@@ -230,7 +230,7 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
 
   <div id="menu" class="screen">
     <div class="card menu-card">
-      <p class="kicker">WORLD OF WARS · ДВЕ МИССИИ</p>
+      <p class="kicker">WORLD OF WARS · ТРИ МИССИИ</p>
       <h1>Последний<br /><em>заказ</em></h1>
       <p class="lead">
         Марк, бармен. Вчера здесь играли джаз и наливали до утра.<br />
@@ -238,7 +238,8 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
       </p>
       <p class="body">
         Миссия 01 — найти оружие, собрать спирт, отбить три волны и уйти через чёрный ход.<br />
-        Миссия 02 — выйти на улицу с бластером и пробиться к телестанции.
+        Миссия 02 — выйти на улицу с бластером и пробиться к телестанции.<br />
+        Миссия 03 — через сутки тебя записывают в штурмовую группу: школа №4, пленные в спортзале и больница за двором.
       </p>
       <ul class="keys">
         <li><kbd>W A S D</kbd><span>движение</span></li>
@@ -383,6 +384,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyM') toggleSound();
   if (e.code === 'Digit1') switchWeapon('pistol');
   if (e.code === 'Digit2') switchWeapon('plasma');
+  if (e.code === 'KeyE') tryFreePrisoners();
   if (e.code === 'Enter' && state.mode === 'menu') newGame();
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
@@ -559,6 +561,82 @@ const STREET_BRAZIERS = [
   { x: 406, y: 310, r: 150 }
 ];
 
+/* ---------- школа и больница ---------- */
+const SCHOOL_PROPS = [
+  /* перегородки */
+  { type: 'wall',   x: 30,  y: 288, w: 120, h: 14 },
+  { type: 'wall',   x: 196, y: 288, w: 184, h: 14 },
+  { type: 'wall',   x: 428, y: 288, w: 182, h: 14 },
+  { type: 'wall',   x: 30,  y: 380, w: 98,  h: 14 },
+  { type: 'wall',   x: 176, y: 380, w: 284, h: 14 },
+  { type: 'wall',   x: 508, y: 380, w: 102, h: 14 },
+  { type: 'wall',   x: 300, y: 30,  w: 14,  h: 258 },
+  { type: 'wall',   x: 440, y: 394, w: 14,  h: 256 },
+  { type: 'wall',   x: 596, y: 30,  w: 14,  h: 258 },
+  { type: 'wall',   x: 596, y: 394, w: 14,  h: 256 },
+  /* клетка в спортзале */
+  { type: 'cage',   x: 56,  y: 66,  w: 160, h: 8   },
+  { type: 'cage',   x: 56,  y: 188, w: 160, h: 8   },
+  { type: 'cage',   x: 56,  y: 66,  w: 8,   h: 130 },
+  { type: 'cage',   x: 208, y: 66,  w: 8,   h: 30  },
+  { type: 'cage',   x: 208, y: 176, w: 8,   h: 20  },
+  /* спортзал */
+  { type: 'bench',  x: 240, y: 212, w: 52,  h: 22  },
+  { type: 'mat',    x: 224, y: 36,  w: 62,  h: 28  },
+  { type: 'mat',    x: 36,  y: 212, w: 62,  h: 26  },
+  /* класс */
+  { type: 'desk',   x: 336, y: 86,  w: 74,  h: 38  },
+  { type: 'desk',   x: 462, y: 86,  w: 74,  h: 38  },
+  { type: 'desk',   x: 336, y: 168, w: 74,  h: 38  },
+  { type: 'locker', x: 556, y: 56,  w: 30,  h: 70  },
+  /* коридор */
+  { type: 'locker', x: 246, y: 302, w: 34,  h: 22  },
+  { type: 'locker', x: 456, y: 358, w: 34,  h: 22  },
+  /* столовая */
+  { type: 'table',  x: 150, y: 450, w: 102, h: 52  },
+  { type: 'table',  x: 300, y: 450, w: 102, h: 52  },
+  { type: 'table',  x: 150, y: 562, w: 102, h: 52  },
+  { type: 'table',  x: 300, y: 562, w: 102, h: 52  },
+  { type: 'counter',x: 34,  y: 394, w: 92,  h: 26  },
+  /* оружейка */
+  { type: 'crate',  x: 468, y: 578, w: 54,  h: 54  },
+  { type: 'locker', x: 546, y: 410, w: 34,  h: 66  },
+  { type: 'locker', x: 546, y: 496, w: 34,  h: 66  },
+  /* двор */
+  { type: 'truck',  x: 646, y: 64,  w: 156, h: 80  },
+  { type: 'sandbag',x: 640, y: 236, w: 116, h: 36  },
+  { type: 'sandbag',x: 788, y: 556, w: 96,  h: 34  },
+  { type: 'barrel', x: 742, y: 392, w: 36,  h: 36  },
+  { type: 'crate',  x: 620, y: 556, w: 52,  h: 52  },
+  { type: 'pole',   x: 742, y: 196, w: 18,  h: 18  },
+  { type: 'ambulance', x: 792, y: 452, w: 78, h: 118 },
+  /* больница */
+  { type: 'hospital', x: 890, y: 0,   w: 110, h: 300 },
+  { type: 'hospital', x: 890, y: 430, w: 110, h: 250 }
+];
+const SCHOOL_SPAWNS = [
+  { x: 700, y: 200 },
+  { x: 846, y: 360 },
+  { x: 700, y: 600 },
+  { x: 520, y: 470 },
+  { x: 420, y: 120 }
+];
+const SCHOOL_STAGES = [
+  { trigger: 340, label: 'Коридор. Шаги за спиной — охрана уже знает.', list: ['trooper', 'looter', 'shooter', 'trooper'] },
+  { trigger: 560, label: 'Двор. Охрана у ворот больницы.', list: ['trooper', 'brute', 'shooter', 'trooper', 'looter'] },
+  { trigger: 760, label: 'Последний заказ. Дальше — только больница.', list: ['elite', 'brute', 'trooper', 'shooter', 'trooper', 'looter'] }
+];
+const CAGE = { x: 56, y: 66, w: 160, h: 130 };
+const CAGE_DOOR = { x: 208, y: 96, w: 8, h: 80 };
+const HOSPITAL_DOOR = { x: 890, y: 300, w: 80, h: 130 };
+const SCHOOL_LAMPS = [
+  { x: 470, y: 340, r: 250, kind: 'tube' },
+  { x: 142, y: 130, r: 180, kind: 'work' },
+  { x: 330, y: 34,  r: 200, kind: 'moon' },
+  { x: 752, y: 205, r: 310, kind: 'sweep' },
+  { x: 934, y: 364, r: 220, kind: 'door' }
+];
+
 /* ===========================================================
    УРОВНИ
    =========================================================== */
@@ -591,10 +669,33 @@ const LEVELS = {
     room: buildStreetRoom,
     light: streetLighting,
     pickups: streetPickups,
+    doorSolid: DOOR_SOLID,
+    update: updateStreet,
     objectives: () => [
       { id: 'plasma', text: 'Подобрать плазменный бластер', done: false, active: true },
       { id: 'breach', text: 'Пробиться к телестанции (0 / 3)', done: false, active: false },
       { id: 'enter', text: 'Войти в телестанцию', done: false, active: false }
+    ]
+  },
+  school: {
+    id: 'school', num: 3, name: 'Школа №4 · больница',
+    props: SCHOOL_PROPS, spawns: SCHOOL_SPAWNS, stages: SCHOOL_STAGES,
+    start: { x: 86, y: 604 },
+    exit: { x: 930, y: 312, w: 58, h: 106 },
+    doorSolid: HOSPITAL_DOOR,
+    fallback: { x: 846, y: 360 },
+    ammoSpots: [{ x: 250, y: 330 }, { x: 470, y: 500 }, { x: 640, y: 360 }, { x: 700, y: 500 }],
+    intro: 'Ночь. Школа №4. Позади — пролом в крыше, впереди — коридор. Где-то в спортзале держат наших.',
+    pauseLead: 'Тишина. Где-то в коридоре скрипит половица — и это не ветер.',
+    floor: buildSchoolFloor,
+    room: buildSchoolRoom,
+    light: schoolLighting,
+    pickups: schoolPickups,
+    update: updateSchool,
+    objectives: () => [
+      { id: 'rescue', text: 'Освободить пленных в спортзале (0 / 3)', done: false, active: true },
+      { id: 'breach', text: 'Пробиться через школу к больнице (0 / 3)', done: false, active: false },
+      { id: 'hospital', text: 'Дойти до больницы', done: false, active: false }
     ]
   }
 };
@@ -607,6 +708,7 @@ let level = LEVELS.bar;
 let props = level.props;
 let solids = walls.concat(props);
 let player, enemies, bullets, molotovs, fires, pickups, parts, decals, texts, casings, bolts;
+let prisoners = [];
 let rain = [];
 
 const state = {
@@ -614,6 +716,7 @@ const state = {
   wave: -1, waveQueue: [], spawnTimer: 0, breakTimer: 0,
   wavesActive: false, exitUnlocked: false, exitHintShown: false,
   stage: -1, stagesDone: 0, stageCleared: true, doorsOpen: false,
+  cageOpen: false, prisonersFreed: 0, schoolHint: false,
   kills: 0, shots: 0, hits: 0, bottlesUsed: 0,
   objectives: [], entryCarry: null, lastSaveAt: 0
 };
@@ -636,11 +739,12 @@ function obj(id) { return state.objectives.find(o => o.id === id); }
 
 function resetWorld() {
   enemies = []; bullets = []; molotovs = []; fires = []; pickups = [];
-  parts = []; decals = []; texts = []; casings = []; bolts = [];
+  parts = []; decals = []; texts = []; casings = []; bolts = []; prisoners = [];
   state.time = 0; state.shake = 0; state.flash = 0; state.lightning = 0; state.nextBolt = 9;
   state.wave = -1; state.waveQueue = []; state.spawnTimer = 0; state.breakTimer = 0;
   state.wavesActive = false; state.exitUnlocked = false; state.exitHintShown = false;
   state.stage = -1; state.stagesDone = 0; state.doorsOpen = false; state.stageCleared = true;
+  state.cageOpen = false; state.prisonersFreed = 0; state.schoolHint = false;
   state.kills = 0; state.shots = 0; state.hits = 0; state.bottlesUsed = 0;
 }
 
@@ -694,9 +798,9 @@ function applyCarry(c) {
 }
 
 function syncDoorSolid() {
-  if (level.id !== 'street') return;
   solids = walls.concat(props);
-  if (!state.doorsOpen) solids.push(DOOR_SOLID);
+  if (level.doorSolid && !state.doorsOpen) solids.push(level.doorSolid);
+  if (level.id === 'school' && !state.cageOpen) solids.push(CAGE_DOOR);
 }
 
 function enterLevel(id, carry) {
@@ -711,9 +815,10 @@ function enterLevel(id, carry) {
   player.x = level.start.x;
   player.y = level.start.y;
   pickups = level.pickups();
+  if (level.id === 'school') spawnPrisoners();
   state.objectives = level.objectives();
-  els.missionTag.textContent = level.num === 1 ? 'МИССИЯ 01' : 'МИССИЯ 02';
-  els.waveLabel.textContent = level.num === 1 ? 'ВОЛНА' : 'РУБЕЖ';
+  els.missionTag.textContent = 'МИССИЯ 0' + level.num;
+  els.waveLabel.textContent = level.id === 'bar' ? 'ВОЛНА' : 'РУБЕЖ';
 
   if (level.id === 'bar') { state.wave = -1; }
   else { state.stage = -1; syncDoorSolid(); }
@@ -1660,6 +1765,692 @@ function buildStreetRoom() {
   c.fillRect(0, 150, W, H - 210);
 }
 /* ===========================================================
+   МИССИЯ 03: ШКОЛА №4
+   =========================================================== */
+
+function buildSchoolFloor() {
+  reseed(330517);
+  const c = fctx;
+  c.fillStyle = '#191a1b';
+  c.fillRect(0, 0, W, H);
+
+  /* ---- двор: бетонные плиты ---- */
+  c.fillStyle = '#2c2d2e';
+  c.fillRect(610, 30, 280, 620);
+  for (let y = 32; y < 648; y += 74) {
+    for (let x = 612; x < 888; x += 76) {
+      const v = 34 + srnd() * 12;
+      c.fillStyle = 'rgba(' + (v | 0) + ',' + ((v + 1) | 0) + ',' + ((v + 2) | 0) + ',.5)';
+      c.fillRect(x, y, 74, 72);
+    }
+  }
+  c.strokeStyle = 'rgba(0,0,0,.5)';
+  c.lineWidth = 1.5;
+  for (let y = 30; y < 650; y += 74) { c.beginPath(); c.moveTo(610, y); c.lineTo(890, y); c.stroke(); }
+  for (let x = 610; x < 890; x += 76) { c.beginPath(); c.moveTo(x, 30); c.lineTo(x, 650); c.stroke(); }
+  /* грязь, воронка, кровь во дворе */
+  for (let i = 0; i < 1400; i++) {
+    const x = 614 + srnd() * 270, y = 34 + srnd() * 610, v = 40 + srnd() * 40;
+    c.fillStyle = 'rgba(' + (v | 0) + ',' + (v | 0) + ',' + (v | 0) + ',' + (0.1 + srnd() * 0.3).toFixed(2) + ')';
+    c.fillRect(x, y, 1 + srnd() * 2, 1 + srnd() * 2);
+  }
+  c.fillStyle = 'rgba(8,8,9,.5)';
+  c.beginPath(); c.ellipse(812, 300, 42, 26, 0.4, 0, 6.28); c.fill();
+  c.strokeStyle = 'rgba(0,0,0,.45)'; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(700, 430); for (let k = 0; k < 6; k++) c.lineTo(700 + srnd() * 90, 430 + srnd() * 120); c.stroke();
+  for (let i = 0; i < 9; i++) {
+    c.fillStyle = 'rgba(64,12,8,' + (0.16 + srnd() * 0.26).toFixed(2) + ')';
+    c.beginPath(); c.ellipse(700 + srnd() * 140, 470 + srnd() * 90, 5 + srnd() * 14, 3 + srnd() * 9, srnd() * 3, 0, 6.28); c.fill();
+  }
+  /* трава в швах */
+  for (let i = 0; i < 260; i++) {
+    const x = 614 + srnd() * 270, y = 34 + srnd() * 610;
+    c.strokeStyle = 'rgba(90,104,66,' + (0.12 + srnd() * 0.2).toFixed(2) + ')';
+    c.lineWidth = 1;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x + (srnd() - 0.5) * 6, y - 3 - srnd() * 6); c.stroke();
+  }
+
+  /* ---- коридор: старый линолеум ---- */
+  c.fillStyle = '#2f2c28';
+  c.fillRect(30, 302, 580, 78);
+  for (let x = 30; x < 610; x += 29) {
+    c.fillStyle = ((x / 29) | 0) % 2 ? 'rgba(255,255,255,.03)' : 'rgba(0,0,0,.12)';
+    c.fillRect(x, 302, 29, 78);
+  }
+  for (let i = 0; i < 200; i++) {
+    const x = 34 + srnd() * 566, y = 306 + srnd() * 70, v = 34 + srnd() * 30;
+    c.fillStyle = 'rgba(' + (v | 0) + ',' + ((v - 2) | 0) + ',' + ((v - 4) | 0) + ',' + (0.1 + srnd() * 0.25).toFixed(2) + ')';
+    c.fillRect(x, y, 2 + srnd() * 8, 1 + srnd() * 3);
+  }
+  c.fillStyle = 'rgba(60,12,8,.22)';
+  for (let x = 130; x < 300; x += 9) {
+    c.beginPath(); c.ellipse(x + srnd() * 6, 330 + Math.sin(x * 0.05) * 14, 9, 5, srnd() * 3, 0, 6.28); c.fill();
+  }
+
+  /* ---- спортзал: паркет ---- */
+  c.fillStyle = '#3b3226';
+  c.fillRect(30, 30, 270, 258);
+  for (let y = 30; y < 288; y += 13) {
+    c.fillStyle = 'rgba(255,255,255,' + (0.02 + srnd() * 0.04).toFixed(3) + ')';
+    c.fillRect(30, y, 270, 11);
+    c.fillStyle = 'rgba(0,0,0,.35)';
+    c.fillRect(30, y + 12, 270, 1);
+    for (let x = 30 + ((y / 13) % 2 ? 30 : 60); x < 300; x += 60) c.fillRect(x, y, 1, 13);
+  }
+  c.strokeStyle = 'rgba(226,204,160,.16)';
+  c.lineWidth = 2;
+  c.strokeRect(60, 70, 210, 180);
+  c.beginPath(); c.arc(165, 160, 56, 0, 6.28); c.stroke();
+  for (let i = 0; i < 160; i++) {
+    const x = 34 + srnd() * 260, y = 34 + srnd() * 250, v = 26 + srnd() * 26;
+    c.fillStyle = 'rgba(' + (v | 0) + ',' + ((v - 6) | 0) + ',' + ((v - 12) | 0) + ',' + (0.08 + srnd() * 0.22).toFixed(2) + ')';
+    c.fillRect(x, y, 2 + srnd() * 6, 1 + srnd() * 2);
+  }
+
+  /* ---- класс: плитка ---- */
+  c.fillStyle = '#2d2e2b';
+  c.fillRect(314, 30, 282, 258);
+  c.strokeStyle = 'rgba(0,0,0,.3)'; c.lineWidth = 1;
+  for (let x = 314; x < 596; x += 34) { c.beginPath(); c.moveTo(x, 30); c.lineTo(x, 288); c.stroke(); }
+  for (let y = 30; y < 288; y += 34) { c.beginPath(); c.moveTo(314, y); c.lineTo(596, y); c.stroke(); }
+  for (let i = 0; i < 900; i++) {
+    const x = 316 + srnd() * 276, y = 32 + srnd() * 252, v = 30 + srnd() * 26;
+    c.fillStyle = 'rgba(' + (v | 0) + ',' + (v | 0) + ',' + ((v - 2) | 0) + ',' + (0.06 + srnd() * 0.2).toFixed(2) + ')';
+    c.fillRect(x, y, 1 + srnd() * 2, 1 + srnd() * 2);
+  }
+
+  /* ---- столовая: шахматная плитка ---- */
+  c.fillStyle = '#26272a';
+  c.fillRect(30, 394, 410, 256);
+  for (let y = 394; y < 650; y += 32) {
+    for (let x = 30; x < 440; x += 32) {
+      c.fillStyle = ((x + y) / 32) % 2 ? 'rgba(255,255,255,.028)' : 'rgba(0,0,0,.14)';
+      c.fillRect(x, y, 32, 32);
+    }
+  }
+  for (let i = 0; i < 700; i++) {
+    const x = 34 + srnd() * 400, y = 398 + srnd() * 248, v = 28 + srnd() * 24;
+    c.fillStyle = 'rgba(' + (v | 0) + ',' + (v | 0) + ',' + (v | 0) + ',' + (0.06 + srnd() * 0.18).toFixed(2) + ')';
+    c.fillRect(x, y, 1 + srnd() * 3, 1 + srnd() * 3);
+  }
+
+  /* ---- оружейная: голый бетон ---- */
+  c.fillStyle = '#222425';
+  c.fillRect(454, 394, 142, 256);
+  for (let i = 0; i < 420; i++) {
+    const x = 456 + srnd() * 136, y = 396 + srnd() * 250, v = 30 + srnd() * 24;
+    c.fillStyle = 'rgba(' + (v | 0) + ',' + ((v + 1) | 0) + ',' + ((v + 2) | 0) + ',' + (0.08 + srnd() * 0.22).toFixed(2) + ')';
+    c.fillRect(x, y, 1 + srnd() * 2, 1 + srnd() * 2);
+  }
+  c.fillStyle = 'rgba(6,6,7,.45)';
+  c.beginPath(); c.ellipse(510, 470, 34, 20, 0.2, 0, 6.28); c.fill();
+}
+
+/* ---------- стены школы ---------- */
+function schoolWall(c, x, y, w, h) {
+  c.fillStyle = 'rgba(0,0,0,.55)';
+  c.fillRect(x + 4, y + 5, w, h);
+  c.fillStyle = '#4e5247';
+  c.fillRect(x, y, w, h);
+  c.fillStyle = 'rgba(255,255,255,.10)';
+  c.fillRect(x, y, w, 2);
+  c.fillStyle = 'rgba(0,0,0,.34)';
+  c.fillRect(x, y + h - 3, w, 3);
+  c.fillStyle = 'rgba(150,160,140,.07)';
+  c.fillRect(x + 2, y + 2, w - 4, h - 6);
+}
+
+function drawSchoolShell(c) {
+  /* внешний контур здания */
+  c.fillStyle = '#1b1c1c';
+  c.fillRect(0, 0, W, 30);
+  c.fillRect(0, H - 30, W, 30);
+  c.fillRect(0, 0, 30, H);
+  c.fillStyle = 'rgba(255,255,255,.05)';
+  c.fillRect(0, 28, W, 2);
+  c.fillRect(0, H - 32, W, 2);
+  c.fillRect(28, 0, 2, H);
+
+  /* окна школы на верхней стене */
+  for (let x = 60; x < 580; x += 92) {
+    c.fillStyle = '#0a0f14';
+    c.fillRect(x, 4, 56, 22);
+    c.strokeStyle = 'rgba(170,190,210,.16)';
+    c.lineWidth = 1;
+    c.strokeRect(x + 0.5, 4.5, 55, 21);
+    c.fillStyle = 'rgba(150,180,205,.07)';
+    c.fillRect(x + 6, 6, 44, 18);
+    c.strokeStyle = 'rgba(0,0,0,.6)';
+    c.beginPath(); c.moveTo(x + 28, 4); c.lineTo(x + 28, 26); c.stroke();
+    if (x === 244) {
+      c.strokeStyle = 'rgba(220,230,240,.35)';
+      c.beginPath(); c.moveTo(x + 6, 26); c.lineTo(x + 26, 6); c.moveTo(x + 20, 26); c.lineTo(x + 40, 9); c.stroke();
+    }
+  }
+  c.save();
+  c.font = 'bold 14px Consolas, monospace';
+  c.fillStyle = 'rgba(210,196,160,.22)';
+  c.fillText('ШКОЛА №4 · ПЕРВЫЙ ЭТАЖ', 60, 18);
+  c.restore();
+}
+
+function drawSchoolWalls(c) {
+  SCHOOL_PROPS.forEach(p => { if (p.type === 'wall') schoolWall(c, p.x, p.y, p.w, p.h); });
+
+  /* дверные полотна: приоткрыты */
+  const doors = [
+    { x: 152, y: 282, w: 44, ang: -0.9, hinge: 'l' },
+    { x: 382, y: 282, w: 44, ang: -0.6, hinge: 'l' },
+    { x: 130, y: 372, w: 44, ang: 0.8, hinge: 'l' },
+    { x: 462, y: 372, w: 44, ang: 0.7, hinge: 'l' }
+  ];
+  doors.forEach(d => {
+    c.save();
+    c.translate(d.x, d.y);
+    c.rotate(d.ang);
+    c.fillStyle = '#3b332a';
+    c.fillRect(0, 0, d.w, 12);
+    c.fillStyle = 'rgba(255,255,255,.06)';
+    c.fillRect(0, 0, d.w, 2);
+    c.strokeStyle = 'rgba(0,0,0,.5)';
+    c.strokeRect(0.5, 0.5, d.w - 1, 11);
+    c.restore();
+  });
+
+  /* таблички у дверей */
+  c.font = 'bold 9px Consolas, monospace';
+  c.fillStyle = 'rgba(217,162,74,.30)';
+  c.fillText('СПОРТЗАЛ', 108, 282);
+  c.fillText('КАБИНЕТ 12', 386, 280);
+  c.fillText('СТОЛОВАЯ', 54, 424);
+  c.fillText('СХРОН', 462, 428);
+}
+
+function drawGym(c) {
+  /* маты, скамья, разбитое кольцо */
+  SCHOOL_PROPS.forEach(p => {
+    if (p.type === 'mat') {
+      c.fillStyle = '#2f4a44';
+      roundRect(c, p.x, p.y, p.w, p.h, 4); c.fill();
+      c.strokeStyle = 'rgba(255,255,255,.08)'; c.lineWidth = 1;
+      roundRect(c, p.x + 1, p.y + 1, p.w - 2, p.h - 2, 4); c.stroke();
+    }
+    if (p.type === 'bench') {
+      c.fillStyle = 'rgba(0,0,0,.5)';
+      c.fillRect(p.x + 4, p.y + 5, p.w, p.h);
+      c.fillStyle = '#4a3b28';
+      c.fillRect(p.x, p.y, p.w, p.h);
+      c.fillStyle = 'rgba(255,255,255,.06)';
+      c.fillRect(p.x, p.y, p.w, 2);
+    }
+  });
+  /* кольцо на стене спортзала */
+  c.fillStyle = '#25292c';
+  c.fillRect(292, 96, 8, 30);
+  c.strokeStyle = 'rgba(230,170,60,.4)';
+  c.lineWidth = 2;
+  c.beginPath(); c.arc(290, 112, 14, -1.2, 1.2); c.stroke();
+  /* мел на полу: стрелка выхода */
+  c.strokeStyle = 'rgba(220,215,200,.20)';
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(232, 250); c.lineTo(280, 250);
+  c.moveTo(272, 243); c.lineTo(282, 250); c.lineTo(272, 257);
+  c.stroke();
+}
+
+function drawClassroom(c) {
+  /* доска на верхней стене */
+  c.fillStyle = '#14181a';
+  c.fillRect(326, 32, 200, 44);
+  c.strokeStyle = '#4a3f30'; c.lineWidth = 3;
+  c.strokeRect(325, 31, 202, 46);
+  c.strokeStyle = 'rgba(220,230,235,.10)';
+  c.lineWidth = 1.2;
+  c.beginPath(); c.moveTo(344, 52); c.lineTo(404, 52); c.moveTo(344, 64); c.lineTo(384, 64); c.stroke();
+  c.fillStyle = 'rgba(230,235,240,.12)';
+  c.font = 'bold 12px Consolas, monospace';
+  c.fillText('ЗАВТРА — РАССВЕТ', 420, 56);
+
+  /* парты */
+  SCHOOL_PROPS.forEach(p => {
+    if (p.type !== 'desk') return;
+    c.fillStyle = 'rgba(0,0,0,.5)';
+    c.fillRect(p.x + 5, p.y + 6, p.w, p.h);
+    c.fillStyle = '#5a4530';
+    c.fillRect(p.x, p.y, p.w, p.h);
+    c.fillStyle = 'rgba(255,255,255,.07)';
+    c.fillRect(p.x, p.y, p.w, 3);
+    c.fillStyle = 'rgba(0,0,0,.35)';
+    c.fillRect(p.x, p.y + p.h - 3, p.w, 3);
+    c.fillStyle = 'rgba(230,225,210,.18)';
+    c.fillRect(p.x + 10, p.y + 9, 20, 14);
+    c.fillRect(p.x + 38, p.y + 12, 12, 9);
+  });
+  /* разбросанные тетради */
+  for (let i = 0; i < 14; i++) {
+    const x = 330 + srnd() * 240, y = 130 + srnd() * 140;
+    c.save(); c.translate(x, y); c.rotate(srnd() * 3);
+    c.fillStyle = 'rgba(226,220,200,.16)';
+    c.fillRect(0, 0, 16, 11);
+    c.restore();
+  }
+}
+
+function drawCafeteria(c) {
+  SCHOOL_PROPS.forEach(p => {
+    if (p.type === 'table') {
+      c.fillStyle = 'rgba(0,0,0,.55)';
+      c.fillRect(p.x + 6, p.y + 7, p.w, p.h);
+      c.fillStyle = '#4c4a44';
+      roundRect(c, p.x, p.y, p.w, p.h, 5); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.07)';
+      c.fillRect(p.x, p.y, p.w, 3);
+      c.strokeStyle = 'rgba(0,0,0,.4)';
+      c.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
+      c.fillStyle = 'rgba(200,200,190,.12)';
+      c.fillRect(p.x + 14, p.y + 12, 18, 12);
+    }
+    if (p.type === 'counter') {
+      c.fillStyle = '#3a3b36';
+      c.fillRect(p.x, p.y, p.w, p.h);
+      c.fillStyle = 'rgba(255,255,255,.06)';
+      c.fillRect(p.x, p.y, p.w, 2);
+      c.fillStyle = 'rgba(180,190,170,.10)';
+      c.fillRect(p.x + 6, p.y + 5, 30, 14);
+    }
+  });
+  /* подносы, ложки, кровь */
+  for (let i = 0; i < 18; i++) {
+    const x = 40 + srnd() * 380, y = 400 + srnd() * 240;
+    c.fillStyle = 'rgba(190,188,175,.12)';
+    c.fillRect(x, y, 7 + srnd() * 5, 4);
+  }
+  c.fillStyle = 'rgba(66,12,8,.25)';
+  c.beginPath(); c.ellipse(120, 520, 30, 14, 0.3, 0, 6.28); c.fill();
+}
+
+function drawArmory(c) {
+  SCHOOL_PROPS.forEach(p => {
+    if (p.type === 'crate') {
+      c.fillStyle = 'rgba(0,0,0,.55)';
+      c.fillRect(p.x + 5, p.y + 6, p.w, p.h);
+      c.fillStyle = '#5d4a2c';
+      c.fillRect(p.x, p.y, p.w, p.h);
+      c.strokeStyle = 'rgba(0,0,0,.45)'; c.lineWidth = 2;
+      c.strokeRect(p.x + 3, p.y + 3, p.w - 6, p.h - 6);
+      c.fillStyle = 'rgba(0,0,0,.3)';
+      c.fillRect(p.x + p.w / 2 - 1, p.y + 4, 2, p.h - 8);
+      c.fillStyle = 'rgba(217,162,74,.35)';
+      c.font = 'bold 8px Consolas, monospace';
+      c.fillText('AMMO', p.x + 8, p.y + p.h - 9);
+    }
+    if (p.type === 'locker') {
+      c.fillStyle = 'rgba(0,0,0,.5)';
+      c.fillRect(p.x + 4, p.y + 5, p.w, p.h);
+      c.fillStyle = '#43483f';
+      c.fillRect(p.x, p.y, p.w, p.h);
+      c.fillStyle = 'rgba(255,255,255,.07)';
+      c.fillRect(p.x, p.y, p.w, 2);
+      c.fillStyle = 'rgba(0,0,0,.4)';
+      c.fillRect(p.x + p.w / 2 - 0.5, p.y + 4, 1, p.h - 8);
+      c.fillStyle = 'rgba(200,205,210,.18)';
+      c.fillRect(p.x + p.w - 10, p.y + p.h / 2 - 1, 4, 2);
+    }
+  });
+  /* стойка под оружие на стене */
+  c.fillStyle = 'rgba(0,0,0,.4)';
+  c.fillRect(596, 500, 10, 90);
+  c.fillStyle = 'rgba(120,120,110,.18)';
+  for (let y = 512; y < 580; y += 18) c.fillRect(598, y, 8, 5);
+}
+
+function drawYard(c) {
+  /* забор из сетки у больницы */
+  c.strokeStyle = 'rgba(160,160,150,.12)';
+  c.lineWidth = 1;
+  for (let y = 30; y < 650; y += 14) {
+    c.beginPath(); c.moveTo(866, y); c.lineTo(890, y + 14); c.stroke();
+  }
+  c.fillStyle = 'rgba(90,90,84,.5)';
+  for (let y = 30; y < 650; y += 90) c.fillRect(866, y, 4, 90);
+
+  /* прожектор */
+  SCHOOL_PROPS.forEach(p => {
+    if (p.type === 'pole') {
+      c.fillStyle = 'rgba(0,0,0,.5)';
+      c.fillRect(p.x + 3, p.y + 4, p.w, p.h);
+      c.fillStyle = '#3b3d3a';
+      c.fillRect(p.x, p.y, p.w, p.h);
+      c.fillStyle = 'rgba(255,255,255,.12)';
+      c.fillRect(p.x + 3, p.y - 10, 12, 10);
+    }
+    if (p.type === 'barrel') {
+      c.fillStyle = 'rgba(0,0,0,.5)';
+      c.fillRect(p.x + 4, p.y + 5, p.w, p.h);
+      c.fillStyle = '#3f4a3e';
+      c.fillRect(p.x, p.y, p.w, p.h);
+      c.strokeStyle = 'rgba(0,0,0,.45)';
+      c.lineWidth = 1;
+      c.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
+      c.fillStyle = 'rgba(0,0,0,.3)';
+      c.fillRect(p.x, p.y + p.h / 2 - 1, p.w, 2);
+    }
+    if (p.type === 'crate') {
+      c.fillStyle = 'rgba(0,0,0,.5)';
+      c.fillRect(p.x + 4, p.y + 5, p.w, p.h);
+      c.fillStyle = '#524326';
+      c.fillRect(p.x, p.y, p.w, p.h);
+      c.strokeStyle = 'rgba(0,0,0,.4)';
+      c.strokeRect(p.x + 2, p.y + 2, p.w - 4, p.h - 4);
+    }
+    if (p.type === 'sandbag') drawSandbags(c, p);
+    if (p.type === 'ambulance') drawAmbulance(c, p);
+    if (p.type === 'truck') drawTruck(c, p);
+  });
+}
+
+function drawTruck(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.5)';
+  roundRect(c, p.x + 7, p.y + 9, p.w, p.h, 8); c.fill();
+  c.fillStyle = '#2f3a2f';
+  roundRect(c, p.x, p.y, p.w, p.h, 8); c.fill();
+  c.strokeStyle = 'rgba(0,0,0,.55)'; c.lineWidth = 2;
+  roundRect(c, p.x + 1, p.y + 1, p.w - 2, p.h - 2, 7); c.stroke();
+  c.fillStyle = '#1d241e';
+  roundRect(c, p.x + 8, p.y + 8, p.w * 0.34, p.h - 16, 5); c.fill();
+  c.fillStyle = 'rgba(150,170,180,.12)';
+  c.fillRect(p.x + 14, p.y + 12, 22, p.h - 24);
+  c.fillStyle = '#232b23';
+  c.fillRect(p.x + p.w * 0.4, p.y + 6, p.w * 0.58, p.h - 12);
+  for (let x = p.x + p.w * 0.45; x < p.x + p.w - 8; x += 12) {
+    c.fillStyle = 'rgba(255,255,255,.04)';
+    c.fillRect(x, p.y + 10, 2, p.h - 20);
+  }
+  /* фара */
+  c.fillStyle = 'rgba(255,240,190,.35)';
+  c.fillRect(p.x + p.w - 4, p.y + p.h / 2 - 8, 4, 6);
+}
+
+function drawAmbulance(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.5)';
+  roundRect(c, p.x + 6, p.y + 8, p.w, p.h, 8); c.fill();
+  c.fillStyle = '#d8d4c8';
+  roundRect(c, p.x, p.y, p.w, p.h, 8); c.fill();
+  c.fillStyle = '#a3261f';
+  c.fillRect(p.x, p.y + p.h * 0.62, p.w, p.h * 0.2);
+  c.strokeStyle = 'rgba(0,0,0,.4)'; c.lineWidth = 1.5;
+  roundRect(c, p.x + 1, p.y + 1, p.w - 2, p.h - 2, 7); c.stroke();
+  /* кабина */
+  c.fillStyle = 'rgba(30,40,45,.75)';
+  c.fillRect(p.x + p.w - 26, p.y + 10, 18, p.h - 20);
+  /* крест */
+  c.fillStyle = 'rgba(180,40,34,.85)';
+  c.fillRect(p.x + 14, p.y + p.h * 0.32, 26, 9);
+  c.fillRect(p.x + 22, p.y + p.h * 0.32 - 9, 9, 27);
+  /* мигалка */
+  c.fillStyle = 'rgba(60,70,80,1)';
+  c.fillRect(p.x + p.w * 0.3, p.y - 6, 16, 6);
+}
+
+function drawHospital(c) {
+  /* корпус */
+  c.fillStyle = '#202226';
+  c.fillRect(890, 0, 110, 680);
+  c.strokeStyle = 'rgba(255,255,255,.05)'; c.lineWidth = 1;
+  for (let y = 20; y < 680; y += 58) { c.beginPath(); c.moveTo(892, y); c.lineTo(1000, y); c.stroke(); }
+  /* окна */
+  for (let y = 46; y < 660; y += 62) {
+    if (y > 280 && y < 450) continue;
+    c.fillStyle = '#0a0d11';
+    c.fillRect(906, y, 78, 30);
+    const lit = (y / 62) % 3 === 0;
+    c.fillStyle = lit ? 'rgba(255,214,150,.22)' : 'rgba(140,175,200,.07)';
+    c.fillRect(912, y + 6, 66, 20);
+    c.strokeStyle = 'rgba(0,0,0,.5)';
+    c.strokeRect(906.5, y + 0.5, 77, 29);
+  }
+  /* проём приёмного */
+  c.fillStyle = '#07080a';
+  c.fillRect(890, 300, 90, 130);
+  const inner = c.createLinearGradient(896, 300, 896, 430);
+  inner.addColorStop(0, 'rgba(255,214,150,.26)');
+  inner.addColorStop(1, 'rgba(255,190,120,.06)');
+  c.fillStyle = inner;
+  c.fillRect(896, 300, 78, 130);
+  /* створки */
+  c.fillStyle = '#3a3d42';
+  c.fillRect(892, 308, 20, 114);
+  c.fillStyle = '#31343a';
+  c.fillRect(962, 308, 20, 114);
+  c.strokeStyle = 'rgba(0,0,0,.55)';
+  c.strokeRect(892.5, 308.5, 19, 113);
+  c.strokeRect(962.5, 308.5, 19, 113);
+  /* каталки у входа */
+  c.fillStyle = '#5a6166';
+  c.fillRect(904, 424, 44, 10);
+  c.fillStyle = 'rgba(230,235,240,.5)';
+  c.fillRect(906, 420, 40, 6);
+
+  /* красный крест */
+  c.save();
+  c.translate(940, 246);
+  c.fillStyle = 'rgba(30,32,36,.9)';
+  roundRect(c, -34, -34, 68, 68, 8); c.fill();
+  c.fillStyle = 'rgba(214,58,48,.9)';
+  c.fillRect(-10, -26, 20, 52);
+  c.fillRect(-26, -10, 52, 20);
+  c.font = 'bold 11px Consolas, monospace';
+  c.textAlign = 'center';
+  c.fillStyle = 'rgba(240,236,225,.75)';
+  c.fillText('БОЛЬНИЦА', 0, 52);
+  c.restore();
+  c.save();
+  c.translate(976, 552);
+  c.rotate(-Math.PI / 2);
+  c.font = '11px Consolas, monospace';
+  c.fillStyle = 'rgba(220,214,200,.35)';
+  c.fillText('ПРИЁМНОЕ ОТДЕЛЕНИЕ · ВХОД', 0, 0);
+  c.restore();
+  c.textAlign = 'left';
+
+  /* следы пуль и кровь на фасаде */
+  c.fillStyle = 'rgba(6,6,7,.75)';
+  for (let i = 0; i < 18; i++) {
+    c.beginPath(); c.arc(892 + srnd() * 96, 470 + srnd() * 180, 1.2 + srnd() * 2.2, 0, 6.28); c.fill();
+  }
+  c.fillStyle = 'rgba(70,14,8,.35)';
+  c.beginPath(); c.ellipse(904, 446, 16, 6, 0.2, 0, 6.28); c.fill();
+}
+
+function buildSchoolRoom() {
+  const c = rctx;
+  c.clearRect(0, 0, W, H);
+  reseed(880211);
+  drawSchoolShell(c);
+  drawSchoolWalls(c);
+  drawGym(c);
+  drawClassroom(c);
+  drawCafeteria(c);
+  drawArmory(c);
+  drawYard(c);
+  drawHospital(c);
+
+  const g = c.createLinearGradient(0, 30, 0, H - 30);
+  g.addColorStop(0, 'rgba(0,0,0,.34)');
+  g.addColorStop(0.35, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,.3)');
+  c.fillStyle = g;
+  c.fillRect(0, 30, W, H - 60);
+}
+
+/* ---------- клетка (поверх пленных) ---------- */
+function drawCage() {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(190,196,198,.42)';
+  ctx.lineWidth = 2;
+  for (let x = CAGE.x + 10; x < CAGE.x + CAGE.w; x += 11) {
+    ctx.beginPath();
+    ctx.moveTo(x, CAGE.y + 2); ctx.lineTo(x, CAGE.y + CAGE.h - 2);
+    ctx.stroke();
+  }
+  for (let y = CAGE.y + 10; y < CAGE.y + CAGE.h; y += 11) {
+    ctx.beginPath();
+    ctx.moveTo(CAGE.x + 2, y); ctx.lineTo(CAGE.x + CAGE.w - 2, y);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(120,124,122,.55)';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(CAGE.x + 2, CAGE.y + 2, CAGE.w - 4, CAGE.h - 4);
+  if (!state.cageOpen) {
+    /* замок на двери */
+    const dx = CAGE.x + CAGE.w - 2, dy = CAGE.y + 132;
+    ctx.fillStyle = 'rgba(216,206,176,.85)';
+    ctx.fillRect(dx - 4, dy, 12, 11);
+    ctx.strokeStyle = 'rgba(216,206,176,.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(dx + 2, dy - 1, 4.5, Math.PI, 0); ctx.stroke();
+    ctx.fillStyle = 'rgba(30,30,28,.65)';
+    ctx.fillRect(dx + 1, dy + 4, 2, 3);
+  }
+  ctx.restore();
+}
+
+/* ---------- пленные ---------- */
+function drawPrisoners() {
+  for (const p of prisoners) {
+    ctx.fillStyle = 'rgba(0,0,0,.45)';
+    ctx.beginPath(); ctx.ellipse(p.x + 2, p.y + 5, 15, 8, 0, 0, 6.28); ctx.fill();
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.ang);
+    const sway = Math.sin(p.walk) * 1.4;
+    ctx.fillStyle = p.hit > 0 ? '#c8b098' : '#4a5140';
+    ctx.beginPath(); ctx.ellipse(0, 0, 13, 10, 0, 0, 6.28); ctx.fill();
+    ctx.fillStyle = p.hit > 0 ? '#d8c4ac' : '#8a7a5e';
+    ctx.beginPath(); ctx.ellipse(-2, 0, 9, 7.4, 0, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#c2956c';
+    ctx.beginPath(); ctx.arc(5.5, 0, 5.8, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#3a2a22';
+    ctx.beginPath(); ctx.arc(3.2, 0, 5.6, Math.PI * 0.55, Math.PI * 1.45); ctx.fill();
+    /* рука: здоровая или перебинтованная */
+    ctx.fillStyle = '#5c6349';
+    ctx.beginPath(); ctx.arc(7 + sway * 0.4, 7.5, 3.2, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(7 - sway * 0.4, -7.5, 3.2, 0, 6.28); ctx.fill();
+    if (p.kind === 1) { ctx.fillStyle = 'rgba(230,225,210,.6)'; ctx.fillRect(2, 5, 9, 3); }
+    if (p.kind === 2) { ctx.fillStyle = '#c22'; ctx.beginPath(); ctx.arc(-2, -1, 3, 0, 6.28); ctx.fill(); }
+    ctx.restore();
+  }
+}
+
+function drawPrisonerPrompt() {
+  if (level.id !== 'school' || state.cageOpen || state.mode !== 'play') return;
+  const near = nearestOnRect(player.x, player.y, CAGE);
+  if (Math.hypot(near.x - player.x, near.y - player.y) > 58) return;
+  const pulse = 0.55 + 0.45 * Math.sin(state.time * 4);
+  ctx.save();
+  ctx.font = 'bold 12px Consolas, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(236,229,215,' + pulse.toFixed(2) + ')';
+  ctx.fillText('[E] СБИТЬ ЗАМОК', CAGE.x + CAGE.w / 2 + 10, CAGE.y - 12);
+  ctx.fillStyle = 'rgba(217,162,74,' + (pulse * 0.7).toFixed(2) + ')';
+  ctx.fillText('ТРОЕ НАШИХ', CAGE.x + CAGE.w / 2 + 10, CAGE.y + CAGE.h + 24);
+  ctx.restore();
+}
+
+/* ---------- подсветка школы ---------- */
+function schoolLighting() {
+  lctx.setTransform(1, 0, 0, 1, 0, 0);
+  lctx.globalCompositeOperation = 'source-over';
+  lctx.clearRect(0, 0, W, H);
+  lctx.fillStyle = 'rgba(5,7,10,.50)';
+  lctx.fillRect(0, 0, W, H);
+
+  lctx.globalCompositeOperation = 'destination-out';
+
+  /* лунный свет из окон */
+  [88, 270, 452, 556].forEach((x, i) => {
+    const f = 0.9 + Math.sin(state.time * 1.3 + i) * 0.06;
+    radial(lctx, x + 28, 34, 130 * f, 0.62);
+  });
+  /* мигающая лампа в коридоре */
+  const tube = SCHOOL_LAMPS[0];
+  const fl = (Math.sin(state.time * 11) > 0.86 || Math.sin(state.time * 3.3) > 0.7) ? 0.25 : 1;
+  radial(lctx, tube.x, tube.y, tube.r * fl, 0.9 * fl);
+  /* лампа над клеткой */
+  radial(lctx, SCHOOL_LAMPS[1].x, SCHOOL_LAMPS[1].y, 215, 0.85);
+  /* подсветка залов: окна, лампы, приоткрытые двери */
+  radial(lctx, 460, 150, 250, 0.55);
+  radial(lctx, 230, 520, 260, 0.52);
+  radial(lctx, 520, 505, 175, 0.44);
+  radial(lctx, 760, 470, 220, 0.34);
+  /* прожектор во дворе: медленно качается */
+  const sweep = Math.sin(state.time * 0.5) * 0.55;
+  const sx = SCHOOL_LAMPS[3].x + Math.cos(sweep) * 90;
+  const sy = SCHOOL_LAMPS[3].y + Math.sin(sweep) * 120;
+  radial(lctx, sx, sy, 300, 0.75);
+  radial(lctx, SCHOOL_LAMPS[3].x, SCHOOL_LAMPS[3].y, 90, 0.5);
+  /* приёмный покой */
+  radial(lctx, SCHOOL_LAMPS[4].x, SCHOOL_LAMPS[4].y, state.doorsOpen ? 240 : 120, state.doorsOpen ? 0.9 : 0.5);
+  /* общий свет зала */
+  radial(lctx, 320, 340, 820, 0.3);
+  radial(lctx, player.x, player.y, 330, 0.7);
+  playerCone(lctx, 470, 0.40, 0.94);
+
+  for (const f of fires) {
+    const k = Math.min(1, f.life / 1.2);
+    radial(lctx, f.x, f.y, f.r * 1.6 * k, 0.95 * k);
+  }
+  if (player.muzzle > 0) {
+    radial(lctx, player.x + Math.cos(player.ang) * 28, player.y + Math.sin(player.ang) * 28,
+      player.weapon === 'plasma' ? 210 : 170, 0.8);
+  }
+  for (const e of enemies) {
+    if (e.muzzle > 0) radial(lctx, e.x + Math.cos(e.ang) * 22, e.y + Math.sin(e.ang) * 22, 140, 0.62);
+  }
+
+  lctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(lightCv, 0, 0);
+}
+
+function drawSchoolGlow() {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  /* красный крест светится */
+  const pulse = 0.5 + 0.5 * Math.sin(state.time * 2.2);
+  const g = ctx.createRadialGradient(940, 246, 0, 940, 246, 120);
+  g.addColorStop(0, 'rgba(220,70,58,' + (0.28 + pulse * 0.12).toFixed(3) + ')');
+  g.addColorStop(1, 'rgba(220,70,58,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(940, 246, 120, 0, 6.28); ctx.fill();
+  /* мигалка санитарки */
+  const fl2 = Math.sin(state.time * 7) > 0 ? 1 : 0.15;
+  const g2 = ctx.createRadialGradient(802, 446, 0, 802, 446, 70);
+  g2.addColorStop(0, 'rgba(90,150,255,' + (0.3 * fl2).toFixed(3) + ')');
+  g2.addColorStop(1, 'rgba(90,150,255,0)');
+  ctx.fillStyle = g2;
+  ctx.beginPath(); ctx.arc(802, 446, 70, 0, 6.28); ctx.fill();
+  /* прожектор во дворе */
+  const sweep = Math.sin(state.time * 0.5) * 0.55;
+  const sx = SCHOOL_LAMPS[3].x + Math.cos(sweep) * 90;
+  const sy = SCHOOL_LAMPS[3].y + Math.sin(sweep) * 120;
+  const g3 = ctx.createRadialGradient(sx, sy, 0, sx, sy, 260);
+  g3.addColorStop(0, 'rgba(255,244,214,.16)');
+  g3.addColorStop(1, 'rgba(255,244,214,0)');
+  ctx.fillStyle = g3;
+  ctx.beginPath(); ctx.arc(sx, sy, 260, 0, 6.28); ctx.fill();
+  /* приёмный покой */
+  if (state.doorsOpen) {
+    const g4 = ctx.createRadialGradient(934, 364, 0, 934, 364, 200);
+    g4.addColorStop(0, 'rgba(255,206,140,.22)');
+    g4.addColorStop(1, 'rgba(255,206,140,0)');
+    ctx.fillStyle = g4;
+    ctx.beginPath(); ctx.arc(934, 364, 200, 0, 6.28); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ===========================================================
    ЛОГИКА
    =========================================================== */
 
@@ -1865,8 +2656,8 @@ function spawnEnemy(type, at) {
     burst: 0, muzzle: 0
   };
   if (hits(e.x, e.y, e.r)) {
-    e.x = level.id === 'bar' ? 430 : 640;
-    e.y = level.id === 'bar' ? 120 : 220;
+    const fb = level.fallback || (level.id === 'bar' ? { x: 430, y: 120 } : { x: 640, y: 220 });
+    e.x = fb.x; e.y = fb.y;
   }
   enemies.push(e);
   spark(e.x, e.y, 6, '#8a7a66', 80);
@@ -1890,7 +2681,7 @@ function enemyShoot(e) {
 function dropFor(e) {
   const roll = Math.random();
   if (roll < 0.26) {
-    const isPlasma = level.id === 'street' && player.weapons.plasma.owned && Math.random() < 0.65;
+    const isPlasma = level.id !== 'bar' && player.weapons.plasma.owned && Math.random() < 0.65;
     pickups.push({
       type: isPlasma ? 'cell' : 'ammo',
       x: e.x + rnd(-6, 6), y: e.y + rnd(-6, 6),
@@ -2120,9 +2911,9 @@ function updatePickups(dt) {
       sfx.cell();
       updateObjectives(); updateHud();
       setTimeout(() => {
-        if ((state.mode === 'play' || state.mode === 'paused') && level.id === 'street') {
-          spawnEnemy('shooter', { x: 940, y: 250 });
-          spawnEnemy('looter', { x: 760, y: 518 });
+        if ((state.mode === 'play' || state.mode === 'paused') && level.id !== 'bar') {
+          spawnEnemy('shooter', level.spawns[0]);
+          spawnEnemy('looter', level.spawns[1]);
           toast('Они уже идут. Стреляй.', 2000);
           sfx.wave();
         }
@@ -2150,6 +2941,12 @@ function updatePickups(dt) {
       player.hp = Math.min(player.maxhp, player.hp + 35);
       toast('Виски. Внутрь — не наружу.', 1600);
       floatText(player.x, player.y - 20, '+35', '#8fbf7a');
+      sfx.pick();
+
+    } else if (p.type === 'medkit') {
+      player.hp = Math.min(player.maxhp, player.hp + 45);
+      floatText(player.x, player.y - 20, '+45', '#8fbf7a');
+      toast('Аптечка. Бинт, жгут, обезболивающее — война в кармане.', 1800);
       sfx.pick();
 
     } else if (p.type === 'ammo') {
@@ -2217,11 +3014,11 @@ function nextWave() {
 }
 
 function spawnAmmoDrop() {
-  const spots = level.id === 'bar'
+  const spots = level.ammoSpots || (level.id === 'bar'
     ? [{ x: 604, y: 452 }, { x: 520, y: 236 }, { x: 900, y: 210 }, { x: 250, y: 322 }, { x: 472, y: 578 }]
-    : [{ x: 250, y: 236 }, { x: 520, y: 320 }, { x: 740, y: 420 }, { x: 860, y: 380 }];
+    : [{ x: 250, y: 236 }, { x: 520, y: 320 }, { x: 740, y: 420 }, { x: 860, y: 380 }]);
   const s = pick(spots);
-  const cell = level.id === 'street' && player.weapons.plasma.owned;
+  const cell = level.id !== 'bar' && player.weapons.plasma.owned;
   pickups.push({ type: cell ? 'cell' : 'ammo', x: s.x, y: s.y, taken: false, t: 0, amount: cell ? 24 : 16 });
 }
 
@@ -2311,6 +3108,172 @@ function updateStreet(dt) {
   }
 }
 
+/* ---------------- МИССИЯ 03: школа и больница ---------------- */
+function schoolPickups() {
+  return [
+    { type: 'medkit', x: 350, y: 240, taken: false, t: 0 },
+    { type: 'medkit', x: 700, y: 604, taken: false, t: 0 },
+    { type: 'ammo', x: 92,  y: 430, taken: false, t: 0, amount: 24 },
+    { type: 'ammo', x: 520, y: 470, taken: false, t: 0, amount: 24 },
+    { type: 'ammo', x: 824, y: 236, taken: false, t: 0, amount: 24 },
+    { type: 'cell', x: 566, y: 552, taken: false, t: 0, amount: 40 },
+    { type: 'cell', x: 640, y: 300, taken: false, t: 0, amount: 30 },
+    { type: 'cell', x: 380, y: 620, taken: false, t: 0, amount: 40 },
+    { type: 'bottle', x: 96, y: 470, taken: false, t: 0 },
+    { type: 'whiskey', x: 300, y: 340, taken: false, t: 0 }
+  ];
+}
+
+function nearestOnRect(x, y, r) {
+  return {
+    x: Math.max(r.x, Math.min(x, r.x + r.w)),
+    y: Math.max(r.y, Math.min(y, r.y + r.h))
+  };
+}
+
+function spawnPrisoners() {
+  prisoners = [
+    { x: 88,  y: 110, ang: 0.6,  walk: 0,   kind: 1, hit: 0 },
+    { x: 126, y: 156, ang: -0.4, walk: 1.4, kind: 0, hit: 0 },
+    { x: 172, y: 114, ang: 2.4,  walk: 2.9, kind: 2, hit: 0 }
+  ];
+}
+
+function tryFreePrisoners() {
+  if (state.mode !== 'play' || level.id !== 'school' || state.cageOpen) return;
+  const near = nearestOnRect(player.x, player.y, CAGE);
+  if (Math.hypot(near.x - player.x, near.y - player.y) > 58) return;
+  freePrisoners();
+}
+
+function freePrisoners() {
+  if (state.cageOpen) return;
+  state.cageOpen = true;
+  state.prisonersFreed = 3;
+  if (!prisoners.length) spawnPrisoners();
+  syncDoorSolid();
+  const o = obj('rescue');
+  if (o) { o.done = true; o.active = false; o.text = 'Пленные освобождены (3 / 3)'; }
+  const b = obj('breach');
+  if (b) b.active = true;
+  spark(CAGE.x + CAGE.w, CAGE.y + 136, 16, '#d9a24a', 130);
+  floatText(CAGE.x + CAGE.w + 8, CAGE.y + 130, 'ЗАМОК СБИТ', '#d9a24a');
+  toast('Замок сбит. Трое своих — на ногах. Выводим их к больнице.', 3600);
+  sfx.pick();
+  updateObjectives(); updateHud();
+  tryOpenHospital();
+}
+
+const PRISONER_PATH = [
+  { x: 232, y: 134 },
+  { x: 228, y: 254 },
+  { x: 173, y: 254 },
+  { x: 173, y: 336 }
+];
+
+function updatePrisoners(dt) {
+  if (!state.cageOpen || !prisoners.length) return;
+  prisoners.forEach((p, i) => {
+    if (p.leg === undefined) p.leg = 0;
+    let tx, ty, through = false;
+    if (p.leg < PRISONER_PATH.length) {
+      const wp = PRISONER_PATH[p.leg];
+      tx = wp.x; ty = wp.y;
+      through = p.leg === 0;
+      if (Math.hypot(tx - p.x, ty - p.y) < 14) p.leg++;
+    } else {
+      const back = player.ang + Math.PI + (i - 1) * 0.7;
+      const rad = 38 + i * 16;
+      tx = player.x + Math.cos(back) * rad;
+      ty = player.y + Math.sin(back) * rad;
+      if (Math.hypot(player.x - p.x, player.y - p.y) > 430) {
+        p.x = player.x - Math.cos(player.ang) * 40 + (i - 1) * 18;
+        p.y = player.y - Math.sin(player.ang) * 40 + (i - 1) * 18;
+      }
+    }
+    const dx = tx - p.x, dy = ty - p.y;
+    const d = Math.hypot(dx, dy) || 1;
+    if (d > 7) {
+      const spd = 212;
+      const nx = p.x + dx / d * spd * dt;
+      const ny = p.y + dy / d * spd * dt;
+      if (through) {
+        p.x = nx; p.y = ny;
+      } else {
+        if (!hits(nx, p.y, 8)) p.x = nx;
+        if (!hits(p.x, ny, 8)) p.y = ny;
+      }
+      p.walk += dt * 8;
+      p.ang = Math.atan2(dy, dx);
+    } else {
+      p.ang = Math.atan2(player.y - p.y, player.x - p.x);
+    }
+    p.hit = Math.max(0, (p.hit || 0) - dt);
+  });
+}
+
+function tryOpenHospital() {
+  if (level.id !== 'school' || state.doorsOpen) return;
+  if (!state.cageOpen || state.stagesDone < SCHOOL_STAGES.length) return;
+  state.doorsOpen = true;
+  state.exitUnlocked = true;
+  syncDoorSolid();
+  const oh = obj('hospital');
+  if (oh) { oh.active = true; oh.text = 'Дойти до больницы'; }
+  toast('Ворота приёмного открыты. Медсёстры уже ждут на крыльце.', 4200);
+  sfx.win();
+  updateObjectives(); updateWaveHud();
+}
+
+function updateSchool(dt) {
+  updatePrisoners(dt);
+
+  if (!state.doorsOpen) {
+    const next = state.stage + 1;
+    if (next < SCHOOL_STAGES.length && state.stageCleared && state.waveQueue.length === 0 &&
+        enemies.length === 0 && player.x > SCHOOL_STAGES[next].trigger) {
+      state.stage = next;
+      state.stageCleared = false;
+      state.waveQueue = SCHOOL_STAGES[next].list.slice();
+      state.spawnTimer = rnd(0.7, 1.3);
+      toast(SCHOOL_STAGES[next].label, 3000);
+      sfx.wave();
+      updateWaveHud();
+    }
+  }
+
+  if (state.waveQueue.length > 0) {
+    state.spawnTimer -= dt;
+    if (state.spawnTimer <= 0) {
+      spawnEnemy(state.waveQueue.shift());
+      state.spawnTimer = rnd(0.7, 1.5);
+    }
+  }
+
+  if (state.stage >= 0 && state.waveQueue.length === 0 && enemies.length === 0 && !state.stageCleared) {
+    state.stageCleared = true;
+    state.stagesDone++;
+    const b = obj('breach');
+    if (b) {
+      b.text = 'Пробиться через школу к больнице (' + Math.min(SCHOOL_STAGES.length, state.stagesDone) + ' / ' + SCHOOL_STAGES.length + ')';
+      if (state.stagesDone >= SCHOOL_STAGES.length) { b.done = true; b.active = false; }
+    }
+    if (state.stagesDone < SCHOOL_STAGES.length) {
+      toast('Двор зачищен. Дальше — ворота больницы.', 2200);
+      spawnAmmoDrop();
+      sfx.pick();
+    } else {
+      tryOpenHospital();
+    }
+    updateObjectives(); updateWaveHud();
+  }
+
+  if (!state.exitUnlocked && state.stagesDone >= SCHOOL_STAGES.length && !state.cageOpen && !state.schoolHint) {
+    state.schoolHint = true;
+    toast('Без пленных не уходим. Спортзал — левое крыло, за коридором.', 3600);
+  }
+}
+
 /* ---------------- игрок ---------------- */
 function updatePlayer(dt) {
   let vx = 0, vy = 0;
@@ -2361,8 +3324,8 @@ function checkExit() {
   if (!state.exitUnlocked) return;
   const ex = level.exit;
   if (player.x > ex.x && player.y > ex.y && player.y < ex.y + ex.h) {
-    if (level.id === 'bar') missionComplete();
-    else finalWin();
+    if (level.id === 'school') finalWin();
+    else missionComplete();
   }
 }
 
@@ -2422,7 +3385,9 @@ function update(dt) {
   updatePickups(dt);
   updateParts(dt);
   updateWeather(dt);
-  if (level.id === 'bar') updateBar(dt); else updateStreet(dt);
+  if (level.id === 'bar') updateBar(dt);
+  else if (level.update) level.update(dt);
+  else updateStreet(dt);
   checkExit();
 
   if (level.id === 'bar' && !state.wavesActive && !state.exitUnlocked) {
@@ -2461,7 +3426,8 @@ function drawPickups() {
   for (const p of pickups) {
     if (p.taken) continue;
     const pulse = 0.5 + 0.5 * Math.sin(p.t * 3 + p.x * 0.05);
-    const tint = p.type === 'plasma' || p.type === 'cell' ? '120,235,255' : '217,162,74';
+    const tint = p.type === 'plasma' || p.type === 'cell' ? '120,235,255'
+      : (p.type === 'medkit' ? '143,191,122' : '217,162,74');
     ctx.strokeStyle = 'rgba(' + tint + ',' + (0.18 + pulse * 0.35) + ')';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -2517,6 +3483,15 @@ function drawPickups() {
       ctx.fillRect(-1.6, -10, 3.2, 4);
       ctx.fillStyle = '#e0cfae';
       ctx.fillRect(-3, -1, 6, 6);
+    } else if (p.type === 'medkit') {
+      ctx.fillStyle = '#d8d2c4';
+      roundRect(ctx, -8, -6, 16, 13, 2); ctx.fill();
+      ctx.fillStyle = 'rgba(180,40,34,.9)';
+      ctx.fillRect(-1.6, -4, 3.2, 9);
+      ctx.fillRect(-5.2, -0.4, 10.4, 3.2);
+      ctx.strokeStyle = 'rgba(60,60,55,.6)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-8, -6, 16, 13);
     } else if (p.type === 'ammo') {
       ctx.fillStyle = '#4d4433';
       ctx.fillRect(-7, -5, 14, 10);
@@ -2560,14 +3535,14 @@ function drawExitZone() {
     } else {
       ctx.font = 'bold 11px Consolas, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('ВХОД', ex.x + ex.w / 2, ex.y - 8);
+      ctx.fillText(level.id === 'school' ? 'БОЛЬНИЦА' : 'ВХОД', ex.x + ex.w / 2, ex.y - 8);
       ctx.textAlign = 'left';
     }
   } else {
     ctx.strokeStyle = 'rgba(150,140,125,.20)';
     ctx.lineWidth = 1;
     ctx.strokeRect(ex.x + 2, ex.y + 2, ex.w - 4, ex.h - 4);
-    if (level.id === 'street') {
+    if (level.id !== 'bar') {
       ctx.save();
       ctx.strokeStyle = 'rgba(200,80,60,' + (0.25 + pulse * 0.2) + ')';
       ctx.lineWidth = 3;
@@ -2581,7 +3556,7 @@ function drawExitZone() {
       ctx.font = 'bold 10px Consolas, monospace';
       ctx.textAlign = 'center';
       ctx.fillStyle = 'rgba(210,120,100,' + (0.35 + pulse * 0.3) + ')';
-      ctx.fillText('ЗАКРЫТО', ex.x + ex.w / 2, ex.y - 8);
+      ctx.fillText(level.id === 'school' ? 'ЗАПЕРТО' : 'ЗАКРЫТО', ex.x + ex.w / 2, ex.y - 8);
       ctx.restore();
     }
   }
@@ -3106,18 +4081,22 @@ function render() {
   drawPickups();
   drawCasings();
   for (const e of enemies) drawEnemy(e);
+  if (level.id === 'school') drawPrisoners();
   drawPlayer();
+  if (level.id === 'school') drawCage();
   drawMolotovs();
   drawParts();
   ctx.restore();
 
   if (player) {
-    if (level.id === 'street') streetLighting(); else barLighting();
+    level.light();
     drawLightingExtras();
     drawFireGlow();
+    if (level.id === 'school') drawSchoolGlow();
     drawRain();
   }
   drawTexts();
+  drawPrisonerPrompt();
   drawEdgeVignette();
 
   if (state.lightning > 0) {
@@ -3178,7 +4157,8 @@ function collectSave() {
       wavesActive: state.wavesActive, breakTimer: state.breakTimer,
       exitUnlocked: state.exitUnlocked, exitHintShown: state.exitHintShown,
       stage: state.stage, stagesDone: state.stagesDone, stageCleared: state.stageCleared,
-      doorsOpen: state.doorsOpen
+      doorsOpen: state.doorsOpen, cageOpen: state.cageOpen,
+      prisonersFreed: state.prisonersFreed, schoolHint: state.schoolHint
     }
   };
 }
@@ -3193,7 +4173,7 @@ function saveGame(silent) {
     updateSaveMeta();
     state.lastSaveAt = Date.now();
     if (!silent) {
-      toast('Сохранено · ' + level.name + ' · ' + (level.num === 1 ? 'миссия 01' : 'миссия 02'), 2200);
+      toast('Сохранено · ' + level.name + ' · миссия 0' + level.num, 2200);
       updatePauseMeta();
     }
     return true;
@@ -3242,11 +4222,15 @@ function loadGame() {
   if (d.st) {
     ['time', 'kills', 'shots', 'hits', 'bottlesUsed', 'wave', 'wavesActive', 'breakTimer',
       'exitUnlocked', 'exitHintShown', 'stage', 'stagesDone', 'stageCleared',
-      'doorsOpen'].forEach(k => { if (d.st[k] !== undefined) state[k] = d.st[k]; });
+      'doorsOpen', 'cageOpen', 'prisonersFreed', 'schoolHint'].forEach(k => { if (d.st[k] !== undefined) state[k] = d.st[k]; });
     state.waveQueue = Array.isArray(d.st.waveQueue) ? d.st.waveQueue.slice() : [];
   }
   state.entryCarry = Object.assign(snapshotCarry(), { hp: player.maxhp });
   syncDoorSolid();
+  if (state.cageOpen) {
+    spawnPrisoners();
+    prisoners.forEach((p, i) => { p.x = player.x - 26 - i * 14; p.y = player.y + (i - 1) * 24; });
+  }
 
   showPlay();
   updateHud(); updateObjectives(); updateWaveHud();
@@ -3272,15 +4256,17 @@ function updatePauseMeta() {
   }
   els.pauseMeta.textContent = line;
   if (els.pauseLead) {
-    els.pauseLead.textContent = level.id === 'street'
-      ? 'Дождь стучит по железу. Телестанция ждёт в конце улицы.'
-      : 'Город никуда не делся. Он ждёт снаружи.';
+    els.pauseLead.textContent = level.pauseLead ||
+      (level.id === 'street'
+        ? 'Дождь стучит по железу. Телестанция ждёт в конце улицы.'
+        : 'Город никуда не делся. Он ждёт снаружи.');
   }
 }
 
 function newGame() {
   ac();
   state.pendingCarry = null;
+  state.pendingNext = 'street';
   enterLevel('bar', null);
 }
 
@@ -3342,14 +4328,32 @@ function missionComplete() {
   keys.clear();
   els.hud.classList.add('hidden');
   els.brief.classList.remove('hidden');
-  els.briefKicker.textContent = 'МИССИЯ 02 · УЛИЦА · 04:38';
-  els.briefTitle.textContent = 'Телестанция';
-  els.briefText.innerHTML =
-    'Чёрный ход вывел в переулок. Дождь, битое стекло и запах горелой проводки.<br />' +
-    'У стены лежит плазменный бластер — кто-то бросил его, убегая.';
-  els.briefBody.innerHTML =
-    'Антенна телестанции ещё передаёт: там есть связь, а может — и ответ, что делать дальше.<br />' +
-    'Три рубежа, потом двери. ' + (state.pendingCarry.hp < 70 ? 'Бар закрыт, но ты ещё на ногах.' : 'Ты ещё на ногах.');
+  const btn = $('briefBtn');
+
+  if (level.id === 'bar') {
+    state.pendingNext = 'street';
+    els.briefKicker.textContent = 'МИССИЯ 02 · УЛИЦА · 04:38';
+    els.briefTitle.textContent = 'Телестанция';
+    els.briefText.innerHTML =
+      'Чёрный ход вывел в переулок. Дождь, битое стекло и запах горелой проводки.<br />' +
+      'У стены лежит плазменный бластер — кто-то бросил его, убегая.';
+    els.briefBody.innerHTML =
+      'Антенна телестанции ещё передаёт: там есть связь, а может — и ответ, что делать дальше.<br />' +
+      'Три рубежа, потом двери. ' + (state.pendingCarry.hp < 70 ? 'Бар закрыт, но ты ещё на ногах.' : 'Ты ещё на ногах.');
+    if (btn) btn.textContent = 'Выйти на улицу';
+  } else {
+    state.pendingNext = 'school';
+    els.briefKicker.textContent = 'МИССИЯ 03 · ШКОЛА №4 · 05:20';
+    els.briefTitle.textContent = 'Последний заказ';
+    els.briefText.innerHTML =
+      'Телестанция передала координаты, а через сутки тебя и ещё двоих записали в штурмовую группу.<br />' +
+      'Ночь, пригород, школа №4. Именно здесь держат наших.';
+    els.briefBody.innerHTML =
+      'Пленные — в спортзале, в клетке за коридором. Охрана — в классах и во дворе.<br />' +
+      'За больницей — точка сбора: медики и машины. Сначала свои, потом больница. ' +
+      (state.pendingCarry.hp < 60 ? 'Ты держишься на честном слове — ищи аптечки.' : 'Патронов хватит, если не палить в молоко.');
+    if (btn) btn.textContent = 'Высадиться в школе';
+  }
   sfx.win();
 }
 
@@ -3374,9 +4378,16 @@ function endGame(win) {
   const mmss = Math.floor(t / 60) + ':' + pad2(t % 60);
   const acc = state.shots ? Math.round(state.hits / state.shots * 100) : 0;
   const street = level.id === 'street';
+  const school = level.id === 'school';
 
   els.endKicker.textContent = 'МИССИЯ 0' + level.num + ' · ' + (win ? 'ВЫПОЛНЕНА' : 'ПРОВАЛЕНА');
-  if (win && street) {
+  if (win && school) {
+    els.endTitle.textContent = 'Приказ выполнен';
+    els.endText.innerHTML =
+      'Двери приёмного закрываются за спиной. Трое своих сидят на каталке, медсёстры режут на них форму. ' +
+      'В коридоре пахнет спиртом и хлоркой, за окнами светает. ' +
+      'Последний заказ закрыт — и впервые за всю войну ты остался в плюсе.';
+  } else if (win && street) {
     els.endTitle.textContent = 'Канал 7 в эфире';
     els.endText.innerHTML =
       'Тяжёлые двери закрываются за спиной. В студии горит только аварийный свет, ' +
@@ -3385,6 +4396,11 @@ function endGame(win) {
   } else if (win) {
     els.endTitle.textContent = 'Последний заказ закрыт';
     els.endText.innerHTML = 'Ты выходишь в переулок. За спиной — бар, который больше никогда не включит неон.';
+  } else if (school) {
+    els.endTitle.textContent = 'Школа не отпустила';
+    els.endText.innerHTML =
+      'Коридор кончился тупиком, а пленные так и остались за решёткой. ' +
+      'Больница в двухстах метрах — и она больше не откроется для вас.';
   } else if (street) {
     els.endTitle.textContent = 'Улица не пустила';
     els.endText.innerHTML =
@@ -3496,7 +4512,7 @@ $('menuBtn').addEventListener('click', () => {
 $('quitBtn2').addEventListener('click', quitGame);
 $('quitBackBtn').addEventListener('click', goMenu);
 $('briefBtn').addEventListener('click', () => {
-  enterLevel('street', state.pendingCarry);
+  enterLevel(state.pendingNext || 'street', state.pendingCarry);
   saveGame(true);
   updateSaveMeta();
 });
@@ -3517,7 +4533,8 @@ window.LO = {
   get pickups() { return pickups; },
   get level() { return level; },
   enterLevel, newGame, loadGame, saveGame, restartLevel, goMenu,
-  switchWeapon, missionComplete, spawnEnemy,
+  switchWeapon, missionComplete, spawnEnemy, tryFreePrisoners, freePrisoners, tryOpenHospital,
+  get prisoners() { return prisoners; },
   killAll() { enemies.slice().forEach(e => damageEnemy(e, 9999, 0)); },
   hurt(n) { hurtPlayer(n); }
 };
