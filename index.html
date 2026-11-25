@@ -209,6 +209,7 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
         <div class="weapons" id="weaponSlots">
           <span data-w="pistol"><kbd>1</kbd>ПИСТОЛЕТ</span>
           <span data-w="plasma"><kbd>2</kbd>ПЛАЗМА</span>
+          <span data-w="shotgun"><kbd>3</kbd>ДРОБОВИК</span>
         </div>
         <div class="gear">
           <div class="gear-item">
@@ -230,7 +231,7 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
 
   <div id="menu" class="screen">
     <div class="card menu-card">
-      <p class="kicker">WORLD OF WARS · ТРИ МИССИИ</p>
+      <p class="kicker">WORLD OF WARS · ЧЕТЫРЕ МИССИИ</p>
       <h1>Последний<br /><em>заказ</em></h1>
       <p class="lead">
         Марк, бармен. Вчера здесь играли джаз и наливали до утра.<br />
@@ -239,13 +240,15 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
       <p class="body">
         Миссия 01 — найти оружие, собрать спирт, отбить три волны и уйти через чёрный ход.<br />
         Миссия 02 — выйти на улицу с бластером и пробиться к телестанции.<br />
-        Миссия 03 — через сутки тебя записывают в штурмовую группу: школа №4, пленные в спортзале и больница за двором.
+        Миссия 03 — через сутки тебя записывают в штурмовую группу: школа №4, пленные в спортзале и больница за двором.<br />
+        Миссия 04 — деревня за рекой: две зенитки уничтожить, третью перехватить, дробовик и бинокль на «0».
       </p>
       <ul class="keys">
         <li><kbd>W A S D</kbd><span>движение</span></li>
         <li><kbd>ЛКМ</kbd><span>выстрел</span></li>
         <li><kbd>ПКМ</kbd><span>молотов</span></li>
-        <li><kbd>1 / 2</kbd><span>оружие</span></li>
+        <li><kbd>1 / 2 / 3</kbd><span>оружие</span></li>
+        <li><kbd>0</kbd><span>бинокль</span></li>
         <li><kbd>R</kbd><span>перезарядка</span></li>
         <li><kbd>ESC</kbd><span>пауза и сохранение</span></li>
       </ul>
@@ -384,6 +387,8 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyM') toggleSound();
   if (e.code === 'Digit1') switchWeapon('pistol');
   if (e.code === 'Digit2') switchWeapon('plasma');
+  if (e.code === 'Digit3') switchWeapon('shotgun');
+  if (e.code === 'Digit0' || e.code === 'Numpad0') toggleOptics();
   if (e.code === 'KeyE') tryFreePrisoners();
   if (e.code === 'Enter' && state.mode === 'menu') newGame();
 });
@@ -488,6 +493,11 @@ const WEAPONS = {
   plasma: {
     name: 'ПЛАЗМЕННЫЙ БЛАСТЕР', short: 'ПЛАЗМА', magSize: 20, dmg: 66, cd: 0.16, speed: 760,
     spread: 0.02, reload: 1.35, tracer: 'rgba(150,245,255,.92)', bolt: true, pierce: 1
+  },
+  shotgun: {
+    name: 'ДРОБОВИК', short: 'ДРОБОВИК', magSize: 6, dmg: 15, cd: 0.86, speed: 860,
+    spread: 0.19, reload: 1.9, tracer: 'rgba(255,214,150,.8)', bolt: false, pierce: 1,
+    pellets: 9, life: 0.34
   }
 };
 
@@ -641,6 +651,89 @@ const SCHOOL_LAMPS = [
    УРОВНИ
    =========================================================== */
 
+/* ===========================================================
+   МИССИЯ 04: ДЕРЕВНЯ И ТРИ ПВО
+   =========================================================== */
+
+const VILLAGE_PROPS = [
+  /* изба №1, северо-запад */
+  { type: 'izba',    x: 60,  y: 60,  w: 190, h: 14 },
+  { type: 'izba',    x: 60,  y: 226, w: 84,  h: 14 },
+  { type: 'izba',    x: 204, y: 226, w: 46,  h: 14 },
+  { type: 'izba',    x: 60,  y: 60,  w: 14,  h: 180 },
+  { type: 'izba',    x: 236, y: 60,  w: 14,  h: 180 },
+  /* изба №2, северо-восток */
+  { type: 'izba',    x: 520, y: 60,  w: 180, h: 14 },
+  { type: 'izba',    x: 520, y: 222, w: 100, h: 14 },
+  { type: 'izba',    x: 664, y: 222, w: 36,  h: 14 },
+  { type: 'izba',    x: 520, y: 60,  w: 14,  h: 176 },
+  { type: 'izba',    x: 686, y: 60,  w: 14,  h: 176 },
+  /* изба №3, юг */
+  { type: 'izba',    x: 470, y: 490, w: 55,  h: 14 },
+  { type: 'izba',    x: 565, y: 490, w: 85,  h: 14 },
+  { type: 'izba',    x: 470, y: 490, w: 14,  h: 140 },
+  { type: 'izba',    x: 636, y: 490, w: 14,  h: 140 },
+  { type: 'izba',    x: 470, y: 616, w: 180, h: 14 },
+  /* сарай */
+  { type: 'shed',    x: 110, y: 460, w: 55,  h: 12 },
+  { type: 'shed',    x: 205, y: 460, w: 85,  h: 12 },
+  { type: 'shed',    x: 110, y: 460, w: 12,  h: 160 },
+  { type: 'shed',    x: 278, y: 460, w: 12,  h: 160 },
+  { type: 'shed',    x: 110, y: 608, w: 180, h: 12 },
+  /* заборы: деревня / поле ПВО */
+  { type: 'fence',   x: 726, y: 30,  w: 10,  h: 214 },
+  { type: 'fence',   x: 726, y: 470, w: 10,  h: 180 },
+  /* двор */
+  { type: 'well',    x: 316, y: 254, w: 34,  h: 34 },
+  { type: 'truck',   x: 350, y: 418, w: 110, h: 56 },
+  { type: 'hay',     x: 330, y: 470, w: 46,  h: 40 },
+  { type: 'hay',     x: 660, y: 250, w: 40,  h: 36 },
+  { type: 'sandbag', x: 470, y: 300, w: 96,  h: 26 },
+  { type: 'sandbag', x: 600, y: 352, w: 80,  h: 26 },
+  { type: 'pole',    x: 336, y: 292, w: 10,  h: 10 },
+  { type: 'pole',    x: 686, y: 402, w: 10,  h: 10 },
+  /* поле ПВО */
+  { type: 'crate',   x: 864, y: 288, w: 26,  h: 26 },
+  { type: 'crate',   x: 864, y: 376, w: 26,  h: 26 },
+  { type: 'crate',   x: 760, y: 96,  w: 26,  h: 26 },
+  { type: 'crate',   x: 760, y: 590, w: 26,  h: 26 }
+];
+
+const VILLAGE_SPAWNS = [
+  { x: 950, y: 110 },
+  { x: 950, y: 560 },
+  { x: 900, y: 250 },
+  { x: 860, y: 430 },
+  { x: 710, y: 120 },
+  { x: 690, y: 600 },
+  { x: 360, y: 120 },
+  { x: 380, y: 560 }
+];
+
+const VILLAGE_STAGES = [
+  { trigger: 330, label: 'Двор. Кто-то уже стучит в рельсу — поднимают гарнизон.', list: ['looter', 'trooper', 'shooter', 'looter'] },
+  { trigger: 620, label: 'Поле ПВО. Расчёты у пушек, прикрытие на крышах.', list: ['trooper', 'shooter', 'brute', 'trooper', 'elite'] },
+  { trigger: 800, label: 'Последний расчёт. Третью установку не отдадут.', list: ['elite', 'brute', 'trooper', 'shooter', 'trooper', 'looter'] }
+];
+
+const VILLAGE_AA = [
+  { id: 'aa1', label: 'ПВО-1', x: 812, y: 132, maxhp: 240, hp: 240, kind: 'twin' },
+  { id: 'aa2', label: 'ПВО-2', x: 812, y: 556, maxhp: 240, hp: 240, kind: 'twin' },
+  { id: 'aa3', label: 'ПВО-3', x: 926, y: 344, maxhp: 0, hp: 0, kind: 'command' }
+];
+
+const VILLAGE_HOUSES = [
+  { x: 74,  y: 74,  w: 162, h: 152 },
+  { x: 534, y: 74,  w: 152, h: 148 },
+  { x: 484, y: 504, w: 152, h: 112 },
+  { x: 122, y: 472, w: 156, h: 136 }
+];
+
+const VILLAGE_AMMO = [
+  { x: 300, y: 360 }, { x: 620, y: 330 }, { x: 780, y: 300 },
+  { x: 150, y: 320 }, { x: 540, y: 560 }
+];
+
 const LEVELS = {
   bar: {
     id: 'bar', num: 1, name: 'Бар «У Гая»',
@@ -697,6 +790,27 @@ const LEVELS = {
       { id: 'breach', text: 'Пробиться через школу к больнице (0 / 3)', done: false, active: false },
       { id: 'hospital', text: 'Дойти до больницы', done: false, active: false }
     ]
+  },
+  village: {
+    id: 'village', num: 4, name: 'Последний заказ · деревня',
+    props: VILLAGE_PROPS, spawns: VILLAGE_SPAWNS, stages: VILLAGE_STAGES,
+    start: { x: 70, y: 344 },
+    exit: { x: 898, y: 318, w: 56, h: 52 },
+    fallback: { x: 860, y: 430 },
+    ammoSpots: VILLAGE_AMMO,
+    intro: 'Деревня за рекой. Три зенитных расчёта, и где-то здесь — дробовик и бинокль. 0 — оптика.',
+    pauseLead: 'В поле гудит генератор, прожекторы шарят по траве. Третья установка ждёт.',
+    floor: buildVillageFloor,
+    room: buildVillageRoom,
+    light: villageLighting,
+    pickups: villagePickups,
+    update: updateVillage,
+    objectives: () => [
+      { id: 'shotgun', text: 'Найти дробовик в деревне', done: false, active: true },
+      { id: 'binocs', text: 'Найти бинокль (0 — оптика)', done: false, active: true },
+      { id: 'aa', text: 'Уничтожить две ПВО (0 / 2)', done: false, active: false },
+      { id: 'hijack', text: 'Перехватить третью ПВО', done: false, active: false }
+    ]
   }
 };
 
@@ -717,6 +831,7 @@ const state = {
   wavesActive: false, exitUnlocked: false, exitHintShown: false,
   stage: -1, stagesDone: 0, stageCleared: true, doorsOpen: false,
   cageOpen: false, prisonersFreed: 0, schoolHint: false,
+  aaKills: 0, aaCaptured: false, captureT: 0, endTimer: 0,
   kills: 0, shots: 0, hits: 0, bottlesUsed: 0,
   objectives: [], entryCarry: null, lastSaveAt: 0
 };
@@ -726,15 +841,17 @@ function makePlayer() {
     x: 0, y: 0, r: 13, hp: 100, maxhp: 100, ang: 0, speed: 172, bottles: 0,
     weapons: {
       pistol: { owned: false, mag: 0, reserve: 0 },
-      plasma: { owned: false, mag: 0, reserve: 0 }
+      plasma: { owned: false, mag: 0, reserve: 0 },
+      shotgun: { owned: false, mag: 0, reserve: 0 }
     },
+    binocs: { owned: false, on: false },
     weapon: 'pistol', fireCd: 0, reloading: 0, invuln: 0, hurt: 0, walk: 0, muzzle: 0
   };
 }
 
 function curWeapon() { return player.weapons[player.weapon]; }
 function wcfg() { return WEAPONS[player.weapon]; }
-function weaponOwned() { return !!(player.weapons.pistol.owned || player.weapons.plasma.owned); }
+function weaponOwned() { return !!(player.weapons.pistol.owned || player.weapons.plasma.owned || player.weapons.shotgun.owned); }
 function obj(id) { return state.objectives.find(o => o.id === id); }
 
 function resetWorld() {
@@ -745,6 +862,8 @@ function resetWorld() {
   state.wavesActive = false; state.exitUnlocked = false; state.exitHintShown = false;
   state.stage = -1; state.stagesDone = 0; state.doorsOpen = false; state.stageCleared = true;
   state.cageOpen = false; state.prisonersFreed = 0; state.schoolHint = false;
+  state.aaKills = 0; state.aaCaptured = false; state.captureT = 0; state.endTimer = 0;
+  aas = []; flaks = [];
   state.kills = 0; state.shots = 0; state.hits = 0; state.bottlesUsed = 0;
 }
 
@@ -778,8 +897,10 @@ function snapshotCarry() {
     hp: player.hp, bottles: player.bottles, weapon: player.weapon,
     weapons: {
       pistol: Object.assign({}, player.weapons.pistol),
-      plasma: Object.assign({}, player.weapons.plasma)
-    }
+      plasma: Object.assign({}, player.weapons.plasma),
+      shotgun: Object.assign({}, player.weapons.shotgun)
+    },
+    binocs: player.binocs ? player.binocs.owned : false
   };
 }
 function applyCarry(c) {
@@ -787,13 +908,16 @@ function applyCarry(c) {
   player.hp = Math.min(player.maxhp, c.hp || 100);
   player.bottles = c.bottles || 0;
   if (c.weapons) {
-    ['pistol', 'plasma'].forEach(k => {
+    ['pistol', 'plasma', 'shotgun'].forEach(k => {
       if (c.weapons[k]) player.weapons[k] = Object.assign({}, player.weapons[k], c.weapons[k]);
     });
   }
+  player.binocs.owned = !!c.binocs;
+  player.binocs.on = false;
   player.weapon = c.weapon || player.weapon;
   if (!player.weapons[player.weapon].owned) {
-    player.weapon = player.weapons.pistol.owned ? 'pistol' : (player.weapons.plasma.owned ? 'plasma' : 'pistol');
+    player.weapon = player.weapons.pistol.owned ? 'pistol'
+      : (player.weapons.plasma.owned ? 'plasma' : (player.weapons.shotgun.owned ? 'shotgun' : 'pistol'));
   }
 }
 
@@ -816,9 +940,10 @@ function enterLevel(id, carry) {
   player.y = level.start.y;
   pickups = level.pickups();
   if (level.id === 'school') spawnPrisoners();
+  if (level.id === 'village') spawnAA();
   state.objectives = level.objectives();
   els.missionTag.textContent = 'МИССИЯ 0' + level.num;
-  els.waveLabel.textContent = level.id === 'bar' ? 'ВОЛНА' : 'РУБЕЖ';
+  els.waveLabel.textContent = level.id === 'bar' ? 'ВОЛНА' : (level.id === 'village' ? 'ПВО' : 'РУБЕЖ');
 
   if (level.id === 'bar') { state.wave = -1; }
   else { state.stage = -1; syncDoorSolid(); }
@@ -2450,6 +2575,793 @@ function drawSchoolGlow() {
   ctx.restore();
 }
 
+/* ---------------- МИССИЯ 04: пол деревни ---------------- */
+function buildVillageFloor() {
+  reseed(770424);
+  const c = fctx;
+  c.fillStyle = '#26251f';
+  c.fillRect(0, 0, W, H);
+
+  /* мёртвая трава и грязь */
+  for (let i = 0; i < 900; i++) {
+    const x = srnd() * W, y = srnd() * H;
+    const t = srnd();
+    const g = 38 + srnd() * 22;
+    if (t < 0.62) {
+      c.fillStyle = 'rgba(' + (g + 14 | 0) + ',' + (g + 10 | 0) + ',' + (g - 6 | 0) + ',.5)';
+      c.fillRect(x, y, 1 + srnd() * 3, 1 + srnd() * 2);
+    } else if (t < 0.88) {
+      c.fillStyle = 'rgba(46,50,36,.55)';
+      c.fillRect(x, y, 2 + srnd() * 4, 1 + srnd() * 3);
+    } else {
+      c.fillStyle = 'rgba(70,66,54,.35)';
+      c.fillRect(x, y, 1 + srnd() * 2, 1 + srnd() * 2);
+    }
+  }
+
+  /* просёлок: полоса через всю деревню */
+  c.fillStyle = '#3a352c';
+  c.fillRect(WALL, 300, W - WALL * 2, 108);
+  for (let i = 0; i < 240; i++) {
+    const x = WALL + srnd() * (W - WALL * 2);
+    const y = 302 + srnd() * 104;
+    c.fillStyle = srnd() < 0.5 ? 'rgba(84,74,58,.35)' : 'rgba(30,27,22,.35)';
+    c.fillRect(x, y, 2 + srnd() * 9, 1 + srnd() * 3);
+  }
+  /* колеи */
+  c.strokeStyle = 'rgba(24,21,17,.5)';
+  c.lineWidth = 5;
+  [330, 380].forEach(y => {
+    c.beginPath();
+    c.moveTo(WALL, y);
+    for (let x = WALL; x < W; x += 40) c.lineTo(x, y + Math.sin(x * 0.02) * 3);
+    c.stroke();
+  });
+  /* лужи */
+  for (let i = 0; i < 6; i++) {
+    const x = 80 + srnd() * 850, y = 306 + srnd() * 96;
+    const rx = 12 + srnd() * 26, ry = rx * 0.45;
+    c.fillStyle = 'rgba(38,46,52,.55)';
+    c.beginPath();
+    c.ellipse(x, y, rx, ry, srnd() * 0.5, 0, 6.28);
+    c.fill();
+    c.fillStyle = 'rgba(150,180,190,.10)';
+    c.beginPath();
+    c.ellipse(x - 3, y - 2, rx * 0.5, ry * 0.4, 0, 0, 6.28);
+    c.fill();
+  }
+
+  /* деревянные полы изб */
+  VILLAGE_HOUSES.forEach(h => {
+    c.fillStyle = '#2c2319';
+    c.fillRect(h.x, h.y, h.w, h.h);
+    for (let y = h.y; y < h.y + h.h; y += 12) {
+      const v = 52 + srnd() * 18;
+      c.fillStyle = 'rgb(' + (v | 0) + ',' + ((v * 0.76) | 0) + ',' + ((v * 0.52) | 0) + ')';
+      c.fillRect(h.x + 1, y + 1, h.w - 2, 9);
+      c.strokeStyle = 'rgba(0,0,0,.35)';
+      c.lineWidth = 1;
+      c.strokeRect(h.x + 1.5, y + 1.5, h.w - 3, 8);
+      if (srnd() < 0.3) {
+        c.fillStyle = 'rgba(0,0,0,.22)';
+        c.fillRect(h.x + srnd() * h.w, y + 2, 1, 7);
+      }
+    }
+    /* тени по углам */
+    const g = c.createRadialGradient(h.x + h.w / 2, h.y + h.h / 2, 10, h.x + h.w / 2, h.y + h.h / 2, Math.max(h.w, h.h) * 0.7);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,.5)');
+    c.fillStyle = g;
+    c.fillRect(h.x, h.y, h.w, h.h);
+  });
+
+  /* солома у сарая, гарь у огневых позиций */
+  for (let i = 0; i < 90; i++) {
+    const x = 100 + srnd() * 200, y = 440 + srnd() * 190;
+    c.fillStyle = 'rgba(150,124,64,.28)';
+    c.fillRect(x, y, 2 + srnd() * 7, 1 + srnd() * 2);
+  }
+  [[812, 132], [812, 556], [926, 344]].forEach(p => {
+    for (let i = 0; i < 120; i++) {
+      const a = srnd() * 6.28, r = srnd() * 70;
+      c.fillStyle = 'rgba(18,16,14,.4)';
+      c.fillRect(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r, 1 + srnd() * 4, 1 + srnd() * 3);
+    }
+  });
+}
+
+/* ---------------- МИССИЯ 04: стены, избы, заборы ---------------- */
+function vIzbaWall(c, p) {
+  const horiz = p.w > p.h;
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.fillRect(p.x + 4, p.y + 6, p.w, p.h);
+  c.fillStyle = '#3a2f24';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.strokeStyle = 'rgba(0,0,0,.5)';
+  c.lineWidth = 1;
+  if (horiz) {
+    for (let x = p.x + 8; x < p.x + p.w; x += 16) {
+      c.beginPath(); c.moveTo(x, p.y + 1); c.lineTo(x, p.y + p.h - 1); c.stroke();
+    }
+    c.fillStyle = 'rgba(255,240,214,.07)';
+    c.fillRect(p.x, p.y + 1, p.w, 2);
+    c.fillStyle = 'rgba(0,0,0,.35)';
+    c.fillRect(p.x, p.y + p.h - 3, p.w, 3);
+  } else {
+    for (let y = p.y + 8; y < p.y + p.h; y += 16) {
+      c.beginPath(); c.moveTo(p.x + 1, y); c.lineTo(p.x + p.w - 1, y); c.stroke();
+    }
+    c.fillStyle = 'rgba(255,240,214,.06)';
+    c.fillRect(p.x + 1, p.y, 2, p.h);
+    c.fillStyle = 'rgba(0,0,0,.35)';
+    c.fillRect(p.x + p.w - 3, p.y, 3, p.h);
+  }
+  /* мох и щепки */
+  for (let i = 0; i < 8; i++) {
+    c.fillStyle = 'rgba(96,104,70,.22)';
+    c.fillRect(p.x + srnd() * p.w, p.y + srnd() * p.h, 2 + srnd() * 5, 1 + srnd() * 2);
+  }
+}
+
+function vShedWall(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.fillRect(p.x + 4, p.y + 6, p.w, p.h);
+  c.fillStyle = '#36342b';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.strokeStyle = 'rgba(0,0,0,.5)';
+  c.lineWidth = 1;
+  for (let x = p.x + 6; x < p.x + p.w; x += 11) {
+    c.beginPath(); c.moveTo(x, p.y); c.lineTo(x, p.y + p.h); c.stroke();
+  }
+  c.fillStyle = 'rgba(190,186,164,.08)';
+  c.fillRect(p.x, p.y, p.w, 1.5);
+}
+
+function vFence(c, p) {
+  const vertical = p.h > p.w;
+  const n = Math.floor((vertical ? p.h : p.w) / 26);
+  c.strokeStyle = 'rgba(24,22,18,.85)';
+  c.lineWidth = 2.5;
+  for (let i = 0; i <= n; i++) {
+    const t = i / Math.max(1, n);
+    const x = vertical ? p.x + p.w / 2 : p.x + t * p.w;
+    const y = vertical ? p.y + t * p.h : p.y + p.h / 2;
+    c.beginPath();
+    c.moveTo(x, y - (vertical ? 0 : 9));
+    c.lineTo(x, y + (vertical ? 0 : 9));
+    c.stroke();
+  }
+  c.strokeStyle = 'rgba(120,116,96,.35)';
+  c.lineWidth = 1;
+  [0.3, 0.62, 0.9].forEach(f => {
+    c.beginPath();
+    if (vertical) { c.moveTo(p.x + p.w * f, p.y); c.lineTo(p.x + p.w * f, p.y + p.h); }
+    else { c.moveTo(p.x, p.y + p.h * f); c.lineTo(p.x + p.w, p.y + p.h * f); }
+    c.stroke();
+  });
+}
+
+function vWell(c, p) {
+  const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.beginPath(); c.ellipse(cx + 3, cy + 4, p.w * 0.62, p.h * 0.5, 0, 0, 6.28); c.fill();
+  c.fillStyle = '#4a4640';
+  c.beginPath(); c.arc(cx, cy, p.w * 0.58, 0, 6.28); c.fill();
+  c.fillStyle = '#5a554c';
+  for (let i = 0; i < 12; i++) {
+    const a = i / 12 * 6.28;
+    c.beginPath();
+    c.arc(cx, cy, p.w * 0.52, a, a + 0.42);
+    c.lineTo(cx + Math.cos(a + 0.42) * p.w * 0.4, cy + Math.sin(a + 0.42) * p.w * 0.4);
+    c.lineTo(cx + Math.cos(a) * p.w * 0.4, cy + Math.sin(a) * p.w * 0.4);
+    c.closePath();
+    c.fill();
+  }
+  c.fillStyle = '#0a0d10';
+  c.beginPath(); c.arc(cx, cy, p.w * 0.34, 0, 6.28); c.fill();
+  c.fillStyle = 'rgba(90,120,130,.16)';
+  c.beginPath(); c.arc(cx - 3, cy - 3, p.w * 0.16, 0, 6.28); c.fill();
+  /* ворот и ведро */
+  c.fillStyle = '#2b2118';
+  c.fillRect(cx - 16, cy - 4, 32, 4);
+  c.fillRect(cx - 15, cy - 22, 4, 20);
+  c.fillRect(cx + 11, cy - 22, 4, 20);
+  c.fillStyle = '#3a3a36';
+  c.fillRect(cx + 6, cy - 1, 7, 8);
+}
+
+function vHay(c, p) {
+  const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+  c.fillStyle = 'rgba(0,0,0,.4)';
+  c.beginPath(); c.ellipse(cx + 4, cy + 5, p.w * 0.56, p.h * 0.46, 0, 0, 6.28); c.fill();
+  c.fillStyle = '#5d4c26';
+  c.beginPath(); c.ellipse(cx, cy, p.w * 0.54, p.h * 0.44, 0, 0, 6.28); c.fill();
+  for (let i = 0; i < 40; i++) {
+    const a = srnd() * 6.28, r = srnd();
+    c.strokeStyle = srnd() < 0.5 ? 'rgba(150,124,62,.5)' : 'rgba(96,78,38,.6)';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(cx + Math.cos(a) * r * p.w * 0.4, cy + Math.sin(a) * r * p.h * 0.4);
+    c.lineTo(cx + Math.cos(a) * (r + 0.25) * p.w * 0.6, cy + Math.sin(a) * (r + 0.25) * p.h * 0.6);
+    c.stroke();
+  }
+}
+
+function vRustTruck(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.5)';
+  roundRect(c, p.x + 6, p.y + 8, p.w, p.h, 6); c.fill();
+  c.fillStyle = '#3d3a2c';
+  roundRect(c, p.x, p.y, p.w, p.h, 6); c.fill();
+  c.fillStyle = '#242a20';
+  roundRect(c, p.x + 8, p.y + 7, p.w * 0.36, p.h - 14, 4); c.fill();
+  c.fillStyle = 'rgba(150,170,180,.10)';
+  c.fillRect(p.x + 13, p.y + 11, 20, p.h - 22);
+  c.fillStyle = '#2a2a22';
+  c.fillRect(p.x + p.w * 0.44, p.y + 6, p.w * 0.5, p.h - 12);
+  for (let x = p.x + p.w * 0.48; x < p.x + p.w - 8; x += 11) {
+    c.fillStyle = 'rgba(0,0,0,.18)';
+    c.fillRect(x, p.y + 9, 2, p.h - 18);
+  }
+  /* ржавчина и вмятины */
+  for (let i = 0; i < 26; i++) {
+    c.fillStyle = 'rgba(' + (110 + (srnd() * 40 | 0)) + ',60,30,.28)';
+    c.fillRect(p.x + srnd() * p.w, p.y + srnd() * p.h, 2 + srnd() * 7, 1 + srnd() * 4);
+  }
+  c.strokeStyle = 'rgba(0,0,0,.45)';
+  c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(p.x + p.w * 0.5, p.y + 2); c.lineTo(p.x + p.w * 0.62, p.y + p.h - 3); c.stroke();
+  /* колесо снято — подпорка */
+  c.fillStyle = '#1a1a17';
+  c.fillRect(p.x + 18, p.y + p.h - 4, 22, 6);
+}
+
+function vPole(c, p) {
+  const cx = p.x + p.w / 2;
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.beginPath(); c.ellipse(cx + 3, p.y + p.h + 3, 8, 4, 0, 0, 6.28); c.fill();
+  c.fillStyle = '#2e2a22';
+  c.fillRect(cx - 3, p.y - 26, 6, 30);
+  c.fillStyle = '#3c372c';
+  c.fillRect(cx - 12, p.y - 26, 24, 4);
+  c.fillStyle = 'rgba(255,226,160,.5)';
+  c.fillRect(cx - 5, p.y - 22, 10, 3);
+  /* провода */
+  c.strokeStyle = 'rgba(10,10,10,.5)';
+  c.lineWidth = 1;
+  c.beginPath();
+  c.moveTo(cx - 12, p.y - 24);
+  c.quadraticCurveTo(cx + 90, p.y - 8, cx + 190, p.y - 24);
+  c.stroke();
+}
+
+function buildVillageRoom() {
+  const c = rctx;
+  c.clearRect(0, 0, W, H);
+
+  /* внешние стены */
+  c.fillStyle = '#2b2721';
+  c.fillRect(0, 0, W, WALL);
+  c.fillRect(0, H - WALL, W, WALL);
+  c.fillRect(0, 0, WALL, H);
+  c.fillRect(W - WALL, 0, WALL, H);
+  c.strokeStyle = 'rgba(0,0,0,.4)';
+  for (let i = 0; i < 70; i++) {
+    const x = srnd() * W, y = srnd() * WALL;
+    c.lineWidth = 1;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x + 8 + srnd() * 22, y + srnd() * 3); c.stroke();
+  }
+  c.fillStyle = 'rgba(255,255,255,.04)';
+  c.fillRect(0, WALL - 3, W, 3);
+  c.fillRect(0, H - WALL, W, 3);
+
+  /* ворота на западной стене — откуда приехали */
+  c.fillStyle = '#0a0b0d';
+  c.fillRect(0, 306, WALL, 96);
+  c.strokeStyle = '#4a443c';
+  c.lineWidth = 2;
+  c.strokeRect(2, 308, WALL - 3, 92);
+  c.fillStyle = 'rgba(185,170,150,.3)';
+  c.save(); c.translate(14, 392); c.rotate(-Math.PI / 2);
+  c.font = '11px Consolas, monospace'; c.fillText('ДЕРЕВНЯ', 0, 0); c.restore();
+
+  /* окна изб (тёплый свет рисуется в glow, тут рамы) */
+  [[96, 214], [184, 214], [552, 212], [636, 212], [498, 600], [578, 600], [150, 596], [232, 596]].forEach(([x, y]) => {
+    c.fillStyle = '#120d08';
+    c.fillRect(x, y - 3, 22, 6);
+    c.strokeStyle = 'rgba(255,208,140,.25)';
+    c.lineWidth = 1;
+    c.strokeRect(x + 0.5, y - 2.5, 21, 5);
+  });
+
+  /* мебель в избах */
+  /* изба №1 */
+  c.fillStyle = '#3b2c1e';
+  roundRect(c, 108, 96, 54, 32, 3); c.fill();
+  c.fillStyle = '#2f2317';
+  c.fillRect(96, 140, 44, 20);
+  c.fillRect(196, 92, 42, 26);
+  c.fillStyle = '#4a3a26';
+  c.fillRect(150, 84, 40, 20);   /* печь */
+  c.fillStyle = 'rgba(0,0,0,.5)';
+  c.fillRect(158, 88, 12, 8);
+  c.fillStyle = '#2c2118';
+  c.fillRect(120, 180, 70, 10);
+  c.fillStyle = '#4b3a24';
+  c.fillRect(122, 176, 66, 4);
+  /* изба №2 */
+  c.fillStyle = '#332a1e';
+  roundRect(c, 560, 100, 52, 56, 3); c.fill();
+  c.fillStyle = '#40331f';
+  c.fillRect(626, 132, 44, 40);
+  c.fillStyle = '#20242a';
+  c.fillRect(590, 106, 20, 14);   /* рация */
+  c.fillStyle = 'rgba(120,235,255,.28)';
+  c.fillRect(594, 110, 4, 3);
+  c.fillStyle = 'rgba(210,90,60,.3)';
+  c.fillRect(602, 110, 3, 3);
+  c.fillStyle = '#2b2118';
+  c.fillRect(536, 190, 96, 8);
+  /* изба №3 */
+  c.fillStyle = '#3a2c1e';
+  roundRect(c, 500, 526, 56, 34, 3); c.fill();
+  c.fillStyle = '#4a3a26';
+  c.fillRect(586, 510, 34, 24);
+  c.fillStyle = '#2c2118';
+  c.fillRect(498, 586, 70, 10);
+  c.fillStyle = '#584733';
+  c.fillRect(576, 574, 44, 30);  /* кровать */
+  c.fillStyle = '#6a6252';
+  c.fillRect(580, 578, 16, 10);
+  /* сарай */
+  c.fillStyle = '#4a3d26';
+  roundRect(c, 132, 490, 56, 36, 3); c.fill();
+  c.fillStyle = '#39321f';
+  roundRect(c, 206, 540, 52, 34, 3); c.fill();
+  c.fillStyle = '#2a2418';
+  c.fillRect(150, 552, 40, 26);   /* ящик с инструментом */
+  c.fillStyle = '#5b4d2c';
+  c.fillRect(206, 588, 60, 16);
+
+  /* статичные пропсы */
+  VILLAGE_PROPS.forEach(p => {
+    if (p.type === 'izba') vIzbaWall(c, p);
+    else if (p.type === 'shed') vShedWall(c, p);
+    else if (p.type === 'fence') vFence(c, p);
+    else if (p.type === 'well') vWell(c, p);
+    else if (p.type === 'hay') vHay(c, p);
+    else if (p.type === 'truck') vRustTruck(c, p);
+    else if (p.type === 'pole') vPole(c, p);
+    else if (p.type === 'sandbag') drawSandbags(c, p);
+    else if (p.type === 'crate') {
+      c.fillStyle = 'rgba(0,0,0,.4)';
+      c.fillRect(p.x + 4, p.y + 5, p.w, p.h);
+      c.fillStyle = '#4a3a24';
+      c.fillRect(p.x, p.y, p.w, p.h);
+      c.strokeStyle = 'rgba(0,0,0,.45)';
+      c.lineWidth = 1;
+      c.strokeRect(p.x + 1, p.y + 1, p.w - 2, p.h - 2);
+      c.beginPath(); c.moveTo(p.x + 1, p.y + 1); c.lineTo(p.x + p.w - 1, p.y + p.h - 1); c.stroke();
+      c.fillStyle = 'rgba(200,180,140,.10)';
+      c.fillRect(p.x + 2, p.y + 2, p.w - 4, 2);
+    }
+  });
+
+  /* огневые позиции: бетон, мешки, маскировочная сеть */
+  VILLAGE_AA.forEach(a => {
+    const isCmd = a.kind === 'command';
+    const padR = isCmd ? 52 : 44;
+    c.fillStyle = 'rgba(0,0,0,.4)';
+    c.beginPath(); c.ellipse(a.x + 4, a.y + 6, padR, padR * 0.72, 0, 0, 6.28); c.fill();
+    c.fillStyle = '#3d3b34';
+    c.beginPath(); c.ellipse(a.x, a.y, padR, padR * 0.74, 0, 0, 6.28); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.4)';
+    c.lineWidth = 1;
+    c.beginPath(); c.ellipse(a.x, a.y, padR * 0.7, padR * 0.5, 0, 0, 6.28); c.stroke();
+    /* мешки по кругу, с проходом снизу */
+    for (let i = 0; i < 11; i++) {
+      const ang = 0.35 + i / 11 * 5.1;
+      const bx = a.x + Math.cos(ang) * (padR + 10);
+      const by = a.y + Math.sin(ang) * (padR + 8);
+      c.save();
+      c.translate(bx, by);
+      c.rotate(ang + Math.PI / 2);
+      c.fillStyle = 'rgba(0,0,0,.4)';
+      c.fillRect(-9, -4, 18, 10);
+      c.fillStyle = i % 2 ? '#57503c' : '#4d4735';
+      roundRect(c, -9, -5, 18, 9, 4); c.fill();
+      c.strokeStyle = 'rgba(0,0,0,.35)';
+      c.strokeRect(-8, -4, 16, 7);
+      c.restore();
+    }
+    /* сеть на стойках */
+    c.fillStyle = 'rgba(40,44,32,.55)';
+    c.beginPath();
+    c.moveTo(a.x - padR - 20, a.y - 30);
+    c.lineTo(a.x + padR + 16, a.y - 34);
+    c.lineTo(a.x + padR - 6, a.y + 22);
+    c.lineTo(a.x - padR + 4, a.y + 26);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = 'rgba(90,96,66,.5)';
+    c.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+      const t = i / 8;
+      c.beginPath();
+      c.moveTo(a.x - padR - 20 + t * (padR * 2 + 36), a.y - 30 + t * -4);
+      c.lineTo(a.x - padR + 4 + t * (padR * 2 - 10), a.y + 22 + t * 4);
+      c.stroke();
+    }
+    /* ящики с боекомплектом */
+    c.fillStyle = '#4a3a24';
+    c.fillRect(a.x + padR - 4, a.y + padR - 18, 22, 14);
+    c.strokeStyle = 'rgba(0,0,0,.4)';
+    c.strokeRect(a.x + padR - 3, a.y + padR - 17, 20, 12);
+  });
+}
+
+/* ---------------- МИССИЯ 04: сами установки ---------------- */
+function drawVillageAA(a) {
+  const t = state.time;
+  const dead = !!a.destroyed;
+  const cmd = a.kind === 'command';
+  const cap = !!a.captured;
+  const bodyCol = dead ? '#1b1a18' : (cap ? '#3c4a3a' : '#41453c');
+
+  ctx.save();
+  ctx.translate(a.x, a.y);
+
+  /* основание */
+  ctx.fillStyle = 'rgba(0,0,0,.5)';
+  ctx.beginPath(); ctx.ellipse(3, 6, cmd ? 34 : 28, cmd ? 24 : 20, 0, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#2c2f2a';
+  ctx.beginPath(); ctx.ellipse(0, 0, cmd ? 32 : 26, cmd ? 23 : 19, 0, 0, 6.28); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.05)';
+  ctx.beginPath(); ctx.ellipse(-2, -3, (cmd ? 32 : 26) * 0.7, (cmd ? 23 : 19) * 0.6, 0, 0, 6.28); ctx.fill();
+
+  /* поворотный круг и станина */
+  ctx.fillStyle = dead ? '#1d1c19' : '#3a3f34';
+  ctx.beginPath(); ctx.arc(0, 0, 16, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#22251f';
+  ctx.fillRect(-9, -9, 18, 18);
+
+  /* стволы — поворачиваются к игроку, пока расчёт жив */
+  const aim = dead ? (cmd ? -0.9 : 0.75) : Math.atan2(player.y - a.y, player.x - a.x) + (cmd ? -0.6 : 0);
+  ctx.save();
+  ctx.rotate(aim);
+  const tilt = dead ? 0.22 : 0;
+  ctx.rotate(tilt);
+  const len = cmd ? 34 : 28;
+  [-1, 1].forEach((s, i) => {
+    ctx.fillStyle = dead ? '#2a2724' : '#4b5044';
+    ctx.fillRect(6, -8 + i * 8, len, 4.4);
+    ctx.fillStyle = 'rgba(0,0,0,.35)';
+    ctx.fillRect(6, -6 + i * 8, len, 1.2);
+    /* дульный тормоз */
+    ctx.fillStyle = dead ? '#1e1c1a' : '#5a6052';
+    ctx.fillRect(6 + len - 4, -8.6 + i * 8, 5, 5.6);
+  });
+  ctx.restore();
+
+  /* кабина наводчика */
+  ctx.fillStyle = dead ? '#232220' : '#2f332b';
+  ctx.beginPath(); ctx.arc(-6, 2, 7, 0, 6.28); ctx.fill();
+  ctx.fillStyle = 'rgba(120,235,255,.12)';
+  ctx.fillRect(-8, -1, 4, 5);
+
+  /* радар */
+  if (!dead) {
+    const spin = cmd && cap ? 0 : t * (cap ? 0.4 : 1.9);
+    ctx.save();
+    ctx.translate(0, -6);
+    ctx.rotate(spin);
+    ctx.fillStyle = '#3d443a';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(16, -10, 18, 4);
+    ctx.quadraticCurveTo(8, 4, 0, 0);
+    ctx.fill();
+    ctx.strokeStyle = cap ? 'rgba(120,240,150,.5)' : 'rgba(200,190,160,.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(17, 2); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = '#2b2e27';
+    ctx.fillRect(-2, -12, 4, 10);
+  } else {
+    /* сбитая антенна */
+    ctx.save();
+    ctx.rotate(0.5);
+    ctx.fillStyle = '#28261f';
+    ctx.fillRect(0, -14, 3, 14);
+    ctx.restore();
+  }
+
+  /* сигнальный огонь */
+  const blink = Math.sin(t * (cap ? 2.2 : 3.6) + a.x) > 0.4;
+  ctx.fillStyle = cap ? 'rgba(120,240,150,.9)' : (dead ? 'rgba(120,60,40,.35)' : 'rgba(230,70,50,.9)');
+  if (blink || cap) {
+    ctx.beginPath(); ctx.arc(cmd ? 20 : 15, -18, 2.6, 0, 6.28); ctx.fill();
+  }
+
+  /* надпись на борту */
+  ctx.save();
+  ctx.rotate(-0.06);
+  ctx.fillStyle = 'rgba(216,206,180,' + (dead ? 0.18 : 0.4) + ')';
+  ctx.font = 'bold 9px Consolas, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(cmd ? 'ПВО-3' : (a.id === 'aa1' ? 'ПВО-1' : 'ПВО-2'), 0, 24);
+  ctx.restore();
+
+  /* гарь на сбитой */
+  if (dead) {
+    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    for (let i = 0; i < 16; i++) {
+      ctx.beginPath();
+      ctx.arc(Math.cos(i) * 20, Math.sin(i * 1.7) * 16, 3 + (i % 4), 0, 6.28);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+/* ---------------- МИССИЯ 04: свет ---------------- */
+function villageLighting() {
+  lctx.setTransform(1, 0, 0, 1, 0, 0);
+  lctx.globalCompositeOperation = 'source-over';
+  lctx.clearRect(0, 0, W, H);
+  lctx.fillStyle = 'rgba(5,7,11,0.56)';
+  lctx.fillRect(0, 0, W, H);
+
+  lctx.globalCompositeOperation = 'destination-out';
+
+  /* общая подсветка деревни */
+  radial(lctx, 420, 340, 900, 0.30);
+  radial(lctx, 250, 350, 420, 0.16);
+  radial(lctx, 780, 344, 380, 0.20);
+
+  /* тёплые окна изб */
+  [[107, 214, 1], [195, 214, 2], [563, 212, 3], [647, 212, 4], [509, 600, 5], [589, 600, 6], [161, 596, 7], [243, 596, 8]]
+    .forEach(([x, y, i]) => {
+      const f = 0.86 + Math.sin(state.time * 1.7 + i) * 0.08;
+      radial(lctx, x, y - 24, 110 * f, 0.55);
+    });
+
+  /* фонари на столбах */
+  VILLAGE_PROPS.filter(p => p.type === 'pole').forEach((p, i) => {
+    const f = i === 1 ? (Math.sin(state.time * 12) > 0.7 ? 0.35 : 1) : 0.94;
+    radial(lctx, p.x + 5, p.y - 20, 250 * f, 0.8);
+  });
+
+  /* прожекторы живых ПВО: медленно шарят по полю */
+  VILLAGE_AA.forEach((a, i) => {
+    if (a.destroyed) return;
+    const base = a.kind === 'command' ? -2.4 : (a.id === 'aa1' ? 1.9 : -0.6);
+    const ang = base + Math.sin(state.time * 0.55 + i * 2.1) * 1.15;
+    for (let s = 0.15; s <= 1; s += 0.17) {
+      radial(lctx, a.x + Math.cos(ang) * 190 * s, a.y + Math.sin(ang) * 190 * s, 120 - s * 34, 0.28);
+    }
+    radial(lctx, a.x, a.y, 130, 0.6);
+  });
+
+  /* пламя на сбитых установках */
+  VILLAGE_AA.forEach(a => {
+    if (!a.destroyed) return;
+    const f = 0.75 + Math.sin(state.time * 9 + a.x) * 0.16;
+    radial(lctx, a.x, a.y, 150 * f, 0.7);
+  });
+
+  /* трассеры зениток */
+  for (const f of flaks) {
+    radial(lctx, f.x, f.y, 90, 0.45);
+    radial(lctx, f.tx, f.ty, 70, 0.22);
+  }
+
+  for (const f of fires) {
+    const k = Math.min(1, f.life / 1.2);
+    radial(lctx, f.x, f.y, f.r * 1.6 * k, 0.95 * k);
+  }
+
+  if (player.binocs && player.binocs.on) {
+    radial(lctx, player.x, player.y, 170, 0.55);
+    playerCone(lctx, 1010, 0.17, 1);
+  } else {
+    radial(lctx, player.x, player.y, 330, 0.72);
+    playerCone(lctx, 470, 0.40, 0.94);
+  }
+  if (player.muzzle > 0) {
+    radial(lctx, player.x + Math.cos(player.ang) * 28, player.y + Math.sin(player.ang) * 28,
+      player.weapon === 'plasma' ? 210 : 175, 0.8);
+  }
+  for (const e of enemies) {
+    if (e.muzzle > 0) radial(lctx, e.x + Math.cos(e.ang) * 22, e.y + Math.sin(e.ang) * 22, 140, 0.62);
+  }
+
+  lctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(lightCv, 0, 0);
+}
+
+function drawVillageGlow() {
+  const t = state.time;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  /* окна */
+  [[107, 214], [195, 214], [563, 212], [647, 212], [509, 600], [589, 600], [161, 596], [243, 596]].forEach(([x, y]) => {
+    const g = ctx.createRadialGradient(x, y - 22, 0, x, y - 22, 70);
+    g.addColorStop(0, 'rgba(255,192,110,.16)');
+    g.addColorStop(1, 'rgba(255,192,110,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y - 22, 70, 0, 6.28); ctx.fill();
+  });
+
+  /* конусы прожекторов ПВО */
+  VILLAGE_AA.forEach((a, i) => {
+    if (a.destroyed) return;
+    const base = a.kind === 'command' ? -2.4 : (a.id === 'aa1' ? 1.9 : -0.6);
+    const ang = base + Math.sin(t * 0.55 + i * 2.1) * 1.15;
+    const g = ctx.createLinearGradient(a.x, a.y, a.x + Math.cos(ang) * 220, a.y + Math.sin(ang) * 220);
+    g.addColorStop(0, 'rgba(190,215,235,.16)');
+    g.addColorStop(1, 'rgba(190,215,235,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.arc(a.x, a.y, 220, ang - 0.16, ang + 0.16);
+    ctx.closePath();
+    ctx.fill();
+    /* красный маяк */
+    const blink = Math.sin(t * 3.6 + a.x) > 0.4;
+    if (blink) {
+      const g2 = ctx.createRadialGradient(a.x + 15, a.y - 18, 0, a.x + 15, a.y - 18, 34);
+      g2.addColorStop(0, 'rgba(240,80,55,.5)');
+      g2.addColorStop(1, 'rgba(240,80,55,0)');
+      ctx.fillStyle = g2;
+      ctx.beginPath(); ctx.arc(a.x + 15, a.y - 18, 34, 0, 6.28); ctx.fill();
+    }
+  });
+
+  /* огонь на сбитых */
+  VILLAGE_AA.forEach(a => {
+    if (!a.destroyed) return;
+    const f = 0.6 + Math.sin(t * 8 + a.x) * 0.2;
+    const g = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 70);
+    g.addColorStop(0, 'rgba(255,150,60,' + (0.3 * f).toFixed(3) + ')');
+    g.addColorStop(0.5, 'rgba(210,72,24,' + (0.16 * f).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(180,30,10,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(a.x, a.y, 70, 0, 6.28); ctx.fill();
+    for (let i = 0; i < 5; i++) {
+      const px = a.x + Math.sin(t * 2.1 + i * 1.7) * 12;
+      const py = a.y - 6 - ((t * 26 + i * 17) % 46);
+      const s = 5 + i;
+      ctx.fillStyle = 'rgba(255,' + (140 + i * 16) + ',70,' + (0.12 + Math.random() * 0.1).toFixed(3) + ')';
+      ctx.beginPath(); ctx.ellipse(px, py, s * 0.7, s * 1.2, 0, 0, 6.28); ctx.fill();
+    }
+  });
+
+  /* захваченная установка — зелёный маяк */
+  const cmdAA = VILLAGE_AA[2];
+  if (cmdAA && cmdAA.captured) {
+    const p = 0.5 + 0.5 * Math.sin(t * 2.4);
+    const g = ctx.createRadialGradient(cmdAA.x, cmdAA.y, 0, cmdAA.x, cmdAA.y, 120 + p * 30);
+    g.addColorStop(0, 'rgba(120,240,150,.26)');
+    g.addColorStop(1, 'rgba(120,240,150,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cmdAA.x, cmdAA.y, 120 + p * 30, 0, 6.28); ctx.fill();
+  }
+
+  /* зенитные трассеры и метки падения */
+  for (const f of flaks) {
+    const k = clamp(f.t / f.dur, 0, 1);
+    const x = f.sx + (f.tx - f.sx) * k;
+    const y = f.sy + (f.ty - f.sy) * k - Math.sin(k * Math.PI) * 40;
+    ctx.strokeStyle = 'rgba(255,200,120,.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - f.vx * 0.03, y - f.vy * 0.03); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,240,190,.9)';
+    ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 6.28); ctx.fill();
+    /* метка на земле */
+    const mk = 30 * (1 - k * 0.35);
+    ctx.strokeStyle = 'rgba(235,90,60,' + (0.2 + k * 0.5).toFixed(2) + ')';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(f.tx, f.ty, mk, 0, 6.28); ctx.stroke();
+    ctx.beginPath(); ctx.arc(f.tx, f.ty, mk * 0.55, 0, 6.28); ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+/* ---------------- МИССИЯ 04: оптика ---------------- */
+function drawOpticsOverlay() {
+  if (!player.binocs || !player.binocs.owned || !player.binocs.on) return;
+  ctx.save();
+  /* туннельное зрение: тёмное кольцо вокруг игрока */
+  const g = ctx.createRadialGradient(player.x, player.y, 120, player.x, player.y, 300);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(0.7, 'rgba(0,0,0,.30)');
+  g.addColorStop(1, 'rgba(0,0,0,.62)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(player.x, player.y, 300, 0, 6.28); ctx.fill();
+
+  /* прицельная сетка у курсора */
+  const mx = mouse.x, my = mouse.y;
+  ctx.strokeStyle = 'rgba(210,235,240,.55)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(mx, my, 44, 0, 6.28); ctx.stroke();
+  ctx.strokeStyle = 'rgba(210,235,240,.35)';
+  ctx.beginPath();
+  ctx.moveTo(mx - 66, my); ctx.lineTo(mx - 16, my);
+  ctx.moveTo(mx + 16, my); ctx.lineTo(mx + 66, my);
+  ctx.moveTo(mx, my - 66); ctx.lineTo(mx, my - 16);
+  ctx.moveTo(mx, my + 16); ctx.lineTo(mx, my + 66);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(160,240,200,.75)';
+  ctx.font = 'bold 9px Consolas, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('ОПТИКА ×8', mx + 50, my + 58);
+  ctx.fillStyle = 'rgba(210,235,240,.32)';
+  ctx.fillText('0 — СНЯТЬ', mx + 50, my + 70);
+
+  /* метки ПВО на дальности */
+  VILLAGE_AA.forEach(a => {
+    if (a.destroyed) return;
+    const d = Math.hypot(a.x - player.x, a.y - player.y);
+    const aPulse = 0.55 + 0.45 * Math.sin(state.time * 3 + a.x);
+    ctx.strokeStyle = a.captured
+      ? 'rgba(120,240,150,' + (0.4 + aPulse * 0.4).toFixed(2) + ')'
+      : 'rgba(235,90,60,' + (0.4 + aPulse * 0.4).toFixed(2) + ')';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y - 30);
+    ctx.lineTo(a.x + 11, a.y - 19);
+    ctx.lineTo(a.x, a.y - 8);
+    ctx.lineTo(a.x - 11, a.y - 19);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.font = 'bold 10px Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = a.captured ? 'rgba(150,245,175,.85)' : 'rgba(245,140,110,.85)';
+    ctx.fillText(a.label + ' · ' + Math.round(d / 3) + ' М', a.x, a.y - 36);
+  });
+
+  /* силуэты живой пехоты на дальности */
+  enemies.forEach(e => {
+    const d = Math.hypot(e.x - player.x, e.y - player.y);
+    if (d > 900) return;
+    ctx.fillStyle = 'rgba(240,120,80,' + (0.5 * (1 - d / 1000)).toFixed(2) + ')';
+    ctx.beginPath();
+    ctx.moveTo(e.x, e.y - 9);
+    ctx.lineTo(e.x + 6, e.y + 5);
+    ctx.lineTo(e.x - 6, e.y + 5);
+    ctx.closePath();
+    ctx.fill();
+  });
+
+  ctx.restore();
+}
+
+function drawVillagePrompt() {
+  if (level.id !== 'village' || state.mode !== 'play') return;
+  const cmd = VILLAGE_AA[2];
+  if (!cmd || cmd.captured) return;
+  const near = nearestOnRect(player.x, player.y, { x: cmd.x - 26, y: cmd.y - 26, w: 52, h: 52 });
+  const d = Math.hypot(near.x - player.x, near.y - player.y);
+  if (d > 70) return;
+  const pulse = 0.55 + 0.45 * Math.sin(state.time * 4);
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 12px Consolas, monospace';
+  const ready = state.aaKills >= 2 && !cmd.captured;
+  ctx.fillStyle = ready ? 'rgba(236,229,215,' + pulse.toFixed(2) + ')' : 'rgba(200,120,100,.7)';
+  ctx.fillText(ready ? '[E] ПЕРЕХВАТ' : 'СНАЧАЛА ДВЕ ОГНЕВЫЕ ТОЧКИ', cmd.x, cmd.y - 48);
+  if (ready && state.captureT > 0) {
+    const p = clamp(state.captureT / 2.2, 0, 1);
+    ctx.fillStyle = 'rgba(20,22,18,.75)';
+    ctx.fillRect(cmd.x - 46, cmd.y + 44, 92, 8);
+    ctx.fillStyle = 'rgba(120,240,150,.85)';
+    ctx.fillRect(cmd.x - 45, cmd.y + 45, 90 * p, 6);
+  }
+  ctx.restore();
+}
+
 /* ===========================================================
    ЛОГИКА
    =========================================================== */
@@ -2505,6 +3417,14 @@ function updateWaveHud() {
       (state.breakTimer > 0 ? 'ПЕРЕДЫШКА ' + Math.ceil(state.breakTimer) : 'ТИШИНА');
     return;
   }
+  if (level.id === 'village') {
+    const n = state.aaKills + (state.aaCaptured ? 1 : 0);
+    els.waveNum.textContent = n + '/3';
+    const left = enemies.length + state.waveQueue.length;
+    els.waveLeft.textContent = state.aaCaptured ? 'ПВО ПЕРЕХВАЧЕНА'
+      : (left > 0 ? left + ' ЖИВЫХ' : (state.stage >= 0 ? 'ЗАСЛОН ПРОЙДЕН' : 'ТИШИНА'));
+    return;
+  }
   if (state.doorsOpen) { els.waveNum.textContent = '3/3'; els.waveLeft.textContent = 'ДВЕРИ ОТКРЫТЫ'; return; }
   const n = state.stage >= 0 ? state.stage + 1 : 0;
   els.waveNum.textContent = n + '/3';
@@ -2545,7 +3465,7 @@ function floatText(x, y, text, col) {
 function switchWeapon(k) {
   if (state.mode !== 'play' || !WEAPONS[k]) return;
   if (!player.weapons[k].owned) {
-    toast(k === 'plasma' ? 'Бластер ещё не в руках.' : 'Пистолет остался в баре.', 1300);
+    toast(k === 'plasma' ? 'Бластер ещё не в руках.' : (k === 'shotgun' ? 'Дробовик остался в деревне.' : 'Пистолет остался в баре.'), 1300);
     return;
   }
   if (player.weapon === k) return;
@@ -2564,15 +3484,19 @@ function shoot() {
 
   w.mag--;
   player.fireCd = cfg.cd;
-  player.muzzle = 0.07;
-  const a = player.ang + rnd(-cfg.spread, cfg.spread);
-  bullets.push({
-    x: player.x + Math.cos(player.ang) * 20,
-    y: player.y + Math.sin(player.ang) * 20,
-    vx: Math.cos(a) * cfg.speed, vy: Math.sin(a) * cfg.speed,
-    r: cfg.bolt ? 5 : 3, dmg: cfg.dmg, life: cfg.bolt ? 1.5 : 1.4,
-    from: 'player', bolt: cfg.bolt, pierce: cfg.pierce, hitList: []
-  });
+  player.muzzle = cfg.pellets ? 0.09 : 0.07;
+  const pellets = cfg.pellets || 1;
+  for (let i = 0; i < pellets; i++) {
+    const a = player.ang + rnd(-cfg.spread, cfg.spread);
+    bullets.push({
+      x: player.x + Math.cos(player.ang) * 20,
+      y: player.y + Math.sin(player.ang) * 20,
+      vx: Math.cos(a) * cfg.speed, vy: Math.sin(a) * cfg.speed,
+      r: cfg.bolt ? 5 : (cfg.pellets ? 2 : 3), dmg: cfg.dmg,
+      life: cfg.life || (cfg.bolt ? 1.5 : 1.4),
+      from: 'player', bolt: cfg.bolt, pierce: cfg.pierce, hitList: []
+    });
+  }
   state.shots++;
   state.shake = Math.max(state.shake, cfg.bolt ? 3.4 : 2.6);
 
@@ -2588,6 +3512,11 @@ function shoot() {
     }
   } else {
     sfx.shot();
+    if (cfg.pellets) {
+      noiseHit(0.26, 0.22, 320, 0.6);
+      tone(72, 0.3, 'square', 0.09, 38);
+      state.shake = Math.max(state.shake, 6.5);
+    }
     casings.push({
       x: player.x + Math.cos(player.ang) * 10, y: player.y + Math.sin(player.ang) * 10,
       vx: Math.cos(player.ang + 1.9) * rnd(40, 90), vy: Math.sin(player.ang + 1.9) * rnd(40, 90),
@@ -2681,11 +3610,12 @@ function enemyShoot(e) {
 function dropFor(e) {
   const roll = Math.random();
   if (roll < 0.26) {
-    const isPlasma = level.id !== 'bar' && player.weapons.plasma.owned && Math.random() < 0.65;
+    const isShell = level.id === 'village' && player.weapons.shotgun.owned && Math.random() < 0.55;
+    const isPlasma = !isShell && level.id !== 'bar' && player.weapons.plasma.owned && Math.random() < 0.65;
     pickups.push({
-      type: isPlasma ? 'cell' : 'ammo',
+      type: isShell ? 'shells' : (isPlasma ? 'cell' : 'ammo'),
       x: e.x + rnd(-6, 6), y: e.y + rnd(-6, 6),
-      taken: false, t: 0, amount: isPlasma ? 12 : 6
+      taken: false, t: 0, amount: isShell ? 6 : (isPlasma ? 12 : 6)
     });
   }
 }
@@ -2805,6 +3735,18 @@ function updateBullets(dt) {
             b.hitList.push(e);
             if (b.pierce > 0) { b.pierce--; } else { dead = true; }
             break;
+          }
+        }
+        if (!dead && level.id === 'village') {
+          for (const a of aas) {
+            if (a.destroyed || b.hitList.indexOf(a) >= 0) continue;
+            if (Math.hypot(b.x - a.x, b.y - a.y) < (a.kind === 'command' ? 30 : 26)) {
+              if (a.kind !== 'command') state.hits++;
+              damageAA(a, b.dmg);
+              b.hitList.push(a);
+              if (b.pierce > 0) { b.pierce--; } else { dead = true; }
+              break;
+            }
           }
         }
       } else {
@@ -2960,8 +3902,38 @@ function updatePickups(dt) {
       player.weapons.plasma.reserve += (p.amount || 20);
       toast('Заряды для бластера. +' + (p.amount || 20), 1400);
       sfx.cell();
+
+    } else if (p.type === 'shotgun') {
+      player.weapons.shotgun.owned = true;
+      player.weapons.shotgun.mag = 6;
+      player.weapons.shotgun.reserve = 24;
+      player.weapon = 'shotgun';
+      player.reloading = 0;
+      const os = obj('shotgun');
+      if (os) { os.done = true; os.active = false; os.text = 'Дробовик найден'; }
+      toast('Дробовик. Шесть в стволе, двадцать четыре в кармане. В упор — то, что надо.', 3400);
+      sfx.pick();
+      els.hud.classList.add('armed');
+
+    } else if (p.type === 'binocs') {
+      player.binocs.owned = true;
+      const ob = obj('binocs');
+      if (ob) { ob.done = true; ob.active = false; ob.text = 'Бинокль найден (0 — оптика)'; }
+      toast('Бинокль. Клавиша 0 — оптика: видно далеко вперёд, но по сторонам слепнешь.', 4000);
+      sfx.pick();
+
+    } else if (p.type === 'shells') {
+      if (player.weapons.shotgun.owned) {
+        player.weapons.shotgun.reserve += (p.amount || 10);
+        toast('Патроны к дробовику. +' + (p.amount || 10), 1400);
+      } else {
+        player.weapons.pistol.reserve += (p.amount || 10);
+        toast('Патроны. +' + (p.amount || 10), 1400);
+      }
+      sfx.pick();
     }
     updateObjectives(); updateHud();
+    if (level.id === 'village') syncVillageObjectives();
     spark(p.x, p.y, 8, '#d9a24a', 90);
   }
 }
@@ -3018,8 +3990,13 @@ function spawnAmmoDrop() {
     ? [{ x: 604, y: 452 }, { x: 520, y: 236 }, { x: 900, y: 210 }, { x: 250, y: 322 }, { x: 472, y: 578 }]
     : [{ x: 250, y: 236 }, { x: 520, y: 320 }, { x: 740, y: 420 }, { x: 860, y: 380 }]);
   const s = pick(spots);
-  const cell = level.id !== 'bar' && player.weapons.plasma.owned;
-  pickups.push({ type: cell ? 'cell' : 'ammo', x: s.x, y: s.y, taken: false, t: 0, amount: cell ? 24 : 16 });
+  const shell = level.id === 'village' && player.weapons.shotgun.owned;
+  const cell = !shell && level.id !== 'bar' && player.weapons.plasma.owned;
+  pickups.push({
+    type: shell ? 'shells' : (cell ? 'cell' : 'ammo'),
+    x: s.x, y: s.y, taken: false, t: 0,
+    amount: shell ? 10 : (cell ? 24 : 16)
+  });
 }
 
 function updateBar(dt) {
@@ -3105,6 +4082,235 @@ function updateStreet(dt) {
     }
     updateObjectives();
     updateWaveHud();
+  }
+}
+
+/* ---------------- МИССИЯ 04: деревня, зенитки, оптика ---------------- */
+let aas = [], flaks = [];
+
+function villagePickups() {
+  return [
+    { type: 'shotgun', x: 600, y: 126, taken: false, t: 0 },
+    { type: 'binocs',  x: 148, y: 150, taken: false, t: 0 },
+    { type: 'shells',  x: 614, y: 178, taken: false, t: 0, amount: 18 },
+    { type: 'shells',  x: 840, y: 420, taken: false, t: 0, amount: 12 },
+    { type: 'medkit',  x: 120, y: 210, taken: false, t: 0 },
+    { type: 'medkit',  x: 900, y: 120, taken: false, t: 0 },
+    { type: 'ammo',    x: 300, y: 430, taken: false, t: 0, amount: 24 },
+    { type: 'ammo',    x: 700, y: 430, taken: false, t: 0, amount: 24 },
+    { type: 'cell',    x: 520, y: 560, taken: false, t: 0, amount: 40 },
+    { type: 'bottle',  x: 250, y: 520, taken: false, t: 0 },
+    { type: 'whiskey', x: 672, y: 586, taken: false, t: 0 }
+  ];
+}
+
+function spawnAA() {
+  aas = VILLAGE_AA.map(a => Object.assign({}, a, {
+    hp: a.maxhp, destroyed: false, captured: false,
+    hit: 0, fireCd: rnd(1.6, 3.2)
+  }));
+  flaks = [];
+  state.aaKills = 0;
+  state.aaCaptured = false;
+  state.captureT = 0;
+  state.endTimer = 0;
+}
+
+function syncVillageObjectives() {
+  if (level.id !== 'village') return;
+  const sg = obj('shotgun'), bn = obj('binocs'), aa = obj('aa'), hj = obj('hijack');
+  if (sg && sg.done && bn && bn.done && aa && !aa.done) aa.active = true;
+  if (aa && state.aaKills >= 2 && !aa.done) {
+    aa.done = true;
+    aa.active = false;
+    aa.text = 'Уничтожить две ПВО (2 / 2)';
+    if (hj) hj.active = true;
+    toast('Обе установки молчат. Третья — командная: нужна целой.', 3800);
+    sfx.win();
+  }
+  updateObjectives();
+}
+
+function damageAA(a, dmg) {
+  if (!a || a.destroyed) return;
+  if (a.kind === 'command') {
+    spark(a.x, a.y, 3, '#d8c9a8', 90);
+    if (Math.random() < 0.12) toast('Броня командной установки держит. Её надо взять, а не сжечь.', 1500);
+    return;
+  }
+  a.hp -= dmg;
+  a.hit = 0.12;
+  spark(a.x, a.y, 4, '#d8c9a8', 100);
+  if (a.hp > 0) { noiseHit(0.05, 0.06, 700, 1.5); return; }
+
+  a.hp = 0;
+  a.destroyed = true;
+  state.aaKills++;
+  state.shake = Math.max(state.shake, 13);
+  state.flash = 0.5;
+  spark(a.x, a.y, 46, '#ffb45a', 280);
+  spark(a.x, a.y, 18, '#f4e6c8', 190);
+  smokePuff(a.x, a.y, 10);
+  for (let i = 0; i < 5; i++) {
+    parts.push({
+      x: a.x + rnd(-18, 18), y: a.y + rnd(-18, 18),
+      vx: rnd(-60, 60), vy: rnd(-70, 10), life: rnd(0.8, 1.8), max: 1.8,
+      col: 'rgba(60,54,44,.5)', size: rnd(4, 9), grav: -14
+    });
+  }
+  decals.push({ x: a.x, y: a.y, r: 40, rot: rnd(0, 6.28), a: 0.45 });
+  noiseHit(0.7, 0.16, 180, 0.5);
+  tone(64, 0.8, 'sine', 0.07, 30);
+  const o = obj('aa');
+  if (o && !o.done) o.text = 'Уничтожить две ПВО (' + Math.min(2, state.aaKills) + ' / 2)';
+  toast(state.aaKills === 1 ? 'ПВО-1 разбита. Вторая ещё работает.' : 'ПВО-2 разбита.', 2600);
+  spawnAmmoDrop();
+  syncVillageObjectives();
+  updateWaveHud();
+}
+
+function villageFlak(a) {
+  const tx = player.x + rnd(-46, 46);
+  const ty = player.y + rnd(-46, 46);
+  const dur = 1.15;
+  flaks.push({
+    sx: a.x, sy: a.y - 12, x: a.x, y: a.y - 12, tx, ty,
+    t: 0, dur, vx: (tx - a.x) / dur, vy: (ty - (a.y - 12)) / dur
+  });
+  noiseHit(0.16, 0.10, 240, 0.7);
+  tone(96, 0.24, 'sawtooth', 0.04, 50);
+}
+
+function updateFlaks(dt) {
+  for (let i = flaks.length - 1; i >= 0; i--) {
+    const f = flaks[i];
+    f.t += dt;
+    const k = Math.min(1, f.t / f.dur);
+    f.x = f.sx + (f.tx - f.sx) * k;
+    f.y = f.sy + (f.ty - f.sy) * k - Math.sin(k * Math.PI) * 42;
+    if (f.t < f.dur) continue;
+    flaks.splice(i, 1);
+    spark(f.tx, f.ty, 24, '#ffb45a', 230);
+    spark(f.tx, f.ty, 10, '#f0e0c0', 140);
+    smokePuff(f.tx, f.ty, 4);
+    state.shake = Math.max(state.shake, 7);
+    noiseHit(0.34, 0.14, 210, 0.6);
+    tone(68, 0.34, 'sine', 0.06, 38);
+    if (Math.hypot(player.x - f.tx, player.y - f.ty) < 74) hurtPlayer(12);
+  }
+}
+
+function captureVillageAA() {
+  const cmd = aas[2];
+  if (!cmd || cmd.captured) return;
+  cmd.captured = true;
+  state.captureT = 0;
+  state.aaCaptured = true;
+  state.endTimer = 2.2;
+  state.flash = 0.4;
+  state.shake = Math.max(state.shake, 6);
+  const o = obj('hijack');
+  if (o) { o.done = true; o.active = false; o.text = 'ПВО-3 перехвачена'; }
+  spark(cmd.x, cmd.y, 30, '#8cf0a6', 200);
+  toast('Пульт наш. Ракеты сняты с предохранителей — канал наведения чужой.', 3600);
+  sfx.win();
+  updateObjectives();
+  updateWaveHud();
+}
+
+function toggleOptics() {
+  if (state.mode !== 'play' || !player) return;
+  if (!player.binocs || !player.binocs.owned) {
+    toast('Бинокля нет. Ищи в деревне.', 1500);
+    return;
+  }
+  player.binocs.on = !player.binocs.on;
+  if (player.binocs.on) {
+    tone(760, 0.07, 'triangle', 0.04);
+    tone(1040, 0.1, 'triangle', 0.03);
+  } else {
+    tone(420, 0.07, 'triangle', 0.04);
+  }
+  toast(player.binocs.on
+    ? 'Оптика. Дальше видно — по сторонам слепнешь.'
+    : 'Бинокль убран.', 1600);
+}
+
+function updateVillage(dt) {
+  updateFlaks(dt);
+
+  /* зенитки бьют по площади, пока живы */
+  for (const a of aas) {
+    if (a.destroyed || a.kind === 'command') continue;
+    a.fireCd = Math.max(-0.25, a.fireCd - dt);
+    a.hit = Math.max(0, (a.hit || 0) - dt);
+    if (a.fireCd <= 0 && Math.hypot(player.x - a.x, player.y - a.y) < 440) {
+      villageFlak(a);
+      a.fireCd = rnd(3.5, 4.8);
+    }
+  }
+
+  /* захват командной установки: удержать E */
+  const cmd = aas[2];
+  if (cmd && !cmd.captured) {
+    const near = nearestOnRect(player.x, player.y, { x: cmd.x - 26, y: cmd.y - 26, w: 52, h: 52 });
+    const nearIt = Math.hypot(near.x - player.x, near.y - player.y) <= 70;
+    if (nearIt && state.aaKills >= 2 && keys.has('KeyE')) {
+      state.captureT += dt;
+      if (Math.random() < dt * 5) {
+        spark(cmd.x + rnd(-14, 14), cmd.y + rnd(-10, 10), 2, '#8cf0a6', 60);
+      }
+      if (state.captureT >= 2.2) captureVillageAA();
+    } else {
+      state.captureT = Math.max(0, state.captureT - dt * 2);
+    }
+  }
+
+  /* подъём гарнизона по рубежам */
+  if (!state.doorsOpen) {
+    const next = state.stage + 1;
+    if (next < VILLAGE_STAGES.length && state.stageCleared && state.waveQueue.length === 0 &&
+        enemies.length === 0 && player.x > VILLAGE_STAGES[next].trigger) {
+      state.stage = next;
+      state.stageCleared = false;
+      state.waveQueue = VILLAGE_STAGES[next].list.slice();
+      state.spawnTimer = rnd(0.7, 1.3);
+      toast(VILLAGE_STAGES[next].label, 3000);
+      sfx.wave();
+      const oa = obj('aa');
+      if (oa && !oa.done) oa.active = true;
+      updateObjectives();
+      updateWaveHud();
+    }
+  }
+
+  if (state.waveQueue.length > 0) {
+    state.spawnTimer -= dt;
+    if (state.spawnTimer <= 0) {
+      spawnEnemy(state.waveQueue.shift());
+      state.spawnTimer = rnd(0.7, 1.5);
+    }
+  }
+
+  if (state.stage >= 0 && state.waveQueue.length === 0 && enemies.length === 0 && !state.stageCleared) {
+    state.stageCleared = true;
+    state.stagesDone++;
+    if (state.stagesDone < VILLAGE_STAGES.length) {
+      toast('Двор зачищен. Дальше — поле ПВО.', 2200);
+      spawnAmmoDrop();
+      sfx.pick();
+    } else {
+      state.doorsOpen = true;
+      toast('Охрана поля смята. Добивай установки.', 3000);
+      sfx.win();
+    }
+    updateObjectives();
+    updateWaveHud();
+  }
+
+  if (state.endTimer > 0) {
+    state.endTimer -= dt;
+    if (state.endTimer <= 0) finalWin();
   }
 }
 
@@ -3324,7 +4530,7 @@ function checkExit() {
   if (!state.exitUnlocked) return;
   const ex = level.exit;
   if (player.x > ex.x && player.y > ex.y && player.y < ex.y + ex.h) {
-    if (level.id === 'school') finalWin();
+    if (level.id === 'village') finalWin();
     else missionComplete();
   }
 }
@@ -3427,7 +4633,8 @@ function drawPickups() {
     if (p.taken) continue;
     const pulse = 0.5 + 0.5 * Math.sin(p.t * 3 + p.x * 0.05);
     const tint = p.type === 'plasma' || p.type === 'cell' ? '120,235,255'
-      : (p.type === 'medkit' ? '143,191,122' : '217,162,74');
+      : (p.type === 'medkit' ? '143,191,122'
+        : (p.type === 'binocs' ? '150,210,180' : '217,162,74'));
     ctx.strokeStyle = 'rgba(' + tint + ',' + (0.18 + pulse * 0.35) + ')';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -3499,21 +4706,54 @@ function drawPickups() {
       ctx.fillRect(-5, -3, 10, 3);
       ctx.fillStyle = '#6e6250';
       ctx.fillRect(-6, 1, 12, 2);
+    } else if (p.type === 'shells') {
+      ctx.fillStyle = '#4a2a22';
+      ctx.fillRect(-8, -5, 16, 10);
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = '#b8452e';
+        ctx.fillRect(-6 + i * 5, -6, 3, 8);
+        ctx.fillStyle = '#c9a25c';
+        ctx.fillRect(-6 + i * 5, 1, 3, 3);
+      }
+    } else if (p.type === 'shotgun') {
+      ctx.rotate(-0.35);
+      ctx.fillStyle = '#4a3320';
+      ctx.fillRect(-16, -2, 12, 5);
+      ctx.fillStyle = '#2a2b2e';
+      ctx.fillRect(-6, -2.5, 22, 4);
+      ctx.fillStyle = '#5b4630';
+      ctx.fillRect(-2, 0.5, 10, 4);
+      ctx.fillStyle = '#3d3f43';
+      ctx.fillRect(14, -2, 5, 3);
+    } else if (p.type === 'binocs') {
+      ctx.rotate(-0.2);
+      ctx.fillStyle = '#2b3034';
+      ctx.fillRect(-9, -5, 7, 10);
+      ctx.fillRect(2, -5, 7, 10);
+      ctx.fillRect(-3, -2, 6, 4);
+      ctx.fillStyle = 'rgba(160,230,210,.5)';
+      ctx.beginPath(); ctx.arc(-5.5, 0, 2.6, 0, 6.28); ctx.fill();
+      ctx.beginPath(); ctx.arc(5.5, 0, 2.6, 0, 6.28); ctx.fill();
     }
     ctx.restore();
 
-    if (p.type === 'plasma') {
+    if (p.type === 'plasma' || p.type === 'shotgun' || p.type === 'binocs') {
       ctx.save();
       ctx.font = 'bold 10px Consolas, monospace';
       ctx.textAlign = 'center';
-      ctx.fillStyle = 'rgba(150,240,255,' + (0.35 + pulse * 0.4).toFixed(2) + ')';
-      ctx.fillText('ПЛАЗМЕННЫЙ БЛАСТЕР', p.x, p.y - 30);
+      ctx.fillStyle = p.type === 'plasma'
+        ? 'rgba(150,240,255,' + (0.35 + pulse * 0.4).toFixed(2) + ')'
+        : (p.type === 'binocs' ? 'rgba(160,230,200,' + (0.35 + pulse * 0.4).toFixed(2) + ')'
+          : 'rgba(235,180,120,' + (0.35 + pulse * 0.4).toFixed(2) + ')');
+      ctx.fillText(p.type === 'plasma' ? 'ПЛАЗМЕННЫЙ БЛАСТЕР'
+        : (p.type === 'shotgun' ? 'ДРОБОВИК' : 'БИНОКЛЬ · 0'), p.x, p.y - 30);
       ctx.restore();
     }
   }
 }
 
 function drawExitZone() {
+  if (level.id === 'village') return;
   const ex = level.exit;
   const unlocked = state.exitUnlocked;
   const pulse = 0.5 + 0.5 * Math.sin(state.time * 3);
@@ -3624,6 +4864,20 @@ function drawPlayer() {
     ctx.fillRect(31, 4.5, 5, 2);
     ctx.fillStyle = 'rgba(120,235,255,.16)';
     ctx.beginPath(); ctx.arc(30, 5, 12, 0, 6.28); ctx.fill();
+  } else if (player.weapon === 'shotgun' && player.weapons.shotgun.owned) {
+    ctx.strokeStyle = '#b8895f';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(6, 6); ctx.lineTo(13, 6);
+    ctx.stroke();
+    ctx.fillStyle = '#4a3320';
+    ctx.fillRect(10, 3, 12, 7);
+    ctx.fillStyle = '#2b2c2f';
+    ctx.fillRect(20, 2.5, 20, 5);
+    ctx.fillStyle = '#5b4630';
+    ctx.fillRect(16, 8.5, 12, 5);
+    ctx.fillStyle = '#3d3f43';
+    ctx.fillRect(36, 3, 5, 4);
   } else if (player.weapons.pistol.owned) {
     ctx.strokeStyle = '#b8895f';
     ctx.lineWidth = 4;
@@ -4079,6 +5333,7 @@ function render() {
   if (level.id === 'street') drawBraziers();
   drawExitZone();
   drawPickups();
+  if (level.id === 'village') aas.forEach(drawVillageAA);
   drawCasings();
   for (const e of enemies) drawEnemy(e);
   if (level.id === 'school') drawPrisoners();
@@ -4092,11 +5347,13 @@ function render() {
     level.light();
     drawLightingExtras();
     drawFireGlow();
+    if (level.id === 'village') { drawVillageGlow(); drawOpticsOverlay(); }
     if (level.id === 'school') drawSchoolGlow();
     drawRain();
   }
   drawTexts();
   drawPrisonerPrompt();
+  if (level.id === 'village') drawVillagePrompt();
   drawEdgeVignette();
 
   if (state.lightning > 0) {
@@ -4145,9 +5402,12 @@ function collectSave() {
       x: player.x, y: player.y, hp: player.hp, bottles: player.bottles, weapon: player.weapon,
       weapons: {
         pistol: Object.assign({}, player.weapons.pistol),
-        plasma: Object.assign({}, player.weapons.plasma)
-      }
+        plasma: Object.assign({}, player.weapons.plasma),
+        shotgun: Object.assign({}, player.weapons.shotgun)
+      },
+      binocs: player.binocs.owned
     },
+    aa: aas.map(a => ({ id: a.id, hp: a.hp, destroyed: a.destroyed, captured: a.captured })),
     enemies: enemies.map(e => ({ type: e.type, x: e.x, y: e.y, hp: e.hp })),
     pickups: pickups.map(p => ({ type: p.type, x: p.x, y: p.y, taken: p.taken, amount: p.amount })),
     objectives: state.objectives.map(o => ({ id: o.id, text: o.text, done: o.done, active: o.active })),
@@ -4158,7 +5418,8 @@ function collectSave() {
       exitUnlocked: state.exitUnlocked, exitHintShown: state.exitHintShown,
       stage: state.stage, stagesDone: state.stagesDone, stageCleared: state.stageCleared,
       doorsOpen: state.doorsOpen, cageOpen: state.cageOpen,
-      prisonersFreed: state.prisonersFreed, schoolHint: state.schoolHint
+      prisonersFreed: state.prisonersFreed, schoolHint: state.schoolHint,
+      aaKills: state.aaKills, aaCaptured: state.aaCaptured
     }
   };
 }
@@ -4200,6 +5461,17 @@ function loadGame() {
   if (d.player.weapons) {
     player.weapons.pistol = Object.assign(player.weapons.pistol, d.player.weapons.pistol || {});
     player.weapons.plasma = Object.assign(player.weapons.plasma, d.player.weapons.plasma || {});
+    if (d.player.weapons.shotgun) player.weapons.shotgun = Object.assign(player.weapons.shotgun, d.player.weapons.shotgun);
+  }
+  player.binocs.owned = !!d.player.binocs;
+  if (Array.isArray(d.aa) && level.id === 'village') {
+    d.aa.forEach(s => {
+      const a = aas.find(x => x.id === s.id);
+      if (!a) return;
+      a.hp = s.hp;
+      a.destroyed = !!s.destroyed;
+      a.captured = !!s.captured;
+    });
   }
   if (!player.weapons[player.weapon].owned) player.weapon = 'pistol';
 
@@ -4222,7 +5494,7 @@ function loadGame() {
   if (d.st) {
     ['time', 'kills', 'shots', 'hits', 'bottlesUsed', 'wave', 'wavesActive', 'breakTimer',
       'exitUnlocked', 'exitHintShown', 'stage', 'stagesDone', 'stageCleared',
-      'doorsOpen', 'cageOpen', 'prisonersFreed', 'schoolHint'].forEach(k => { if (d.st[k] !== undefined) state[k] = d.st[k]; });
+      'doorsOpen', 'cageOpen', 'prisonersFreed', 'schoolHint', 'aaKills', 'aaCaptured'].forEach(k => { if (d.st[k] !== undefined) state[k] = d.st[k]; });
     state.waveQueue = Array.isArray(d.st.waveQueue) ? d.st.waveQueue.slice() : [];
   }
   state.entryCarry = Object.assign(snapshotCarry(), { hp: player.maxhp });
@@ -4341,7 +5613,7 @@ function missionComplete() {
       'Антенна телестанции ещё передаёт: там есть связь, а может — и ответ, что делать дальше.<br />' +
       'Три рубежа, потом двери. ' + (state.pendingCarry.hp < 70 ? 'Бар закрыт, но ты ещё на ногах.' : 'Ты ещё на ногах.');
     if (btn) btn.textContent = 'Выйти на улицу';
-  } else {
+  } else if (level.id === 'street') {
     state.pendingNext = 'school';
     els.briefKicker.textContent = 'МИССИЯ 03 · ШКОЛА №4 · 05:20';
     els.briefTitle.textContent = 'Последний заказ';
@@ -4353,6 +5625,20 @@ function missionComplete() {
       'За больницей — точка сбора: медики и машины. Сначала свои, потом больница. ' +
       (state.pendingCarry.hp < 60 ? 'Ты держишься на честном слове — ищи аптечки.' : 'Патронов хватит, если не палить в молоко.');
     if (btn) btn.textContent = 'Высадиться в школе';
+  } else {
+    state.pendingNext = 'village';
+    els.briefKicker.textContent = 'МИССИЯ 04 · ДЕРЕВНЯ · 06:40';
+    els.briefTitle.textContent = 'Последний заказ';
+    els.briefText.innerHTML =
+      'Медики передали координаты: за рекой — деревня, а в ней три зенитных расчёта. ' +
+      'Пока они работают, ни один борт сюда не сядет.<br />' +
+      'Две установки — уничтожить. Третью, командную, — перехватить целой.';
+    els.briefBody.innerHTML =
+      'В избах остались дробовик и бинокль. Оптика включается на <b>0</b>: видно далеко вперёд, ' +
+      'но по сторонам ты слепнешь.<br />' +
+      'Дробовик — на <b>3</b>, патроны к нему — в ящиках и с убитых. ' +
+      (state.pendingCarry.hp < 55 ? 'Ты еле держишься — ищи аптечки в домах.' : 'Держись дворов: в поле работают зенитки.');
+    if (btn) btn.textContent = 'Выехать в деревню';
   }
   sfx.win();
 }
@@ -4379,9 +5665,16 @@ function endGame(win) {
   const acc = state.shots ? Math.round(state.hits / state.shots * 100) : 0;
   const street = level.id === 'street';
   const school = level.id === 'school';
+  const village = level.id === 'village';
 
   els.endKicker.textContent = 'МИССИЯ 0' + level.num + ' · ' + (win ? 'ВЫПОЛНЕНА' : 'ПРОВАЛЕНА');
-  if (win && school) {
+  if (win && village) {
+    els.endTitle.textContent = 'ПВО замолчала';
+    els.endText.innerHTML =
+      'Третья установка разворачивается на север, и в наушниках вместо чужого голоса — свой. ' +
+      'Над деревней проходит борт, с неба мигают три зелёных огня. ' +
+      'Последний заказ закрыт: небо над рекой снова наше.';
+  } else if (win && school) {
     els.endTitle.textContent = 'Приказ выполнен';
     els.endText.innerHTML =
       'Двери приёмного закрываются за спиной. Трое своих сидят на каталке, медсёстры режут на них форму. ' +
@@ -4396,6 +5689,11 @@ function endGame(win) {
   } else if (win) {
     els.endTitle.textContent = 'Последний заказ закрыт';
     els.endText.innerHTML = 'Ты выходишь в переулок. За спиной — бар, который больше никогда не включит неон.';
+  } else if (village) {
+    els.endTitle.textContent = 'Деревня не отпустила';
+    els.endText.innerHTML =
+      'Зенитки продолжают бить по площади, а третья установка стоит целой — ' +
+      'с чужим расчётом у пульта. Борт над рекой так и не дождётся коридора.';
   } else if (school) {
     els.endTitle.textContent = 'Школа не отпустила';
     els.endText.innerHTML =
@@ -4534,6 +5832,9 @@ window.LO = {
   get level() { return level; },
   enterLevel, newGame, loadGame, saveGame, restartLevel, goMenu,
   switchWeapon, missionComplete, spawnEnemy, tryFreePrisoners, freePrisoners, tryOpenHospital,
+  toggleOptics, damageAA, captureVillageAA, spawnAA, updateVillage,
+  get aas() { return aas; },
+  get flaks() { return flaks; },
   get prisoners() { return prisoners; },
   killAll() { enemies.slice().forEach(e => damageEnemy(e, 9999, 0)); },
   hurt(n) { hurtPlayer(n); }
