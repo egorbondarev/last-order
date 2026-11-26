@@ -5364,8 +5364,18 @@ function resVisit(f, silent) {
   resPlacePickups();
   for (const e of enemies) {
     if (e.floor === undefined) { e.floor = 0; e.spawn = e.spawn || { x: e.x, y: e.y }; }
-    if (e.floor !== resFloor) { e.away = true; e.x = 100000; e.y = 100000; }
-    else { e.away = false; }
+    if (e.floor !== resFloor) {
+      /* уводим с этажа: запоминаем, где враг стоял, чтобы вернуть его туда же */
+      if (!e.away) { e.hx = e.x; e.hy = e.y; }
+      e.away = true; e.x = 100000; e.y = 100000;
+    } else {
+      /* вернулись на этаж: не даём врагу осесть в углу карты после clamp */
+      if (e.away || e.x > 9999 || e.y > 9999) {
+        const s = (e.hx !== undefined) ? { x: e.hx, y: e.hy } : (e.spawn || { x: e.x, y: e.y });
+        e.x = s.x; e.y = s.y;
+      }
+      e.away = false;
+    }
   }
   if (!resVisited[resFloor]) {
     resVisited[resFloor] = true;
