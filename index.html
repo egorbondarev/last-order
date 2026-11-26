@@ -535,7 +535,14 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Digit3') switchWeapon('shotgun');
   if (e.code === 'Digit4') switchWeapon('smg');
   if (e.code === 'Digit0' || e.code === 'Numpad0') toggleOptics();
-  if (e.code === 'KeyE') { if (level.id === 'roof') roofInteract(); else if (level.id === 'fort') fortInteract(); else if (level.id === 'res') resInteract(); else tryFreePrisoners(); }
+  if (e.code === 'KeyE') {
+    if (state.mode === 'play' && secretInRange()) { enterSecret(); return; }
+    if (level.id === 'roof') roofInteract();
+    else if (level.id === 'fort') fortInteract();
+    else if (level.id === 'res') resInteract();
+    else if (level.id === 'mayor') mayorInteract();
+    else tryFreePrisoners();
+  }
   if (e.code === 'Enter' && state.mode === 'menu' && els.select && els.select.classList.contains('hidden')) newGame();
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
@@ -6554,9 +6561,775 @@ function resBriefFill() {
   if (hideSquadPick) hideSquadPick();
 }
 
+/* ===========================================================
+   СЕКРЕТНАЯ КНОПКА В КАЖДОЙ МИССИИ · УРОВЕНЬ «МЭРИЯ»
+   =========================================================== */
+
+const MAYOR_TAG = 'СЕКРЕТНО · МЭРИЯ';
+const MAYOR_COPY_T = 7.0;      /* сколько держать E у стойки с делами */
+const MAYOR_ALERT_T = 1.05;    /* сколько держат на виду, прежде чем тревога */
+const MAYOR_CAUGHT_T = 5.0;    /* тревога до «тебя взяли» */
+const MAYOR_CONE = 0.44;       /* половина угла обзора охраны */
+const MAYOR_RANGE = 300;       /* дальность обзора */
+const MAYOR_USE_R = 78;        /* радиус удержания E у стойки */
+const MAYOR_START = { x: 96, y: 596 };
+const MAYOR_SERVER = { x: 860, y: 284 };
+const MAYOR_SECRET_R = 44;     /* радиус, с которого кнопка слушается E */
+
+const MAYOR_WALLS = [
+  { type: 'wall', x: 30,  y: 212, w: 236, h: 14 },   /* кабинет: низ, дверь x266..470 */
+  { type: 'wall', x: 470, y: 212, w: 216, h: 14 },
+  { type: 'wall', x: 404, y: 30,  w: 14,  h: 182 },  /* перегородка верхних комнат */
+  { type: 'wall', x: 686, y: 30,  w: 14,  h: 120 },  /* архив: левая стена, дверь y150..214 и y344..404 */
+  { type: 'wall', x: 686, y: 214, w: 14,  h: 130 },
+  { type: 'wall', x: 686, y: 404, w: 14,  h: 100 },
+  { type: 'wall', x: 700, y: 504, w: 270, h: 14 }    /* архив: низ */
+];
+
+const MAYOR_PROPS = [
+  { type: 'col',     x: 296, y: 168, w: 36,  h: 36 },
+  { type: 'col',     x: 556, y: 168, w: 36,  h: 36 },
+  { type: 'col',     x: 296, y: 404, w: 36,  h: 36 },
+  { type: 'col',     x: 556, y: 404, w: 36,  h: 36 },
+  { type: 'desk',    x: 140, y: 492, w: 210, h: 54 },   /* ресепшен */
+  { type: 'sofa',    x: 64,  y: 300, w: 132, h: 40 },
+  { type: 'sofa',    x: 616, y: 300, w: 44,  h: 120 },
+  { type: 'cabinet', x: 64,  y: 36,  w: 150, h: 42 },
+  { type: 'desk',    x: 96,  y: 64,  w: 132, h: 56 },
+  { type: 'plant',   x: 360, y: 160, w: 26,  h: 26 },
+  { type: 'shelf',   x: 440, y: 36,  w: 200, h: 36 },
+  { type: 'crate',   x: 440, y: 570, w: 56,  h: 56 },
+  { type: 'plant',   x: 660, y: 600, w: 26,  h: 26 },
+  { type: 'server',  x: 826, y: 246, w: 68,  h: 76 },   /* стойка с делами */
+  { type: 'rack',    x: 712, y: 60,  w: 130, h: 44 },
+  { type: 'rack',    x: 850, y: 396, w: 110, h: 44 },
+  { type: 'safe',    x: 930, y: 60,  w: 40,  h: 40 }
+];
+
+const MAYOR_GUARDS = [
+  { kind: 'patrol', speed: 58,  pause: 0.9, path: [{ x: 110, y: 470 }, { x: 620, y: 470 }, { x: 620, y: 600 }, { x: 110, y: 600 }] },
+  { kind: 'patrol', speed: 50,  pause: 1.3, path: [{ x: 300, y: 120 }, { x: 640, y: 120 }] },
+  { kind: 'post',   speed: 0,   pause: 0,   base: -1.15, path: [{ x: 790, y: 468 }] }
+];
+
+const MAYOR_SPAWNS = [
+  { x: 120, y: 360 }, { x: 300, y: 590 }, { x: 620, y: 440 },
+  { x: 790, y: 468 }, { x: 520, y: 120 }, { x: 900, y: 460 }
+];
+
+const MAYOR_ALARM_SPAWNS = [
+  { x: 92, y: 240 }, { x: 640, y: 560 }, { x: 900, y: 470 }
+];
+
+let mayorGuards = [], mayorAlert = 0, mayorCopy = 0, mayorFiles = 0;
+let mayorAlarm = false, mayorCopied = false, mayorCaught = false, mayorSig = '';
+
+function mayorPickups() {
+  return [
+    { type: 'ammo', x: 140, y: 600, taken: false, t: 0, amount: 16 },
+    { type: 'ammo', x: 600, y: 470, taken: false, t: 0, amount: 16 },
+    { type: 'cell', x: 540, y: 620, taken: false, t: 0, amount: 30 },
+    { type: 'whiskey', x: 420, y: 620, taken: false, t: 0 }
+  ];
+}
+
+function mayorObjectives() {
+  return [
+    { id: 'in',   text: 'Проникнуть в архив мимо охраны', done: false, active: true },
+    { id: 'copy', text: 'Скопировать дела у стойки (E — удержание, 0 / 3)', done: false, active: false },
+    { id: 'wire', text: 'Вывести копии своим', done: false, active: false }
+  ];
+}
+
+function mayorInsideArchive() {
+  return player.x > 700 && player.y > 30 && player.y < 504;
+}
+
+function spawnMayor() {
+  mayorGuards = MAYOR_GUARDS.map((g, i) => ({
+    kind: g.kind, speed: g.speed, pause: g.pause, path: g.path.slice(),
+    x: g.path[0].x, y: g.path[0].y, r: 12, leg: g.kind === 'post' ? 0 : 1,
+    dir: 1, ang: g.base || 0, t: i * 1.3, waitT: 0, seen: false, base: g.base || 0
+  }));
+}
+
+/* охрана ходит по маршруту: разворот на конце, пауза «осмотрелся» */
+function guardStep(g, dt) {
+  if (g.waitT > 0) {
+    g.waitT -= dt;
+    g.ang += dt * 1.05 * g.dir;
+    return;
+  }
+  const leg = g.path[g.leg];
+  if (!leg) return;
+  const dx = leg.x - g.x, dy = leg.y - g.y;
+  const d = Math.hypot(dx, dy);
+  if (d < 7) {
+    g.leg += g.dir;
+    if (g.leg >= g.path.length) { g.dir = -1; g.leg = Math.max(0, g.path.length - 2); }
+    else if (g.leg < 0) { g.dir = 1; g.leg = Math.min(1, g.path.length - 1); }
+    g.waitT = g.pause || 0.7;
+    return;
+  }
+  const a = Math.atan2(dy, dx);
+  g.ang = a;
+  const sp = g.speed * (g.seen ? 0.5 : 1);
+  const nx = g.x + Math.cos(a) * sp * dt;
+  const ny = g.y + Math.sin(a) * sp * dt;
+  if (!hits(nx, g.y, g.r)) g.x = nx;
+  if (!hits(g.x, ny, g.r)) g.y = ny;
+  g.t += dt;
+}
+
+function mayorSees(g) {
+  if (mayorCopied) return false;
+  const d = Math.hypot(player.x - g.x, player.y - g.y);
+  if (d > MAYOR_RANGE) return false;
+  const a = Math.atan2(player.y - g.y, player.x - g.x);
+  const da = Math.abs(((a - g.ang + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+  const half = MAYOR_CONE + (d < 90 ? 0.6 : 0);
+  if (da > half) return false;
+  return los(g.x, g.y, player.x, player.y);
+}
+
+function raiseMayorAlarm(reinforce) {
+  const fresh = !mayorAlarm;
+  mayorAlarm = true;
+  mayorAlert = 1;
+  for (const g of mayorGuards) spawnEnemy('trooper', { x: g.x, y: g.y });
+  mayorGuards = [];
+  if (reinforce) {
+    MAYOR_ALARM_SPAWNS.forEach((p, i) => spawnEnemy(i === 0 ? 'smg' : 'trooper', p));
+  }
+  if (fresh) {
+    state.flash = 0.7;
+    state.shake = Math.max(state.shake, 8);
+    tone(190, 0.5, 'square', 0.06, 88);
+    toast('Тревога. Охрана идёт сюда.', 2600);
+    updateWaveHud();
+  }
+}
+
+function updateMayorDetect(dt) {
+  if (mayorAlarm) return;
+  if (state.shots !== state.mayorShots) {
+    state.mayorShots = state.shots;
+    toast('Выстрел в мэрии слышно на всём этаже.', 2200);
+    raiseMayorAlarm(false);
+    return;
+  }
+  let seen = false;
+  for (const g of mayorGuards) {
+    g.seen = mayorSees(g);
+    if (g.seen) seen = true;
+  }
+  if (seen) mayorAlert = clamp(mayorAlert + dt / MAYOR_ALERT_T * 1.25, 0, 1);
+  else mayorAlert = clamp(mayorAlert - dt * 0.45, 0, 1);
+  if (mayorAlert >= 1) raiseMayorAlarm(false);
+}
+
+function finishMayorCopy() {
+  if (mayorCopied) return;
+  mayorCopied = true;
+  mayorFiles = 3;
+  mayorCopy = 1;
+  sfx.win();
+  toast('Копии ушли своим. И сработала сигнализация.', 3200);
+  raiseMayorAlarm(true);
+  state.endTimer = MAYOR_CAUGHT_T;
+  player.invuln = Math.max(player.invuln, 1.4);
+  syncMayorObjectives();
+  updateObjectives();
+}
+
+function updateMayorCopy(dt) {
+  if (mayorCopied || state.endTimer > 0) return;
+  const d = Math.hypot(player.x - MAYOR_SERVER.x, player.y - MAYOR_SERVER.y);
+  state.mayorUse = d < MAYOR_USE_R;
+  if (state.mayorUse && keys.has('KeyE')) {
+    mayorCopy = Math.min(1, mayorCopy + dt / MAYOR_COPY_T);
+    if (Math.random() < dt * 6) {
+      spark(MAYOR_SERVER.x + rnd(-30, 30), MAYOR_SERVER.y + rnd(-30, 30), 1, '#8ce6ac', 40);
+    }
+    const files = Math.floor(mayorCopy * 3 + 1e-6);
+    if (files > mayorFiles) {
+      mayorFiles = files;
+      floatText(MAYOR_SERVER.x, MAYOR_SERVER.y - 46, 'ФАЙЛ ' + files + ' / 3', '#8ce6ac');
+      tone(520 + files * 130, 0.09, 'triangle', 0.05);
+      syncMayorObjectives();
+      updateObjectives();
+    }
+    if (mayorCopy >= 1) finishMayorCopy();
+  } else if (!state.mayorUse) {
+    mayorCopy = Math.max(0, mayorCopy - dt * 0.1);
+  }
+}
+
+function syncMayorObjectives() {
+  const o1 = obj('in'), o2 = obj('copy'), o3 = obj('wire');
+  if (!o1 || !o2 || !o3) return;
+  o1.done = mayorInsideArchive() || mayorCopied || mayorAlarm;
+  o1.text = o1.done ? 'Архив мэрии — ты внутри' : 'Проникнуть в архив мимо охраны';
+  o1.active = !o1.done;
+  o2.done = mayorFiles >= 3;
+  o2.text = o2.done ? 'Дела скопированы (3 / 3)'
+    : 'Скопировать дела у стойки (E — удержание, ' + mayorFiles + ' / 3)';
+  o2.active = o1.done && !o2.done;
+  o3.done = mayorCopied;
+  o3.text = o3.done ? 'Копии ушли своим' : 'Вывести копии своим';
+  o3.active = mayorFiles > 0 && !o3.done;
+}
+
+function mayorSyncSig() {
+  const sig = state.objectives.map(o => (o.done ? '1' : '0') + (o.active ? '1' : '0') + o.text).join('|');
+  if (sig !== mayorSig) { mayorSig = sig; updateObjectives(); }
+}
+
+function mayorCaptureEnd() {
+  if (state.mode !== 'play') return;
+  mayorCaught = true;
+  endGame(false);
+}
+
+function mayorInteract() {
+  if (!player) return;
+  const d = Math.hypot(player.x - MAYOR_SERVER.x, player.y - MAYOR_SERVER.y);
+  if (mayorCopied) { toast('Копии уже ушли. Осталось дождаться своих.', 1600); return; }
+  if (d < MAYOR_USE_R) { toast('Держи E — копии уходят по каналу.', 1700); return; }
+  toast('Стойка с делами — в архиве, за правой перегородкой. Копирование — E.', 1800);
+}
+
+function mayorUpdate(dt) {
+  guardStepMayor(dt);
+  if (state.endTimer > 0) {
+    state.endTimer -= dt;
+    player.invuln = Math.max(player.invuln, 0.6);
+    if (state.endTimer <= 0) mayorCaptureEnd();
+  }
+  updateMayorDetect(dt);
+  updateMayorCopy(dt);
+  syncMayorObjectives();
+  mayorSyncSig();
+}
+
+function guardStepMayor(dt) {
+  for (const g of mayorGuards) {
+    if (g.kind === 'post') {
+      g.t += dt;
+      g.ang = g.base + Math.sin(g.t * 0.5) * 1.0;
+      continue;
+    }
+    guardStep(g, dt);
+  }
+}
+
+/* ---------- графика: пол, стены, интерьер ---------- */
+
+function buildMayorFloor() {
+  reseed(770100);
+  const c = fctx;
+  c.fillStyle = '#2a2c30';
+  c.fillRect(0, 0, W, H);
+
+  /* гранитная плитка мэрии */
+  for (let y = 30; y < H; y += 58) {
+    for (let x = 30; x < W; x += 58) {
+      const v = 34 + srnd() * 16;
+      c.fillStyle = 'rgba(' + (v | 0) + ',' + ((v + 2) | 0) + ',' + ((v + 6) | 0) + ',' + (0.34 + srnd() * 0.3).toFixed(2) + ')';
+      c.fillRect(x + 1, y + 1, 55, 55);
+    }
+  }
+  c.strokeStyle = 'rgba(10,10,14,.35)';
+  c.lineWidth = 1.2;
+  for (let y = 30; y <= H; y += 58) { c.beginPath(); c.moveTo(30, y); c.lineTo(W - 30, y); c.stroke(); }
+  for (let x = 30; x <= W; x += 58) { c.beginPath(); c.moveTo(x, 30); c.lineTo(x, H - 30); c.stroke(); }
+
+  /* ковровая дорожка от входа к архиву */
+  c.fillStyle = 'rgba(78,30,28,.42)';
+  c.fillRect(120, 232, 60, 320);
+  c.fillRect(120, 470, 500, 62);
+  c.fillRect(560, 180, 60, 352);
+  c.strokeStyle = 'rgba(206,178,120,.16)';
+  c.lineWidth = 2;
+  c.strokeRect(126, 238, 48, 308);
+  c.strokeRect(126, 476, 488, 50);
+
+  /* зерно, потёртости, мусор */
+  for (let i = 0; i < 8000; i++) {
+    const x = srnd() * W, y = srnd() * H, v = 32 + srnd() * 30;
+    c.fillStyle = 'rgba(' + (v | 0) + ',' + ((v - 2) | 0) + ',' + ((v - 6) | 0) + ',' + (0.05 + srnd() * 0.18).toFixed(2) + ')';
+    c.fillRect(x, y, 1 + srnd() * 2.2, 1 + srnd() * 2.2);
+  }
+  for (let i = 0; i < 12; i++) {
+    const x = 60 + srnd() * (W - 120), y = 60 + srnd() * (H - 120), r = 18 + srnd() * 46;
+    const rg = c.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, 'rgba(6,6,8,.3)');
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = rg;
+    c.beginPath(); c.ellipse(x, y, r, r * 0.62, srnd() * 3, 0, 6.28); c.fill();
+  }
+  for (let i = 0; i < 20; i++) {
+    const x = 60 + srnd() * (W - 120), y = 60 + srnd() * (H - 120);
+    c.fillStyle = 'rgba(198,194,178,' + (0.05 + srnd() * 0.1).toFixed(2) + ')';
+    c.fillRect(x, y, 2 + srnd() * 5, 1 + srnd() * 3);
+  }
+
+  /* подписи на полу */
+  c.save();
+  c.textAlign = 'center';
+  c.font = 'bold 62px Consolas, monospace';
+  c.fillStyle = 'rgba(220,212,190,.045)';
+  c.fillText('МЭРИЯ', 300, 360);
+  c.font = 'bold 9px Consolas, monospace';
+  c.fillStyle = 'rgba(220,210,186,.14)';
+  c.fillText('ВХОД · СЛУЖЕБНЫЙ', 96, 572);
+  c.restore();
+
+  /* вход: тёмная ниша слева внизу */
+  c.fillStyle = '#14161a';
+  c.fillRect(30, 520, 34, 130);
+  c.fillStyle = 'rgba(226,214,178,.14)';
+  c.fillRect(64, 520, 3, 130);
+}
+
+function mayorRoomProp(c, p) {
+  if (p.type === 'wall') {
+    const g = c.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
+    g.addColorStop(0, '#5b5750');
+    g.addColorStop(0.5, '#48443d');
+    g.addColorStop(1, '#332f2a');
+    c.fillStyle = g;
+    c.fillRect(p.x, p.y, p.w, p.h);
+    c.fillStyle = 'rgba(236,226,200,.14)';
+    c.fillRect(p.x, p.y, p.w, 3);
+    c.fillStyle = 'rgba(0,0,0,.35)';
+    c.fillRect(p.x, p.y + p.h - 3, p.w, 3);
+  } else if (p.type === 'col') {
+    const g = c.createLinearGradient(p.x, p.y, p.x + p.w, p.y + p.h);
+    g.addColorStop(0, '#6d685f');
+    g.addColorStop(0.5, '#565149');
+    g.addColorStop(1, '#3b372f');
+    c.fillStyle = g;
+    c.fillRect(p.x, p.y, p.w, p.h);
+    c.strokeStyle = 'rgba(20,18,14,.5)';
+    c.lineWidth = 1.4;
+    c.strokeRect(p.x + 1, p.y + 1, p.w - 2, p.h - 2);
+    c.fillStyle = 'rgba(230,220,196,.12)';
+    c.fillRect(p.x + 4, p.y + 4, p.w - 8, 3);
+  } else if (p.type === 'cabinet') {
+    c.fillStyle = '#40372c';
+    c.fillRect(p.x, p.y, p.w, p.h);
+    c.fillStyle = 'rgba(226,206,160,.1)';
+    c.fillRect(p.x, p.y, p.w, 4);
+    for (let i = 1; i < 4; i++) {
+      c.fillStyle = 'rgba(12,10,8,.45)';
+      c.fillRect(p.x + i * (p.w / 4), p.y + 6, 2, p.h - 12);
+    }
+  } else if (p.type === 'rack') {
+    c.fillStyle = '#2f3a3c';
+    c.fillRect(p.x, p.y, p.w, p.h);
+    c.fillStyle = 'rgba(140,220,200,.14)';
+    c.fillRect(p.x, p.y, p.w, 3);
+    for (let i = 0; i < 5; i++) {
+      const bx = p.x + 6 + i * ((p.w - 12) / 5);
+      c.fillStyle = 'rgba(210,190,140,.22)';
+      c.fillRect(bx, p.y + 8, (p.w - 12) / 5 - 6, p.h - 18);
+      c.fillStyle = 'rgba(10,12,14,.4)';
+      c.fillRect(bx, p.y + 12, (p.w - 12) / 5 - 6, 2);
+    }
+  } else if (p.type === 'safe') {
+    c.fillStyle = '#3a3c40';
+    c.fillRect(p.x, p.y, p.w, p.h);
+    c.strokeStyle = 'rgba(226,206,160,.2)';
+    c.lineWidth = 2;
+    c.strokeRect(p.x + 4, p.y + 4, p.w - 8, p.h - 8);
+    c.fillStyle = 'rgba(226,206,160,.35)';
+    c.beginPath(); c.arc(p.x + p.w / 2, p.y + p.h / 2, 4, 0, 6.28); c.fill();
+  } else if (p.type === 'desk') {
+    c.fillStyle = '#3f3527';
+    c.fillRect(p.x, p.y, p.w, p.h);
+    c.fillStyle = 'rgba(232,214,172,.12)';
+    c.fillRect(p.x, p.y, p.w, 5);
+    c.fillStyle = 'rgba(12,10,8,.4)';
+    c.fillRect(p.x + 6, p.y + p.h - 10, p.w - 12, 6);
+    c.fillStyle = 'rgba(226,206,160,.16)';
+    c.fillRect(p.x + p.w * 0.62, p.y + 8, 46, 6);
+  } else if (p.type === 'sofa') {
+    c.fillStyle = '#3d3238';
+    c.fillRect(p.x, p.y, p.w, p.h);
+    c.fillStyle = 'rgba(226,196,180,.1)';
+    c.fillRect(p.x + 3, p.y + 3, p.w - 6, 6);
+    c.strokeStyle = 'rgba(16,12,14,.5)';
+    c.lineWidth = 1.2;
+    c.strokeRect(p.x + 1, p.y + 1, p.w - 2, p.h - 2);
+  } else if (p.type === 'shelf') {
+    c.fillStyle = '#332c22';
+    c.fillRect(p.x, p.y, p.w, p.h);
+    c.fillStyle = 'rgba(222,202,158,.1)';
+    c.fillRect(p.x, p.y, p.w, 3);
+    for (let i = 0; i < 9; i++) {
+      c.fillStyle = i % 3 === 0 ? 'rgba(150,60,50,.45)' : (i % 3 === 1 ? 'rgba(70,90,120,.4)' : 'rgba(180,168,130,.35)');
+      const bh = 18 + srnd() * 12;
+      c.fillRect(p.x + 6 + i * ((p.w - 12) / 9), p.y + p.h - bh, (p.w - 12) / 9 - 5, bh);
+    }
+  } else if (p.type === 'crate') {
+    c.fillStyle = '#4a3d2c';
+    c.fillRect(p.x, p.y, p.w, p.h);
+    c.strokeStyle = 'rgba(20,16,10,.5)';
+    c.lineWidth = 2;
+    c.strokeRect(p.x + 2, p.y + 2, p.w - 4, p.h - 4);
+    c.beginPath(); c.moveTo(p.x + 2, p.y + 2); c.lineTo(p.x + p.w - 2, p.y + p.h - 2); c.stroke();
+  } else if (p.type === 'plant') {
+    c.fillStyle = '#2f2a24';
+    c.fillRect(p.x + 5, p.y + 8, p.w - 10, p.h - 8);
+    c.fillStyle = 'rgba(74,110,66,.85)';
+    for (let i = 0; i < 7; i++) {
+      const a = i / 7 * 6.28;
+      c.beginPath();
+      c.ellipse(p.x + p.w / 2 + Math.cos(a) * 8, p.y + 12 + Math.sin(a) * 8, 8, 4.5, a, 0, 6.28);
+      c.fill();
+    }
+  } else if (p.type === 'server') {
+    c.fillStyle = '#23282c';
+    c.fillRect(p.x - 2, p.y - 2, p.w + 4, p.h + 4);
+    c.fillStyle = '#39424a';
+    c.fillRect(p.x, p.y, p.w, p.h);
+    c.fillStyle = 'rgba(150,230,200,.12)';
+    c.fillRect(p.x, p.y, p.w, 3);
+    for (let r = 0; r < 5; r++) {
+      c.fillStyle = 'rgba(16,20,22,.75)';
+      c.fillRect(p.x + 6, p.y + 8 + r * 13, p.w - 12, 10);
+      c.fillStyle = 'rgba(140,230,172,' + (0.3 + srnd() * 0.5).toFixed(2) + ')';
+      c.fillRect(p.x + 9, p.y + 11 + r * 13, 14, 4);
+      c.fillStyle = 'rgba(255,214,140,' + (0.2 + srnd() * 0.4).toFixed(2) + ')';
+      c.fillRect(p.x + 27, p.y + 11 + r * 13, 6, 4);
+    }
+  }
+}
+
+function buildMayorRoom() {
+  reseed(770200);
+  const c = rctx;
+  c.clearRect(0, 0, W, H);
+  for (const p of MAYOR_WALLS) mayorRoomProp(c, p);
+  for (const p of MAYOR_PROPS) mayorRoomProp(c, p);
+
+  /* стеклянная перегородка архива: рамы на проломе */
+  c.strokeStyle = 'rgba(150,190,200,.28)';
+  c.lineWidth = 3;
+  c.beginPath(); c.moveTo(686, 30); c.lineTo(700, 30); c.stroke();
+  c.strokeRect(686, 150, 14, 64);
+  c.strokeRect(686, 344, 14, 60);
+  c.fillStyle = 'rgba(150,200,210,.1)';
+  c.fillRect(687, 151, 12, 62);
+  c.fillRect(687, 345, 12, 58);
+
+  c.save();
+  c.textAlign = 'center';
+  c.font = 'bold 11px Consolas, monospace';
+  c.fillStyle = 'rgba(184,226,232,.5)';
+  c.fillText('АРХИВ', 843, 22);
+  c.font = 'bold 8px Consolas, monospace';
+  c.fillStyle = 'rgba(184,226,232,.34)';
+  c.fillText('ДВЕРЬ', 693, 146);
+  c.fillText('ДВЕРЬ', 693, 412);
+  c.fillStyle = 'rgba(214,182,110,.3)';
+  c.font = 'bold 9px Consolas, monospace';
+  c.fillText('КАБИНЕТ', 200, 26);
+  c.fillText('ПОСТ', 470, 92);
+  c.restore();
+
+  /* подписи зон на полу */
+  c.save();
+  c.textAlign = 'center';
+  c.font = 'bold 9px Consolas, monospace';
+  c.fillStyle = 'rgba(206,196,170,.16)';
+  c.fillText('РЕСЕПШЕН', 245, 470);
+  c.fillText('ХОЛЛ', 470, 640);
+  c.restore();
+}
+
+/* ---------- свет ---------- */
+
+function conePunch(c, x, y, ang, reach, half, inner) {
+  c.save();
+  c.translate(x, y);
+  c.rotate(ang);
+  const g = c.createLinearGradient(0, 0, reach, 0);
+  g.addColorStop(0, 'rgba(0,0,0,' + inner + ')');
+  g.addColorStop(0.55, 'rgba(0,0,0,' + (inner * 0.5).toFixed(3) + ')');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g;
+  c.beginPath();
+  c.moveTo(0, 0);
+  c.arc(0, 0, reach, -half, half);
+  c.closePath();
+  c.fill();
+  c.restore();
+}
+
+function mayorLighting() {
+  lctx.setTransform(1, 0, 0, 1, 0, 0);
+  lctx.globalCompositeOperation = 'source-over';
+  lctx.clearRect(0, 0, W, H);
+  lctx.fillStyle = mayorAlarm ? 'rgba(26,7,7,0.46)' : 'rgba(7,8,12,0.55)';
+  lctx.fillRect(0, 0, W, H);
+  lctx.globalCompositeOperation = 'destination-out';
+
+  /* потолочные лампы холла и кабинетов */
+  const lift = mayorAlarm ? 1.45 : 1;
+  radial(lctx, 250, 360, 300, 0.32 * lift);
+  radial(lctx, 620, 300, 320, 0.28 * lift);
+  radial(lctx, 500, 560, 260, 0.22 * lift);
+  radial(lctx, 150, 130, 210, 0.24 * lift);
+  radial(lctx, 540, 120, 220, 0.22 * lift);
+  radial(lctx, 840, 220, 320, 0.4 * lift);      /* архив */
+  radial(lctx, 830, 440, 220, 0.26 * lift);
+
+  /* стойка с делами */
+  radial(lctx, MAYOR_SERVER.x, MAYOR_SERVER.y, 130, 0.44);
+  /* фонари охраны */
+  for (const g of mayorGuards) {
+    radial(lctx, g.x, g.y, 130, 0.5);
+    conePunch(lctx, g.x, g.y, g.ang, MAYOR_RANGE, MAYOR_CONE + 0.08, 0.6);
+  }
+
+  radial(lctx, player.x, player.y, 330, 0.6);
+  playerCone(lctx, 470, 0.42, 0.95);
+
+  for (const f of fires) {
+    const k = Math.min(1, f.life / 1.2);
+    radial(lctx, f.x, f.y, f.r * 1.6 * k, 0.95 * k);
+  }
+  if (player.muzzle > 0) {
+    radial(lctx, player.x + Math.cos(player.ang) * 28, player.y + Math.sin(player.ang) * 28,
+      player.weapon === 'plasma' ? 200 : 165, 0.75);
+  }
+  for (const e of enemies) {
+    if (e.muzzle > 0) radial(lctx, e.x + Math.cos(e.ang) * 22, e.y + Math.sin(e.ang) * 22, 135, 0.62);
+  }
+
+  lctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(lightCv, 0, 0);
+}
+
+function drawMayorGlow() {
+  const t = state.time;
+  ctx.save();
+  /* стойка: зелёные светодиоды и лампа над архивом */
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = 'rgba(120,232,168,' + (0.16 + 0.08 * Math.sin(t * 3.3)).toFixed(3) + ')';
+  ctx.beginPath(); ctx.arc(MAYOR_SERVER.x, MAYOR_SERVER.y, 46, 0, 6.28); ctx.fill();
+  /* проёмы архива светятся холодным */
+  for (const y of [182, 374]) {
+    ctx.fillStyle = 'rgba(150,210,226,0.1)';
+    ctx.fillRect(680, y - 26, 22, 52);
+  }
+  if (mayorAlarm) {
+    ctx.fillStyle = 'rgba(226,72,52,' + (0.1 + 0.07 * Math.sin(t * 7)).toFixed(3) + ')';
+    ctx.fillRect(0, 0, W, H);
+    for (const x of [250, 620, 840]) {
+      ctx.fillStyle = 'rgba(255,120,80,' + (0.05 + 0.05 * Math.sin(t * 9 + x)).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(x, 300, 120, 0, 6.28); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawMayorGuard(g) {
+  const bob = Math.sin(g.t * 6) * 0.8;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,.45)';
+  ctx.beginPath(); ctx.ellipse(g.x + 3, g.y + 8, 13, 7, 0, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#363b42';
+  ctx.beginPath(); ctx.arc(g.x, g.y + bob, 11, 0, 6.28); ctx.fill();
+  ctx.strokeStyle = 'rgba(186,196,206,.24)';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(g.x, g.y + bob, 11, 0, 6.28); ctx.stroke();
+  ctx.fillStyle = '#282d33';
+  ctx.beginPath(); ctx.arc(g.x, g.y + bob, 6.4, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#454a52';
+  ctx.beginPath(); ctx.arc(g.x, g.y + bob, 4.6, 0, 6.28); ctx.fill();
+  ctx.save();
+  ctx.translate(g.x, g.y + bob);
+  ctx.rotate(g.ang);
+  ctx.fillStyle = '#1c2025';
+  ctx.fillRect(9, -2.4, 11, 4.8);
+  ctx.fillStyle = g.seen ? 'rgba(255,150,120,.95)' : 'rgba(255,232,180,.85)';
+  ctx.fillRect(19, -2, 3, 4);
+  ctx.restore();
+  ctx.restore();
+}
+
+function drawMayorCones() {
+  const t = state.time;
+  for (const g of mayorGuards) {
+    const col = g.seen ? '226,72,52' : (mayorAlert > 0.3 ? '232,150,80' : '232,196,110');
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(g.x, g.y);
+    ctx.arc(g.x, g.y, MAYOR_RANGE, g.ang - MAYOR_CONE, g.ang + MAYOR_CONE);
+    ctx.closePath();
+    const rg = ctx.createRadialGradient(g.x, g.y, 8, g.x, g.y, MAYOR_RANGE);
+    rg.addColorStop(0, 'rgba(' + col + ',0.24)');
+    rg.addColorStop(1, 'rgba(' + col + ',0.015)');
+    ctx.fillStyle = rg;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(' + col + ',0.22)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.restore();
+
+    /* глаза/метка над охраной */
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = g.seen ? 'rgba(255,120,96,.95)' : 'rgba(255,214,150,.5)';
+    ctx.beginPath();
+    ctx.arc(g.x + Math.cos(g.ang) * 10, g.y + Math.sin(g.ang) * 10, 1.8, 0, 6.28);
+    ctx.fill();
+    ctx.restore();
+
+    if (g.seen && !mayorAlarm) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 14px Consolas, monospace';
+      ctx.fillStyle = 'rgba(255,120,96,' + (0.6 + 0.4 * Math.sin(t * 12)).toFixed(3) + ')';
+      ctx.fillText('!', g.x, g.y - 18);
+      ctx.restore();
+    }
+  }
+}
+
+function drawMayorPrompt() {
+  if (!player) return;
+  const t = state.time;
+  ctx.save();
+  ctx.textAlign = 'center';
+
+  /* конусы и метки охраны — поверх затемнения */
+  drawMayorCones();
+
+  const d = Math.hypot(player.x - MAYOR_SERVER.x, player.y - MAYOR_SERVER.y);
+  const inRange = d < MAYOR_USE_R;
+
+  /* светодиоды стойки читаются в темноте */
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = 'rgba(140,230,172,' + (0.4 + 0.3 * Math.sin(t * 4)).toFixed(3) + ')';
+  ctx.font = 'bold 9px Consolas, monospace';
+  ctx.fillText('СТОЙКА · ДЕЛА', MAYOR_SERVER.x, MAYOR_SERVER.y - 52);
+  ctx.restore();
+
+  /* полоса копирования */
+  if (mayorCopy > 0.005 && !mayorCopied) {
+    const w = 132, x = MAYOR_SERVER.x - w / 2, y = MAYOR_SERVER.y - 44;
+    ctx.fillStyle = 'rgba(8,14,12,.75)';
+    ctx.fillRect(x - 2, y - 2, w + 4, 10);
+    ctx.fillStyle = 'rgba(140,230,172,.9)';
+    ctx.fillRect(x, y, w * mayorCopy, 6);
+  }
+
+  if (inRange && !mayorCopied) {
+    ctx.font = 'bold 10px Consolas, monospace';
+    ctx.fillStyle = 'rgba(150,236,180,' + (0.6 + 0.4 * Math.sin(t * 4)).toFixed(3) + ')';
+    ctx.fillText('УДЕРЖИВАЙ E — КОПИРОВАТЬ ДЕЛА (' + mayorFiles + ' / 3)',
+      MAYOR_SERVER.x, MAYOR_SERVER.y - 60);
+  }
+
+  /* маркер цели для входа */
+  if (!mayorCopied && !mayorInsideArchive() && state.time < 90) {
+    const px = 843, py = 250;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(150,226,200,.22)';
+    ctx.beginPath(); ctx.arc(px, py, 30, 0, 6.28); ctx.fill();
+    ctx.restore();
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.fillStyle = 'rgba(186,232,214,.5)';
+    ctx.fillText('ЦЕЛЬ · АРХИВ', px, py - 38);
+  }
+
+  /* нижняя строка состояния */
+  ctx.font = 'bold 10px Consolas, monospace';
+  if (mayorCopied) {
+    ctx.fillStyle = 'rgba(255,124,96,' + (0.6 + 0.4 * Math.sin(t * 10)).toFixed(3) + ')';
+    ctx.fillText('СИГНАЛИЗАЦИЯ · ТЕБЯ ВЗЯЛИ ЧЕРЕЗ ' + Math.max(0, state.endTimer).toFixed(1), W / 2, H - 22);
+  } else if (mayorAlarm) {
+    ctx.fillStyle = 'rgba(255,124,96,' + (0.55 + 0.35 * Math.sin(t * 8)).toFixed(3) + ')';
+    ctx.fillText('ТРЕВОГА · ЗАБЕРИ ДЕЛА У СТОЙКИ И УХОДИ', W / 2, H - 22);
+  } else {
+    ctx.fillStyle = 'rgba(214,196,150,.5)';
+    ctx.fillText('МЭРИЯ · ОБХОД ОХРАНЫ · НЕ ПОПАДАЙ В ЛУЧИ', W / 2, H - 22);
+    if (mayorAlert > 0.04) {
+      ctx.fillStyle = 'rgba(240,150,90,.75)';
+      ctx.fillText('ТЕБЯ МОГУТ ЗАМЕТИТЬ', W / 2, H - 40);
+      const w = 150, x = W / 2 - w / 2, y = H - 34;
+      ctx.fillStyle = 'rgba(12,12,14,.7)';
+      ctx.fillRect(x, y, w, 5);
+      ctx.fillStyle = 'rgba(240,150,90,.9)';
+      ctx.fillRect(x, y, w * mayorAlert, 5);
+    }
+  }
+  ctx.restore();
+}
+
+/* ---------- секретная кнопка ---------- */
+
+function secretInRange() {
+  const s = state.secret;
+  if (!s || !player || state.mode !== 'play') return false;
+  return Math.hypot(player.x - s.x, player.y - s.y) < MAYOR_SECRET_R;
+}
+
+function enterSecret() {
+  if (state.mode !== 'play' || level.id === 'mayor') return;
+  saveGame(true);
+  state.secretFrom = { id: level.id, num: level.num, name: level.name };
+  state.pendingCarry = snapshotCarry();
+  sfx.pick();
+  enterLevel('mayor', snapshotCarry());
+}
+
+function drawSecretButton() {
+  const s = state.secret;
+  if (!s || !player || level.id === 'mayor') return;
+  if (state.mode !== 'play' && state.mode !== 'paused') return;
+  if (level.id === 'res' && resFloor !== 0) return;
+  const t = state.time;
+  const d = Math.hypot(player.x - s.x, player.y - s.y);
+  const near = d < MAYOR_SECRET_R;
+  const fade = clamp(1 - d / 900, 0.3, 1);
+  const pulse = 0.5 + 0.5 * Math.sin(t * 3.2);
+  ctx.save();
+  /* станина */
+  ctx.fillStyle = 'rgba(0,0,0,.45)';
+  ctx.beginPath(); ctx.ellipse(s.x, s.y + 7, 14, 6.5, 0, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#242019';
+  ctx.fillRect(s.x - 12, s.y - 9, 24, 18);
+  ctx.strokeStyle = 'rgba(190,178,152,.28)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(s.x - 11.5, s.y - 8.5, 23, 17);
+  /* сама кнопка */
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = 'rgba(226,74,54,' + ((0.3 + 0.5 * pulse) * fade).toFixed(3) + ')';
+  ctx.beginPath(); ctx.arc(s.x, s.y, 4.8, 0, 6.28); ctx.fill();
+  ctx.fillStyle = 'rgba(255,130,100,' + ((0.05 + 0.13 * pulse) * fade).toFixed(3) + ')';
+  ctx.beginPath(); ctx.arc(s.x, s.y, 15 + 4 * pulse, 0, 6.28); ctx.fill();
+  ctx.restore();
+  if (near) {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 10px Consolas, monospace';
+    ctx.fillStyle = 'rgba(236,150,130,' + (0.6 + 0.4 * pulse).toFixed(3) + ')';
+    ctx.fillText('E — КНОПКА БЕЗ ОПИСИ', s.x, s.y - 22);
+    ctx.restore();
+  }
+}
+
 const LEVELS = {
   bar: {
     id: 'bar', num: 1, name: 'Бар «У Гая»',
+    secret: { x: 60, y: 250 },
     props: BAR_PROPS, spawns: BAR_SPAWNS,
     start: { x: 400, y: 600 },
     exit: { x: 900, y: 552, w: 70, h: 96 },
@@ -6575,6 +7348,7 @@ const LEVELS = {
   },
   street: {
     id: 'street', num: 2, name: 'Улица · телестанция',
+    secret: { x: 862, y: 268 },
     props: STREET_PROPS, spawns: STREET_SPAWNS,
     start: { x: 80, y: 440 },
     exit: { x: 906, y: 338, w: 64, h: 112 },
@@ -6594,6 +7368,7 @@ const LEVELS = {
   },
   school: {
     id: 'school', num: 3, name: 'Школа №4 · больница',
+    secret: { x: 860, y: 430 },
     props: SCHOOL_PROPS, spawns: SCHOOL_SPAWNS, stages: SCHOOL_STAGES,
     start: { x: 86, y: 604 },
     exit: { x: 930, y: 312, w: 58, h: 106 },
@@ -6615,6 +7390,7 @@ const LEVELS = {
   },
   village: {
     id: 'village', num: 4, name: 'Последний заказ · деревня',
+    secret: { x: 940, y: 190 },
     props: VILLAGE_PROPS, spawns: VILLAGE_SPAWNS, stages: VILLAGE_STAGES,
     start: { x: 70, y: 344 },
     exit: { x: 898, y: 318, w: 56, h: 52 },
@@ -6636,6 +7412,7 @@ const LEVELS = {
   },
   factory: {
     id: 'factory', num: 5, name: 'Последний заказ · завод №7',
+    secret: { x: 940, y: 250 },
     props: FACTORY_PROPS, spawns: FACTORY_SPAWNS, stages: FACTORY_STAGES,
     start: { x: 80, y: 340 },
     exit: { x: 916, y: 300, w: 54, h: 120 },
@@ -6657,6 +7434,7 @@ const LEVELS = {
   },
   farm: {
     id: 'farm', num: 6, name: 'Последний заказ · ферма',
+    secret: { x: 940, y: 190 },
     props: FARM_PROPS, spawns: FARM_SPAWNS, stages: FARM_STAGES,
     start: { x: 196, y: 210 },
     exit: { x: 948, y: 300, w: 40, h: 90 },
@@ -6677,6 +7455,7 @@ const LEVELS = {
   },
   roof: {
     id: 'roof', num: 7, name: 'Последний заказ · крыша',
+    secret: { x: 60, y: 190 },
     props: ROOF_PROPS, spawns: ROOF_SPAWNS, stages: [],
     start: { x: 486, y: 262 },
     exit: { x: 946, y: 260, w: 20, h: 60 },
@@ -6697,6 +7476,7 @@ const LEVELS = {
   },
   fort: {
     id: 'fort', num: 8, name: 'Последний заказ · форт',
+    secret: { x: 60, y: 190 },
     props: FORT_PROPS, spawns: FORT_SPAWNS, stages: [],
     start: { x: FORT_LAND.x, y: FORT_LAND.y },
     exit: FORT_EXIT,
@@ -6719,6 +7499,7 @@ const LEVELS = {
   },
   res: {
     id: 'res', num: 9, name: 'Последний заказ · резиденция',
+    secret: { x: 80, y: 190 },
     props: RES_WALLS.concat(RES_PROPS[0]), spawns: RES_SPAWNS[0], stages: [],
     start: RES_START,
     exit: { x: -200, y: -200, w: 1, h: 1 },
@@ -6732,6 +7513,22 @@ const LEVELS = {
     pickups: resPickupsList,
     update: resUpdate,
     objectives: resObjectives
+  },
+  mayor: {
+    id: 'mayor', num: 0, secret: true, tag: MAYOR_TAG, name: 'Мэрия · архив',
+    props: MAYOR_WALLS.concat(MAYOR_PROPS), spawns: MAYOR_SPAWNS, stages: [],
+    start: MAYOR_START,
+    exit: { x: -200, y: -200, w: 1, h: 1 },
+    fallback: { x: 470, y: 560 },
+    ammoSpots: [],
+    intro: 'Кнопка щёлкнула — и ты уже не там, где был. Мэрия, ночь, обход охраны, а дела — в архиве справа.',
+    pauseLead: 'Мэрия спит, но охрана ходит по этажу. В архиве ждут дела, за которыми ты здесь.',
+    floor: buildMayorFloor,
+    room: buildMayorRoom,
+    light: mayorLighting,
+    pickups: mayorPickups,
+    update: mayorUpdate,
+    objectives: mayorObjectives
   }
 };
 
@@ -6760,7 +7557,8 @@ const state = {
   kills: 0, shots: 0, hits: 0, bottlesUsed: 0,
   objectives: [], entryCarry: null, lastSaveAt: 0,
   dropT: 0, dropY: 0, dropLine: null, riding: false, mortarOn: false,
-  mortarAmmo: 0, fortWave: 0, gateCrack: 0, tankWarned: false, tankKills: 0
+  mortarAmmo: 0, fortWave: 0, gateCrack: 0, tankWarned: false, tankKills: 0,
+  mayorUse: false, mayorShots: 0, secret: null, secretFrom: null
 };
 
 function makePlayer() {
@@ -6806,6 +7604,9 @@ function resetWorld() {
   resEdo = null; resPres = null; resStairLock = 0; resBeams.length = 0;
   state.resSig = ''; state.captureOn = null; state.captureT = 0;
   state.kills = 0; state.shots = 0; state.hits = 0; state.bottlesUsed = 0;
+  mayorGuards = []; mayorAlert = 0; mayorCopy = 0; mayorFiles = 0;
+  mayorAlarm = false; mayorCopied = false; mayorCaught = false; mayorSig = '';
+  state.mayorUse = false; state.mayorShots = 0; state.secret = null;
 }
 
 function barPickups() {
@@ -6888,13 +7689,20 @@ function enterLevel(id, carry) {
   if (level.id === 'roof') { spawnMortars(); spawnSquad(); }
   if (level.id === 'fort') { spawnFort(); spawnSquad(); }
   if (level.id === 'res') spawnRes();
+  if (level.id === 'mayor') spawnMayor();
   state.objectives = level.objectives();
   if (level.id === 'res') { syncResObjectives(); updateObjectives(); }
-  els.missionTag.textContent = 'МИССИЯ ' + (level.num < 10 ? '0' + level.num : level.num);
-  els.waveLabel.textContent = level.id === 'res' ? 'ЭТАЖ' : level.id === 'bar' ? 'ВОЛНА' : (level.id === 'village' ? 'ПВО' : (level.id === 'farm' ? 'АВИАУДАР' : (level.id === 'roof' ? 'МИНОМЁТЫ' : (level.id === 'fort' ? 'БРОНЯ' : 'РУБЕЖ'))));
+  if (level.id === 'mayor') { syncMayorObjectives(); updateObjectives(); }
+  els.missionTag.textContent = level.tag || ('МИССИЯ ' + (level.num < 10 ? '0' + level.num : level.num));
+  els.waveLabel.textContent = level.id === 'mayor' ? 'АРХИВ' : (level.id === 'res' ? 'ЭТАЖ' : level.id === 'bar' ? 'ВОЛНА' : (level.id === 'village' ? 'ПВО' : (level.id === 'farm' ? 'АВИАУДАР' : (level.id === 'roof' ? 'МИНОМЁТЫ' : (level.id === 'fort' ? 'БРОНЯ' : 'РУБЕЖ')))));
 
   if (level.id === 'bar') { state.wave = -1; }
   else { state.stage = -1; syncDoorSolid(); }
+  /* секретная кнопка: точка есть, но её нет в описи — проверяем, что в неё можно встать */
+  state.secret = level.secret ? freeSpot(level.secret.x, level.secret.y, 15) : null;
+  if (level.secret && Math.hypot(state.secret.x - level.secret.x, state.secret.y - level.secret.y) > 40) {
+    console.warn('[секрет ' + level.id + '] кнопка переехала в ' + Math.round(state.secret.x) + ',' + Math.round(state.secret.y));
+  }
   spawnBag = [];
   checkSpawns();
 
@@ -9366,6 +10174,12 @@ function updateObjectives() {
 }
 
 function updateWaveHud() {
+  if (level.id === 'mayor') {
+    els.waveNum.textContent = mayorFiles + '/3';
+    els.waveLeft.textContent = mayorCopied ? 'ВЗЯЛИ'
+      : (mayorAlarm ? 'ТРЕВОГА' : (mayorAlert > 0.25 ? 'ЗАМЕТИЛИ?' : 'СКРЫТНО'));
+    return;
+  }
   if (level.id === 'res') {
     els.waveNum.textContent = (resFloor + 1) + '/3';
     const n = resCount(resFloor);
@@ -10352,6 +11166,10 @@ function toggleOptics() {
     toast('Бинокля нет. Ищи в деревне.', 1500);
     return;
   }
+  if (level.id === 'mayor') {
+    toast('В мэрии оптика не поможет — только тишина.', 1500);
+    return;
+  }
   player.binocs.on = !player.binocs.on;
   if (player.binocs.on) {
     tone(760, 0.07, 'triangle', 0.04);
@@ -11196,7 +12014,7 @@ function updatePlayer(dt) {
 /* ---------------- выход ---------------- */
 function checkExit() {
   if (!state.exitUnlocked) return;
-  if (level.id === 'roof' || level.id === 'fort' || level.id === 'res') return;
+  if (level.id === 'roof' || level.id === 'fort' || level.id === 'res' || level.id === 'mayor') return;
   const ex = level.exit;
   if (player.x > ex.x && player.y > ex.y && player.y < ex.y + ex.h) {
     missionComplete();
@@ -11463,7 +12281,7 @@ function drawPickups() {
 }
 
 function drawExitZone() {
-  if (level.id === 'village' || level.id === 'farm' || level.id === 'roof' || level.id === 'fort' || level.id === 'res') return;
+  if (level.id === 'village' || level.id === 'farm' || level.id === 'roof' || level.id === 'fort' || level.id === 'res' || level.id === 'mayor') return;
   const ex = level.exit;
   const unlocked = state.exitUnlocked;
   const pulse = 0.5 + 0.5 * Math.sin(state.time * 3);
@@ -12079,6 +12897,7 @@ function render() {
   if (level.id === 'fort') { drawFortGate(); drawFortMortar(); }
   drawPickups();
   if (level.id === 'res') resDrawScene();
+  if (level.id === 'mayor') mayorGuards.forEach(drawMayorGuard);
   if (level.id === 'village') aas.forEach(drawVillageAA);
   if (level.id === 'farm') drawFarmMarker();
   if (level.id === 'roof') drawRoofCrates();
@@ -12107,6 +12926,7 @@ function render() {
     if (level.id === 'roof') drawRoofGlow();
     if (level.id === 'fort') drawFortGlow();
     if (level.id === 'res') resDrawGlow();
+    if (level.id === 'mayor') drawMayorGlow();
     if (level.id === 'school') drawSchoolGlow();
     drawRain();
   }
@@ -12118,6 +12938,8 @@ function render() {
   if (level.id === 'roof') drawRoofPrompt();
   if (level.id === 'fort') drawFortPrompt();
   if (level.id === 'res') resDrawPrompt();
+  if (level.id === 'mayor') drawMayorPrompt();
+  drawSecretButton();
   drawEdgeVignette();
 
   if (state.lightning > 0) {
@@ -12405,7 +13227,8 @@ function collectSave() {
       mortarKills: state.mortarKills, roofLoaded: state.roofLoaded,
       carrying: state.carrying, descended: state.descended,
       dropT: state.dropT, mortarOn: state.mortarOn, mortarAmmo: state.mortarAmmo,
-      fortWave: state.fortWave, gateCrack: state.gateCrack
+      fortWave: state.fortWave, gateCrack: state.gateCrack,
+      mayorCopy: mayorCopy, mayorFiles: mayorFiles, mayorAlarm: mayorAlarm, mayorCopied: mayorCopied
     }
   };
 }
@@ -12420,7 +13243,7 @@ function saveGame(silent) {
     updateSaveMeta();
     state.lastSaveAt = Date.now();
     if (!silent) {
-      toast('Сохранено · ' + level.name + ' · миссия ' + (level.num < 10 ? '0' + level.num : level.num), 2200);
+      toast('Сохранено · ' + level.name + ' · ' + (level.tag ? level.tag.toLowerCase() : 'миссия ' + (level.num < 10 ? '0' + level.num : level.num)), 2200);
       updatePauseMeta();
     }
     return true;
@@ -12536,6 +13359,18 @@ function loadGame() {
   if (level.id === 'roof') syncRoofObjectives();
   if (level.id === 'fort') syncFortObjectives();
   if (level.id === 'res') resApplyLoad(d.res);
+  if (level.id === 'mayor' && d.st) {
+    mayorCopy = d.st.mayorCopy || 0;
+    mayorFiles = d.st.mayorFiles || 0;
+    mayorAlarm = !!d.st.mayorAlarm;
+    mayorCopied = !!d.st.mayorCopied;
+    mayorAlert = mayorAlarm ? 1 : 0;
+    if (mayorCopied) { mayorGuards = []; state.endTimer = 2; }
+    else if (mayorAlarm) { mayorGuards.forEach(g => spawnEnemy('trooper', { x: g.x, y: g.y })); mayorGuards = []; }
+    syncMayorObjectives();
+    updateObjectives();
+    updateWaveHud();
+  }
   toast('Загружено · ' + level.name, 2000);
   return true;
 }
@@ -12546,7 +13381,7 @@ function updatePauseMeta() {
   const t = Math.floor(state.time);
   const mss = Math.floor(t / 60) + ':' + pad2(t % 60);
   const raw = readRaw();
-  let line = 'МИССИЯ ' + (level.num < 10 ? '0' + level.num : level.num) + ' · ' + level.name + ' · ' + mss;
+  let line = (level.tag ? level.tag : 'МИССИЯ ' + (level.num < 10 ? '0' + level.num : level.num)) + ' · ' + level.name + ' · ' + mss;
   if (raw) {
     try {
       const d = JSON.parse(raw);
@@ -12763,7 +13598,19 @@ function endGame(win) {
   const res = level.id === 'res';
 
   els.endKicker.textContent = 'МИССИЯ ' + (level.num < 10 ? '0' + level.num : level.num) + ' · ' + (win ? 'ВЫПОЛНЕНА' : 'ПРОВАЛЕНА');
-  if (win && res) {
+  const mayor = level.id === 'mayor';
+  if (mayor) {
+    els.endKicker.textContent = MAYOR_TAG + ' · ЛИЧНОЕ ДЕЛО';
+    els.endTitle.textContent = mayorCaught ? 'Тебя взяли' : 'Мэрия не отпустила';
+    els.endText.innerHTML = mayorCopied
+      ? 'Копии ушли по каналу — своим, в назначенный час. А тебя взяли в архиве: свет, сирена и стволы в лицо. ' +
+        'Марк остаётся в мэрии, но дело, за которым он шёл, закрыто.<br />' +
+        'Прогресс кампании цел: перед броском игра сохранилась' +
+        (state.secretFrom ? ' на миссии 0' + state.secretFrom.num + ' · ' + state.secretFrom.name : '') +
+        ', и «Загрузить» в меню вернёт тебя туда.'
+      : 'Дела остались в чужом архиве, а коридоры мэрии тебя не отпустили. Копии не ушли — секретный заказ открыт.';
+    $('againBtn').textContent = 'Снова в мэрию';
+  } else if (win && res) {
     els.endTitle.textContent = 'Акт I завершён';
     els.endText.innerHTML =
       'Президент лежит на ковре, руки связаны, пулемёт брошен рядом. Из-за стены ещё тянет ' +
@@ -12857,7 +13704,7 @@ function endGame(win) {
     '<li>МОЛОТОВЫХ <b>' + state.bottlesUsed + '</b></li>' +
     '<li>ЗДОРОВЬЕ <b>' + Math.round(player.hp) + '</b></li>';
 
-  $('againBtn').textContent = win ? 'С начала' : 'Повторить';
+  $('againBtn').textContent = mayor ? 'Снова в мэрию' : (win ? 'С начала' : 'Повторить');
 }
 
 /* ---------------- цикл ---------------- */
@@ -12974,7 +13821,7 @@ $('briefBtn').addEventListener('click', () => {
   updateSaveMeta();
 });
 $('againBtn').addEventListener('click', () => {
-  if (state.mode === 'win') newGame(); else restartLevel();
+  if (state.mode === 'win' && level.id !== 'mayor') newGame(); else restartLevel();
 });
 $('endMenuBtn').addEventListener('click', goMenu);
 if (els.squadGrid) {
@@ -13026,6 +13873,11 @@ window.LO = {
   get resPres() { return resPres; }, get resBeams() { return resBeams; },
   get resFloor() { return resFloor; }, get resVisited() { return resVisited; },
   resCount, resPickupsList,
+  enterSecret, mayorUpdate, mayorInteract, mayorPickups, spawnMayor, syncMayorObjectives, drawSecretButton,
+  get mayorGuards() { return mayorGuards; },
+  get mayorState() { return { alert: mayorAlert, copy: mayorCopy, files: mayorFiles, alarm: mayorAlarm, copied: mayorCopied, caught: mayorCaught }; },
+  get MAYOR_SERVER() { return MAYOR_SERVER; },
+  get secretSpot() { return state.secret; },
   killAll() { enemies.slice().forEach(e => damageEnemy(e, 9999, 0)); },
   hurt(n) { hurtPlayer(n); }
 };
