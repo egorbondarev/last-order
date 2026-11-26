@@ -237,7 +237,6 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
 @media (prefers-reduced-motion: reduce){
   *{transition:none !important; animation:none !important}
 }
-
 </style>
 </head>
 <body>
@@ -290,14 +289,14 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
 
   <div id="menu" class="screen">
     <div class="card menu-card">
-      <p class="kicker">WORLD OF WARS · СЕМЬ МИССИЙ</p>
+      <p class="kicker">WORLD OF WARS · ВОСЕМЬ МИССИЙ</p>
       <h1>Последний<br /><em>заказ</em></h1>
       <p class="lead">
         Марк, бармен. Вчера здесь играли джаз и наливали до утра.<br />
         Сегодня в городе война: бар разгромлен, а на улице ждёт плазменный бластер.
       </p>
       <p class="body">
-        Семь заказов одной ночью: бар, улица, школа, деревня, завод, ферма и крыша многоэтажки.<br />
+        Восемь заказов одной ночью: бар, улица, школа, деревня, завод, ферма, крыша и военный форт.<br />
         Каждый следующий открывается после предыдущего — прогресс хранится в браузере.
       </p>
       <ul class="keys">
@@ -331,7 +330,7 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
   <div id="select" class="screen hidden">
     <div class="card select-card">
       <p class="kicker">КАМПАНИЯ · ВЫБОР МИССИИ</p>
-      <h2>Семь заказов</h2>
+      <h2>Восемь заказов</h2>
       <p class="lead" id="selectLead">Открыта первая миссия. Следующая — после прохождения предыдущей.</p>
       <div id="missionGrid" class="mission-grid"></div>
       <p id="selectHint" class="select-hint">Выбери миссию.</p>
@@ -472,7 +471,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Digit3') switchWeapon('shotgun');
   if (e.code === 'Digit4') switchWeapon('smg');
   if (e.code === 'Digit0' || e.code === 'Numpad0') toggleOptics();
-  if (e.code === 'KeyE') { if (level.id === 'roof') roofInteract(); else tryFreePrisoners(); }
+  if (e.code === 'KeyE') { if (level.id === 'roof') roofInteract(); else if (level.id === 'fort') fortInteract(); else tryFreePrisoners(); }
   if (e.code === 'Enter' && state.mode === 'menu' && els.select && els.select.classList.contains('hidden')) newGame();
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
@@ -601,7 +600,8 @@ const ENEMY = {
   trooper: { hp: 64,  speed: 94,  r: 13, dmg: 7,  reach: 0,  cd: 1.5,  col: '#4f5f52', burst: 3 },
   brute:   { hp: 115, speed: 60,  r: 17, dmg: 18, reach: 34, cd: 1.3,  col: '#8c7856' },
   elite:   { hp: 150, speed: 56,  r: 17, dmg: 15, reach: 0,  cd: 1.55, col: '#4a6a74', plasma: true },
-  smg:     { hp: 70,  speed: 100, r: 13, dmg: 9,  reach: 0,  cd: 1.7,  col: '#5c4a5e', burst: 3, smg: true }
+  smg:     { hp: 70,  speed: 100, r: 13, dmg: 9,  reach: 0,  cd: 1.7,  col: '#5c4a5e', burst: 3, smg: true },
+  at:      { hp: 92,  speed: 68,  r: 14, dmg: 11, reach: 0,  cd: 2.4,  col: '#6b5c3f' }
 };
 
 /* ---------- бар ---------- */
@@ -1888,7 +1888,7 @@ function updateFarm(dt) {
     state.heliLift = Math.min(1, state.heliLift + dt * 0.55);
     player.invuln = Math.max(player.invuln, 0.5);
     state.endTimer -= dt;
-    if (state.endTimer <= 0) finalWin();
+    if (state.endTimer <= 0) missionComplete();
   }
 
   syncFarmObjectives();
@@ -2450,7 +2450,7 @@ function updateRoof(dt) {
     state.heliLift = Math.min(1, state.heliLift + dt * 0.5);
     player.invuln = Math.max(player.invuln, 0.5);
     state.endTimer -= dt;
-    if (state.endTimer <= 0) finalWin();
+    if (state.endTimer <= 0) missionComplete();
   }
 
   syncRoofObjectives();
@@ -3602,18 +3602,26 @@ let squadPick = 'assault';
 
 function renderSquadPick() {
   if (!els.squadGrid) return;
+  const fortBrief = state.pendingNext === 'fort';
   els.squadGrid.innerHTML = Object.keys(SQUADS).map(k => {
     const q = SQUADS[k];
+    const desc = fortBrief && FORT_SQUAD_DESC[k] ? FORT_SQUAD_DESC[k] : q.desc;
     return '<button class="squad-card' + (k === squadPick ? ' on' : '') + '" data-squad="' + k + '">' +
       '<span class="sq-name">' + q.name + '</span>' +
       '<span class="sq-tag">' + q.tag + '</span>' +
-      '<span class="sq-desc">' + q.desc + '</span>' +
+      '<span class="sq-desc">' + desc + '</span>' +
       '</button>';
   }).join('');
   if (els.squadHint) {
-    els.squadHint.textContent = squadPick === 'solo'
-      ? 'Идёшь один. Борт заберёт тебя только с грузом.'
-      : SQUADS[squadPick].name + ' высадится с тобой на крыше.';
+    if (state.pendingNext === 'fort') {
+      els.squadHint.textContent = squadPick === 'solo'
+        ? 'Идёшь один. Танк, ворота и весь гарнизон — на тебе.'
+        : SQUADS[squadPick].name + (SQUADS[squadPick].men > 1 ? ' прыгнут с тобой в форт.' : ' прыгнет с тобой в форт.');
+    } else {
+      els.squadHint.textContent = squadPick === 'solo'
+        ? 'Идёшь один. Борт заберёт тебя только с грузом.'
+        : SQUADS[squadPick].name + ' высадится с тобой на крыше.';
+    }
   }
 }
 
@@ -3647,6 +3655,1537 @@ function roofBriefFill() {
     (state.pendingCarry && state.pendingCarry.hp < 50 ? 'Ты еле стоишь — ищи аптечки и не иди один.' : 'С ящиком в руках стрелять не выйдет.');
 }
 
+
+/* ===========================================================
+   МИССИЯ 08 · «ПОСЛЕДНИЙ ЗАКАЗ · ФОРТ»
+   Высадка с вертолёта в военный форт. В автопарке стоит танк.
+   Его надо вывести за ворота: сесть за рычаги и доехать или
+   сопроводить на своих двоих — тогда в твоих руках остаётся
+   миномёт у ворот. Перед вылетом на базе можно нанять отряд.
+   =========================================================== */
+
+const FORT_LAND = { x: 306, y: 268 };
+const FORT_TANK_START = { x: 196, y: 545, ang: 0 };
+const FORT_ROUTE = [
+  { x: 372, y: 545 }, { x: 606, y: 545 }, { x: 858, y: 548 }
+];
+const FORT_GATE = { x: 902, y: 500, w: 26, h: 112 };
+const FORT_EXIT = { x: 932, y: 500, w: 36, h: 112 };
+const FORT_MORTAR_PIT = { x: 742, y: 418, w: 86, h: 70 };
+const FORT_MORTAR = { x: 785, y: 452 };
+const FORT_TANK_SPEED = 116;
+const FORT_TANK_AUTO = 58;
+const FORT_TANK_HP = 900;
+const FORT_MORTAR_AMMO = 9;
+
+const FORT_PROPS = [
+  /* казарма, штаб, склад — каменные коробки по периметру */
+  { type: 'bldg', x: 110, y: 84, w: 236, h: 116, kind: 'barracks' },
+  { type: 'bldg', x: 640, y: 78, w: 260, h: 120, kind: 'hq' },
+  { type: 'bldg', x: 660, y: 262, w: 148, h: 92, kind: 'depot' },
+  /* автопарк — навес, из-под которого выезжает танк */
+  { type: 'shed', x: 108, y: 392, w: 150, h: 84 },
+  /* топливный склад */
+  { type: 'fuel', x: 490, y: 120, w: 60, h: 60 },
+  { type: 'fuel', x: 558, y: 120, w: 60, h: 60 },
+  /* вышка */
+  { type: 'tower', x: 396, y: 70, w: 44, h: 44 },
+  /* миномётный окоп у ворот */
+  { type: 'pit', x: FORT_MORTAR_PIT.x, y: FORT_MORTAR_PIT.y, w: FORT_MORTAR_PIT.w, h: FORT_MORTAR_PIT.h },
+  /* брустверы вдоль дороги */
+  { type: 'sandbag', x: 360, y: 470, w: 70, h: 26 },
+  { type: 'sandbag', x: 470, y: 470, w: 70, h: 26 },
+  { type: 'crate', x: 250, y: 452, w: 40, h: 40 },
+  { type: 'truck', x: 560, y: 430, w: 96, h: 52 },
+  { type: 'flood', x: 884, y: 200, w: 26, h: 26 },
+  { type: 'barrier', x: 858, y: 612, w: 62, h: 18 }
+];
+
+const FORT_SPAWNS = [
+  { x: 430, y: 250 }, { x: 566, y: 330 }, { x: 724, y: 382 },
+  { x: 872, y: 246 }, { x: 302, y: 432 }, { x: 618, y: 240 }
+];
+
+const FORT_AMMO = [
+  { x: 332, y: 240 }, { x: 520, y: 330 }, { x: 700, y: 508 }, { x: 880, y: 320 }
+];
+
+const FORT_WAVES = [
+  { at: 382, list: ['trooper', 'at', 'smg', 'trooper'] },
+  { at: 606, list: ['at', 'at', 'trooper', 'brute'] },
+  { at: 800, list: ['smg', 'smg', 'at', 'at', 'elite'] }
+];
+
+const FORT_PICKUP_LIST = [
+  { type: 'ammo',   x: 330, y: 236, amount: 30 },
+  { type: 'ammo',   x: 520, y: 326, amount: 30 },
+  { type: 'ammo',   x: 700, y: 512, amount: 30 },
+  { type: 'cell',   x: 878, y: 322, amount: 40 },
+  { type: 'shells', x: 276, y: 470, amount: 8 },
+  { type: 'medkit', x: 386, y: 300 },
+  { type: 'medkit', x: 640, y: 500 },
+  { type: 'bottle', x: 208, y: 300 },
+  { type: 'bottle', x: 862, y: 470 },
+  { type: 'whiskey', x: 452, y: 402 }
+];
+
+let tank = null;
+let fortMortar = null;
+let fortShells = [];
+let atShells = [];
+
+function fortPickups() {
+  return FORT_PICKUP_LIST.map(p => Object.assign({ taken: false, t: 0 }, p));
+}
+
+function spawnFort() {
+  tank = {
+    x: FORT_TANK_START.x, y: FORT_TANK_START.y, ang: FORT_TANK_START.ang,
+    turret: -0.18, hp: FORT_TANK_HP, maxhp: FORT_TANK_HP,
+    started: false, wp: 0, fireCd: 0, tread: 0, hit: 0, dead: false,
+    muzzle: 0, smoke: 0
+  };
+  fortMortar = {
+    x: FORT_MORTAR.x, y: FORT_MORTAR.y,
+    ammo: FORT_MORTAR_AMMO, cd: 0, aim: -1.9
+  };
+  fortShells = [];
+  atShells = [];
+  state.dropT = 2.7;
+  state.dropY = 0;
+  state.dropLine = null;
+  state.riding = false;
+  state.mortarOn = false;
+  state.mortarAmmo = FORT_MORTAR_AMMO;
+  state.fortWave = 0;
+  state.gateCrack = 0;
+  state.tankKills = 0;
+  state.endTimer = 0;
+  player.invuln = 3.2;
+  player.x = FORT_LAND.x;
+  player.y = FORT_LAND.y;
+}
+
+/* ---------------- МИССИЯ 08: логика ---------------- */
+
+function angNorm(a) {
+  while (a > Math.PI) a -= 6.283185307;
+  while (a < -Math.PI) a += 6.283185307;
+  return a;
+}
+
+function fortBoom(x, y, r, dmg, heavy) {
+  spark(x, y, heavy ? 30 : 20, '#ffcf8a', heavy ? 320 : 240);
+  spark(x, y, heavy ? 14 : 9, '#fff0cf', 180);
+  smokePuff(x, y, heavy ? 14 : 8);
+  decals.push({ x, y, r: r * 0.42, rot: rnd(0, 6.28), a: 0.42, col: 'rgba(26,20,16,.5)' });
+  state.shake = Math.max(state.shake, heavy ? 12 : 6);
+  if (heavy) { noiseHit(0.42, 0.16, 220, 0.7); tone(70, 0.34, 'sine', 0.06, 38); }
+  else { noiseHit(0.26, 0.12, 320, 0.8); tone(96, 0.2, 'sine', 0.045, 52); }
+
+  for (const e of enemies.slice()) {
+    const d = Math.hypot(e.x - x, e.y - y);
+    if (d < r) {
+      const k = 1 - d / (r * 1.4);
+      damageEnemy(e, dmg * clamp(k, 0.35, 1), Math.atan2(e.y - y, e.x - x));
+    }
+  }
+}
+
+function damageTank(n) {
+  if (!tank || tank.dead) return;
+  tank.hp -= n;
+  tank.hit = 0.24;
+  spark(tank.x + rnd(-16, 16), tank.y + rnd(-14, 14), 8, '#ffd0a0', 150);
+  smokePuff(tank.x, tank.y, 3);
+  state.shake = Math.max(state.shake, 6);
+  noiseHit(0.2, 0.1, 400, 1.1);
+  if (tank.hp > tank.maxhp * 0.34 || state.tankWarned) { /* ещё держится */ }
+  else { state.tankWarned = true; toast('Танк дымит. Ещё пара попаданий — и он встанет.', 3000); }
+  updateWaveHud();
+  if (tank.hp > 0) return;
+  tank.hp = 0;
+  tank.dead = true;
+  fortBoom(tank.x, tank.y, 120, 0, true);
+  if (state.riding) { state.riding = false; player.x = tank.x - 42; player.y = tank.y + 42; }
+  endGame(false);
+}
+
+function fortCannon() {
+  if (!tank || tank.fireCd > 0 || tank.dead) return;
+  tank.fireCd = 1.75;
+  tank.muzzle = 0.12;
+  const a = tank.turret + rnd(-0.02, 0.02);
+  const mx = tank.x + Math.cos(a) * 46, my = tank.y + Math.sin(a) * 46;
+  fortShells.push({
+    kind: 'cannon', x: mx, y: my, sx: mx, sy: my,
+    vx: Math.cos(a) * 700, vy: Math.sin(a) * 700,
+    dmg: 150, r: 92, life: 1.3
+  });
+  spark(mx, my, 12, '#ffe0a8', 220);
+  state.shake = Math.max(state.shake, 8);
+  noiseHit(0.4, 0.2, 200, 0.6);
+  tone(64, 0.3, 'sine', 0.07, 34);
+}
+
+function fortMortarFire() {
+  if (!fortMortar || state.mortarAmmo <= 0 || fortMortar.cd > 0 || !state.mortarOn) return;
+  const mx = mouse.x, my = mouse.y;
+  const dx = mx - fortMortar.x, dy = my - fortMortar.y;
+  const d = Math.hypot(dx, dy) || 1;
+  if (d < 120) { toast('Слишком близко — только себя накроешь.', 1200); return; }
+  const k = Math.min(1, 700 / d);
+  const tx = fortMortar.x + dx * k * 0.98, ty = fortMortar.y + dy * k * 0.98;
+  state.mortarAmmo--;
+  fortMortar.cd = 1.55;
+  fortMortar.aim = Math.atan2(ty - fortMortar.y, tx - fortMortar.x);
+  fortShells.push({
+    kind: 'mortar', x: fortMortar.x, y: fortMortar.y,
+    sx: fortMortar.x, sy: fortMortar.y,
+    t: 0, dur: 0.72 + d / 900, tx, ty, dmg: 165, r: 96
+  });
+  noiseHit(0.3, 0.12, 260, 0.9);
+  tone(120, 0.24, 'sine', 0.05, 60);
+  spark(fortMortar.x, fortMortar.y, 8, '#ffe0b0', 130);
+  toast('Мины: ' + state.mortarAmmo, 900);
+  updateWaveHud();
+}
+
+function updateFortShells(dt) {
+  for (let i = fortShells.length - 1; i >= 0; i--) {
+    const s = fortShells[i];
+    if (s.kind === 'mortar') {
+      s.t += dt;
+      const p = Math.min(1, s.t / s.dur);
+      s.x = s.sx + (s.tx - s.sx) * p;
+      s.y = s.sy + (s.ty - s.sy) * p;
+      s.z = Math.sin(p * Math.PI) * 120;
+      if (p >= 1) { fortBoom(s.x, s.y, s.r, s.dmg, true); fortShells.splice(i, 1); }
+      continue;
+    }
+    s.life -= dt;
+    if (s.life <= 0) { fortBoom(s.x, s.y, s.r, s.dmg, false); fortShells.splice(i, 1); continue; }
+    const steps = 3;
+    let hit = false;
+    for (let k = 0; k < steps && !hit; k++) {
+      s.x += s.vx * dt / steps;
+      s.y += s.vy * dt / steps;
+      if (pointInSolid(s.x, s.y)) hit = true;
+      for (const e of enemies) {
+        if (Math.hypot(e.x - s.x, e.y - s.y) < e.r + 6) { hit = true; break; }
+      }
+      if (s.x < 0 || s.x > W || s.y < 0 || s.y > H) hit = true;
+    }
+    s.z = 0;
+    if (hit) { fortBoom(s.x, s.y, s.r, s.dmg, false); fortShells.splice(i, 1); }
+  }
+}
+
+function atFire(e) {
+  if (!tank || tank.dead) return;
+  e.atCd = rnd(2.7, 3.7);
+  e.muzzle = 0.1;
+  atShells.push({
+    x: e.x, y: e.y, life: 1.5, sp: 250, trail: 0,
+    ang: Math.atan2(tank.y - e.y, tank.x - e.x)
+  });
+  spark(e.x, e.y, 5, '#ffd0a0', 120);
+  noiseHit(0.16, 0.1, 480, 1.0);
+  tone(110, 0.14, 'square', 0.035, 60);
+}
+
+function updateAtShells(dt) {
+  for (let i = atShells.length - 1; i >= 0; i--) {
+    const s = atShells[i];
+    s.life -= dt;
+    if (!tank || tank.dead) { atShells.splice(i, 1); continue; }
+    const want = Math.atan2(tank.y - s.y, tank.x - s.x);
+    s.ang += clamp(angNorm(want - s.ang), -2.2 * dt, 2.2 * dt);
+    s.x += Math.cos(s.ang) * s.sp * dt;
+    s.y += Math.sin(s.ang) * s.sp * dt;
+    s.trail += dt;
+    if (s.trail > 0.05) { s.trail = 0; smokePuff(s.x, s.y, 1); }
+    const d = Math.hypot(tank.x - s.x, tank.y - s.y);
+    if (d < 40) {
+      damageTank(52);
+      spark(s.x, s.y, 14, '#ffb070', 200);
+      atShells.splice(i, 1);
+    } else if (s.life <= 0 || pointInSolid(s.x, s.y)) {
+      spark(s.x, s.y, 8, '#c8b48c', 120);
+      smokePuff(s.x, s.y, 3);
+      atShells.splice(i, 1);
+    }
+  }
+}
+
+function moveTank(dt, speed) {
+  const t = tank;
+  const nx = t.x + Math.cos(t.ang) * speed * dt;
+  const ny = t.y + Math.sin(t.ang) * speed * dt;
+  let moved = false;
+  if (!hits(nx, t.y, 28)) { t.x = nx; moved = true; }
+  else if (!state.doorsOpen && nx > 846) fortRamGate();
+  if (!hits(t.x, ny, 28)) { t.y = ny; moved = true; }
+  if (moved) t.tread += Math.abs(speed) * dt * 0.11;
+  t.x = clamp(t.x, WALL + 30, W - WALL - 30);
+  t.y = clamp(t.y, WALL + 30, H - WALL - 30);
+  return moved;
+}
+
+function fortRamGate(force) {
+  if (state.doorsOpen) return;
+  if (!force && tank.x < 838) return;
+  state.doorsOpen = true;
+  state.gateCrack = 1;
+  syncDoorSolid();
+  state.shake = Math.max(state.shake, 16);
+  fortBoom(FORT_GATE.x, 556, 96, 0, true);
+  for (let i = 0; i < 16; i++) {
+    parts.push({
+      x: FORT_GATE.x + rnd(-8, 8), y: 556 + rnd(-52, 52),
+      vx: rnd(40, 220), vy: rnd(-120, 120), life: rnd(0.5, 1.1), max: 1.1,
+      col: 'rgba(150,132,104,0.8)', size: rnd(1.5, 3.4), grav: 210
+    });
+  }
+  toast('Ворота снесены. Дорога открыта.', 2600);
+  sfx.wave();
+}
+
+function updateFortDriving(dt) {
+  if (!tank || tank.dead) return;
+  let fwd = 0, turn = 0;
+  if (keys.has('KeyW') || keys.has('ArrowUp')) fwd += 1;
+  if (keys.has('KeyS') || keys.has('ArrowDown')) fwd -= 0.6;
+  if (keys.has('KeyA') || keys.has('ArrowLeft')) turn -= 1;
+  if (keys.has('KeyD') || keys.has('ArrowRight')) turn += 1;
+  tank.ang += turn * (fwd !== 0 ? 1.5 : 0.9) * dt;
+  if (fwd !== 0) {
+    moveTank(dt, FORT_TANK_SPEED * fwd);
+    if (Math.random() < dt * 7) {
+      parts.push({
+        x: tank.x - Math.cos(tank.ang) * 26 + rnd(-10, 10), y: tank.y - Math.sin(tank.ang) * 26 + rnd(-10, 10),
+        vx: rnd(-8, 8), vy: rnd(-8, 8), life: 0.6, max: 0.6,
+        col: 'rgba(150,142,124,0.22)', size: rnd(1.5, 3), grav: -4
+      });
+    }
+  }
+  tank.turret = Math.atan2(mouse.y - tank.y, mouse.x - tank.x);
+  tank.fireCd = Math.max(0, tank.fireCd - dt);
+  tank.muzzle = Math.max(0, tank.muzzle - dt);
+  if (mouse.down) fortCannon();
+  player.x = tank.x;
+  player.y = tank.y;
+  player.ang = tank.turret;
+  player.invuln = Math.max(player.invuln, 0.1);
+}
+
+function fortInteract() {
+  if (state.mode !== 'play' || level.id !== 'fort' || !tank || tank.dead) return;
+  if (state.dropT > 0) return;
+
+  if (state.riding) {
+    state.riding = false;
+    player.x = clamp(tank.x - Math.cos(tank.ang) * 46, WALL + 16, W - WALL - 16);
+    player.y = clamp(tank.y - Math.sin(tank.ang) * 46, WALL + 16, H - WALL - 16);
+    for (let i = 0; i < 10 && hits(player.x, player.y, player.r); i++) {
+      player.x = clamp(player.x + 14, WALL + 16, W - WALL - 16);
+      player.y = clamp(player.y + 12, WALL + 16, H - WALL - 16);
+    }
+    toast('Ты снова на своих. Танк поедет сам — или заводи и садись.', 2400);
+    updateWaveHud();
+    return;
+  }
+
+  if (state.mortarOn) {
+    state.mortarOn = false;
+    toast('Отошёл от миномёта.', 1200);
+    return;
+  }
+
+  const dTank = Math.hypot(player.x - tank.x, player.y - tank.y);
+  const dMortar = Math.hypot(player.x - fortMortar.x, player.y - fortMortar.y);
+  const tankNear = dTank < 78;
+  const mortarNear = dMortar < 104;
+
+  if (mortarNear && (!tankNear || dMortar < dTank)) {
+    if (state.mortarAmmo <= 0) { toast('Мин больше нет.', 1400); return; }
+    state.mortarOn = true;
+    player.x = fortMortar.x;
+    player.y = fortMortar.y + 26;
+    toast('У миномёта. Наводи мышью, ЛКМ — выстрел, E — отойти.', 2800);
+    updateWaveHud();
+    return;
+  }
+
+  if (tankNear) {
+    if (!tank.started) {
+      tank.started = true;
+      tank.fireCd = 0;
+      toast('Двигатель поймал. Танк пойдёт к воротам сам — садись (E) или прикрывай.', 3400);
+      sfx.wave();
+      updateWaveHud();
+      return;
+    }
+    state.riding = true;
+    player.x = tank.x;
+    player.y = tank.y;
+    toast('Ты в башне. W/S — ход, A/D — поворот, ЛКМ — орудие.', 2800);
+    updateWaveHud();
+    return;
+  }
+
+  toast('Рядом нечего делать. Танк — в автопарке, миномёт — у ворот.', 1800);
+}
+
+function syncFortObjectives() {
+  const land = obj('land'), tk = obj('tank'), ride = obj('ride'), gate = obj('gate');
+  if (land) land.done = state.dropT <= 0;
+  if (tk) {
+    tk.done = !!(tank && tank.started);
+    tk.active = !tk.done && state.dropT <= 0;
+  }
+  if (ride) {
+    ride.active = !!(tank && tank.started) && !gate.done;
+    ride.done = !!(gate && gate.done);
+    ride.text = state.riding ? 'Доехать до ворот в танке (W/S · A/D · ЛКМ)'
+      : 'Сопроводить танк к воротам (миномёт — E)';
+  }
+  if (gate) {
+    gate.done = state.doorsOpen;
+    gate.active = !state.doorsOpen && !!(tank && tank.started);
+  }
+  const sig = state.objectives.map(o => (o.done ? '1' : '0') + (o.active ? '1' : '0') + o.text).join('|');
+  if (sig !== state.fortSig) { state.fortSig = sig; updateObjectives(); }
+}
+
+function updateFort(dt) {
+  if (!tank) return;
+  state.strikeCd = Math.max(0, state.strikeCd - dt);
+
+  if (state.dropT > 0) {
+    state.dropT -= dt;
+    player.invuln = Math.max(player.invuln, 0.2);
+    if (state.dropT <= 0) {
+      state.dropT = 0;
+      toast('Форт. Танк в автопарке — заводи (E). Миномёт у ворот — если пойдёшь пешком.', 4200);
+      sfx.wave();
+    }
+  }
+
+  updateAllies(dt);
+  updateFortShells(dt);
+  updateAtShells(dt);
+  if (fortMortar) fortMortar.cd = Math.max(0, fortMortar.cd - dt);
+  tank.hit = Math.max(0, (tank.hit || 0) - dt);
+  tank.muzzle = Math.max(0, tank.muzzle - dt);
+
+  /* танк идёт сам, пока ты не за рычагами */
+  if (tank.started && !state.riding && !tank.dead) {
+    const wp = tank.wp < FORT_ROUTE.length ? FORT_ROUTE[tank.wp] : { x: 952, y: 548 };
+    const want = Math.atan2(wp.y - tank.y, wp.x - tank.x);
+    tank.ang += clamp(angNorm(want - tank.ang), -1.15 * dt, 1.15 * dt);
+    moveTank(dt, FORT_TANK_AUTO);
+    if (Math.hypot(wp.x - tank.x, wp.y - tank.y) < 30 && tank.wp < FORT_ROUTE.length) tank.wp++;
+    tank.turret += clamp(angNorm(tank.ang - tank.turret), -0.9 * dt, 0.9 * dt);
+    if (!state.doorsOpen && tank.x > 838) fortRamGate();
+  }
+
+  /* заслоны по мере движения */
+  const nextWave = FORT_WAVES[state.fortWave];
+  if (nextWave && tank.started && tank.x > nextWave.at) {
+    const pts = FORT_SPAWNS.slice();
+    for (let i = 0; i < nextWave.list.length; i++) {
+      const sp = pts[(state.fortWave * 2 + i) % pts.length];
+      spawnEnemy(nextWave.list[i], { x: sp.x, y: sp.y });
+    }
+    state.fortWave++;
+    toast(state.fortWave === 1 ? 'Гарнизон заметил танк.'
+      : (state.fortWave === 2 ? 'У склада — гранатомётчики. Они бьют по броне.'
+        : 'У ворот заслон. Миномёт — твой единственный шанс расчистить дорогу.'), 3200);
+    sfx.wave();
+  }
+
+  /* гранатомётчики бьют по танку */
+  for (const e of enemies) {
+    if (e.type !== 'at') continue;
+    if (e.atCd === undefined) e.atCd = rnd(1.4, 2.6);
+    e.atCd -= dt;
+    if (e.hitT > 0 || e.atCd > 0) continue;
+    const d = Math.hypot(tank.x - e.x, tank.y - e.y);
+    if (d > 470) continue;
+    if (!los(e.x, e.y, tank.x, tank.y)) continue;
+    atFire(e);
+  }
+
+  /* сапёры: заряд у створок ворот — удержать E, если танк встал */
+  const sq = SQUADS[state.squad] || SQUADS.assault;
+  if (sq.kind === 'sapper' && !state.doorsOpen && !state.riding) {
+    const dg = Math.hypot(player.x - (FORT_GATE.x + FORT_GATE.w / 2), player.y - 556);
+    if (dg < 96 && keys.has('KeyE')) {
+      state.chargeT += dt;
+      state.chargeOn = 'gate';
+      if (Math.random() < dt * 9) spark(FORT_GATE.x + rnd(-10, 10), 556 + rnd(-40, 40), 2, '#8cf0a6', 60);
+      if (state.chargeT >= 2.2) {
+        state.chargeT = 0;
+        state.chargeOn = null;
+        fortRamGate(true);
+        toast('Заряд сапёров вскрыл створки. Дорога есть — осталось провести танк.', 3000);
+      }
+    } else {
+      state.chargeT = Math.max(0, state.chargeT - dt * 2);
+      if (state.chargeOn === 'gate') state.chargeOn = null;
+    }
+  }
+
+  /* миномёт: наводка и выстрел, пока сидишь у ствола */
+  if (state.mortarOn) {
+    if (!fortMortar || state.mortarAmmo <= 0) {
+      state.mortarOn = false;
+    } else {
+      fortMortar.aim = Math.atan2(mouse.y - fortMortar.y, mouse.x - fortMortar.x);
+      player.x = fortMortar.x;
+      player.y = fortMortar.y + 26;
+      player.ang = fortMortar.aim;
+      if (mouse.down) fortMortarFire();
+    }
+  }
+  if (state.riding && (!tank || tank.dead)) state.riding = false;
+
+  if (state.doorsOpen && tank.x > 918 && !tank.dead) {
+    state.endTimer += dt;
+    player.invuln = Math.max(player.invuln, 0.4);
+    if (state.endTimer > 0.7) finalWin();
+  }
+
+  syncFortObjectives();
+}
+
+/* ---------------- МИССИЯ 08: графика ---------------- */
+
+const FORT_ROAD = { y0: 500, y1: 612 };
+
+function fortRoadMark(c, x, y, w, h) {
+  c.fillStyle = 'rgba(226,214,178,.10)';
+  c.fillRect(x, y, w, h);
+}
+
+function buildFortFloor() {
+  reseed(880812);
+  const c = fctx;
+
+  /* бетон двора */
+  c.fillStyle = '#2b2b30';
+  c.fillRect(0, 0, W, H);
+
+  for (let i = 0; i < 14000; i++) {
+    const x = srnd() * W, y = srnd() * H;
+    const v = 34 + srnd() * 26;
+    c.fillStyle = 'rgba(' + (v | 0) + ',' + ((v + 1) | 0) + ',' + ((v + 3) | 0) + ',' + (0.08 + srnd() * 0.26).toFixed(2) + ')';
+    c.fillRect(x, y, 1 + srnd() * 2.4, 1 + srnd() * 2.4);
+  }
+
+  /* плиты двора: швы */
+  c.strokeStyle = 'rgba(12,12,14,.42)';
+  c.lineWidth = 2;
+  for (let x = 60; x < W - 40; x += 124) {
+    c.beginPath(); c.moveTo(x, 34); c.lineTo(x, H - 34); c.stroke();
+  }
+  for (let y = 60; y < H - 40; y += 118) {
+    c.beginPath(); c.moveTo(34, y); c.lineTo(W - 34, y); c.stroke();
+  }
+  c.strokeStyle = 'rgba(196,190,172,.05)';
+  c.lineWidth = 1;
+  for (let x = 61; x < W - 40; x += 124) {
+    c.beginPath(); c.moveTo(x, 34); c.lineTo(x, H - 34); c.stroke();
+  }
+
+  /* асфальтовая дорога к воротам */
+  const rg = c.createLinearGradient(0, FORT_ROAD.y0, 0, FORT_ROAD.y1);
+  rg.addColorStop(0, '#1c1d20');
+  rg.addColorStop(0.5, '#17181b');
+  rg.addColorStop(1, '#1b1c1f');
+  c.fillStyle = rg;
+  c.fillRect(34, FORT_ROAD.y0, W - 68, FORT_ROAD.y1 - FORT_ROAD.y0);
+
+  for (let i = 0; i < 5200; i++) {
+    const x = 40 + srnd() * (W - 80);
+    const y = FORT_ROAD.y0 + srnd() * (FORT_ROAD.y1 - FORT_ROAD.y0);
+    const v = 30 + srnd() * 26;
+    c.fillStyle = 'rgba(' + (v | 0) + ',' + (v | 0) + ',' + ((v + 2) | 0) + ',' + (0.1 + srnd() * 0.3).toFixed(2) + ')';
+    c.fillRect(x, y, 1.4 + srnd() * 2, 1.4 + srnd() * 2);
+  }
+
+  /* разметка: стёртая, кусками */
+  c.fillStyle = 'rgba(224,214,180,.16)';
+  for (let x = 70; x < 900; x += 96) {
+    if (srnd() < 0.22) continue;
+    c.fillRect(x, 553, 52 - srnd() * 22, 5);
+  }
+  c.fillStyle = 'rgba(224,214,180,.10)';
+  c.fillRect(40, FORT_ROAD.y0 + 6, W - 80, 3);
+  c.fillRect(40, FORT_ROAD.y1 - 9, W - 80, 3);
+
+  /* следы гусениц и масло у автопарка */
+  for (let i = 0; i < 8; i++) {
+    const y = FORT_ROAD.y0 + 24 + srnd() * 60;
+    c.fillStyle = 'rgba(10,10,12,.30)';
+    c.fillRect(120 + srnd() * 40, y, 260 + srnd() * 300, 4 + srnd() * 5);
+  }
+  for (let i = 0; i < 14; i++) {
+    const x = 120 + srnd() * 170, y = 470 + srnd() * 120, r = 14 + srnd() * 40;
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(8,8,10,.42)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g;
+    c.beginPath(); c.ellipse(x, y, r, r * 0.55, srnd(), 0, 6.28); c.fill();
+  }
+
+  /* лужи и трещины */
+  for (let i = 0; i < 9; i++) {
+    const x = 60 + srnd() * (W - 120), y = 60 + srnd() * (H - 120), r = 20 + srnd() * 54;
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(56,66,72,.26)');
+    g.addColorStop(0.75, 'rgba(38,46,52,.13)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g;
+    c.beginPath(); c.ellipse(x, y, r, r * 0.58, srnd() * 3, 0, 6.28); c.fill();
+  }
+  for (let i = 0; i < 22; i++) {
+    let x = 50 + srnd() * (W - 100), y = 50 + srnd() * (H - 100);
+    c.strokeStyle = 'rgba(9,9,11,' + (0.24 + srnd() * 0.3).toFixed(2) + ')';
+    c.lineWidth = 0.7 + srnd();
+    c.beginPath(); c.moveTo(x, y);
+    for (let s = 0; s < 5; s++) { x += rnd(-26, 26); y += rnd(8, 30); c.lineTo(x, y); }
+    c.stroke();
+  }
+
+  /* воронки */
+  for (let i = 0; i < 5; i++) {
+    const x = 90 + srnd() * (W - 180), y = 90 + srnd() * (H - 180), r = 22 + srnd() * 34;
+    const g = c.createRadialGradient(x, y, 2, x, y, r);
+    g.addColorStop(0, 'rgba(6,6,7,.8)');
+    g.addColorStop(0.6, 'rgba(30,26,22,.55)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g;
+    c.beginPath(); c.arc(x, y, r, 0, 6.28); c.fill();
+    c.strokeStyle = 'rgba(120,106,86,.18)';
+    c.lineWidth = 2;
+    c.beginPath(); c.arc(x, y, r * 0.9, 0, 6.28); c.stroke();
+  }
+
+  /* бетонная площадка миномёта */
+  const p = FORT_MORTAR_PIT;
+  c.fillStyle = 'rgba(46,44,40,.9)';
+  c.fillRect(p.x - 14, p.y - 12, p.w + 28, p.h + 22);
+  c.strokeStyle = 'rgba(150,144,124,.14)';
+  c.lineWidth = 2;
+  c.strokeRect(p.x - 14, p.y - 12, p.w + 28, p.h + 22);
+
+  /* площадка высадки: стёртая, кривая */
+  c.save();
+  c.translate(FORT_LAND.x, FORT_LAND.y);
+  c.strokeStyle = 'rgba(216,206,176,.10)';
+  c.lineWidth = 3;
+  for (let a = 0; a < 6.28; a += 0.5) {
+    if (Math.random() < 0.28) continue;
+    c.beginPath();
+    c.arc(0, 0, 46 + Math.sin(a * 3) * 6, a, a + 0.34);
+    c.stroke();
+  }
+  c.fillStyle = 'rgba(216,206,176,.08)';
+  c.font = 'bold 30px Consolas, monospace';
+  c.textAlign = 'center';
+  c.fillText('H', 0, 11);
+  c.restore();
+
+  /* подпись окопа миномёта */
+  c.save();
+  c.textAlign = 'center';
+  c.fillStyle = 'rgba(226,210,168,.20)';
+  c.font = 'bold 10px Consolas, monospace';
+  c.fillText('МИНОМЁТ', p.x + p.w / 2, p.y + p.h - 8);
+  c.restore();
+
+  /* бетон у ворот */
+  c.fillStyle = 'rgba(40,38,34,.55)';
+  c.fillRect(FORT_GATE.x - 16, FORT_GATE.y - 10, 54, FORT_GATE.h + 20);
+}
+
+/* ---------- статика: постройки, мешки, техника ---------- */
+
+function fortBrickWall(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.5)';
+  c.fillRect(p.x + 5, p.y + p.h, p.w, 10);
+
+  const g = c.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
+  g.addColorStop(0, '#4b463c');
+  g.addColorStop(0.42, '#3d3830');
+  g.addColorStop(1, '#2a2620');
+  c.fillStyle = g;
+  c.fillRect(p.x, p.y, p.w, p.h);
+
+  /* кладка */
+  c.strokeStyle = 'rgba(20,17,14,.45)';
+  c.lineWidth = 1;
+  for (let y = p.y + 10; y < p.y + p.h; y += 11) {
+    c.beginPath(); c.moveTo(p.x, y); c.lineTo(p.x + p.w, y); c.stroke();
+  }
+  for (let y = p.y + 10, row = 0; y < p.y + p.h; y += 11, row++) {
+    for (let x = p.x + (row % 2 ? 0 : 12); x < p.x + p.w; x += 26) {
+      c.beginPath(); c.moveTo(x, y - 11); c.lineTo(x, y); c.stroke();
+    }
+  }
+
+  /* кромка и ржавые потёки */
+  c.fillStyle = 'rgba(216,208,186,.12)';
+  c.fillRect(p.x, p.y, p.w, 3);
+  for (let i = 0; i < 7; i++) {
+    const x = p.x + 8 + srnd() * (p.w - 16);
+    c.fillStyle = 'rgba(96,66,40,.16)';
+    c.fillRect(x, p.y + 3, 2 + srnd() * 4, 10 + srnd() * 40);
+  }
+
+  /* окна и дверь */
+  const cols = Math.max(2, Math.round(p.w / 74));
+  const rowY = p.y + p.h * 0.34;
+  for (let i = 0; i < cols; i++) {
+    const wx = p.x + 18 + i * ((p.w - 30) / cols);
+    c.fillStyle = 'rgba(9,10,12,.92)';
+    c.fillRect(wx, rowY, 22, 15);
+    c.fillStyle = 'rgba(170,150,96,.10)';
+    c.fillRect(wx + 1, rowY + 1, 20, 5);
+    c.strokeStyle = 'rgba(140,128,104,.26)';
+    c.lineWidth = 1;
+    c.strokeRect(wx + 0.5, rowY + 0.5, 21, 14);
+  }
+  c.fillStyle = 'rgba(12,11,10,.9)';
+  c.fillRect(p.x + p.w * 0.5 - 13, p.y + p.h - 26, 26, 26);
+  c.fillStyle = 'rgba(190,180,152,.1)';
+  c.fillRect(p.x + p.w * 0.5 - 13, p.y + p.h - 26, 26, 2);
+
+  /* крыша: тёмная плита с вентиляцией */
+  c.fillStyle = 'rgba(26,24,20,.55)';
+  c.fillRect(p.x + 6, p.y + 6, p.w - 12, 18);
+  for (let i = 0; i < 3; i++) {
+    c.fillStyle = 'rgba(58,54,46,.7)';
+    c.fillRect(p.x + 20 + i * 34, p.y + 12, 12, 8);
+  }
+}
+
+function fortShed(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.48)';
+  c.fillRect(p.x + 4, p.y + p.h, p.w, 9);
+  c.fillStyle = 'rgba(34,32,28,.92)';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  /* гофра */
+  for (let x = p.x; x < p.x + p.w; x += 9) {
+    c.fillStyle = (Math.round(x - p.x) / 9) % 2 ? 'rgba(78,74,64,.35)' : 'rgba(24,22,20,.35)';
+    c.fillRect(x, p.y, 5, p.h);
+  }
+  c.strokeStyle = 'rgba(160,150,126,.16)';
+  c.lineWidth = 2;
+  c.strokeRect(p.x + 1, p.y + 1, p.w - 2, p.h - 2);
+  /* открытые ворота автопарка */
+  c.fillStyle = 'rgba(8,8,9,.85)';
+  c.fillRect(p.x + 8, p.y + p.h - 10, p.w - 16, 10);
+  c.fillStyle = 'rgba(196,186,158,.12)';
+  c.font = 'bold 10px Consolas, monospace';
+  c.fillText('АВТОПАРК', p.x + 12, p.y + 18);
+  /* лампа под навесом */
+  c.fillStyle = 'rgba(255,214,150,.5)';
+  c.beginPath(); c.arc(p.x + p.w * 0.5, p.y + p.h - 8, 3, 0, 6.28); c.fill();
+}
+
+function fortFuel(c, p) {
+  const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+  c.fillStyle = 'rgba(0,0,0,.5)';
+  c.beginPath(); c.ellipse(cx + 4, cy + 8, p.w * 0.56, p.h * 0.34, 0, 0, 6.28); c.fill();
+  const g = c.createRadialGradient(cx - 10, cy - 12, 4, cx, cy, p.w * 0.7);
+  g.addColorStop(0, '#6a6656');
+  g.addColorStop(0.6, '#4d4a3e');
+  g.addColorStop(1, '#2e2c25');
+  c.fillStyle = g;
+  c.beginPath(); c.arc(cx, cy, p.w * 0.48, 0, 6.28); c.fill();
+  c.strokeStyle = 'rgba(18,17,14,.6)';
+  c.lineWidth = 2;
+  c.beginPath(); c.arc(cx, cy, p.w * 0.48, 0, 6.28); c.stroke();
+  c.beginPath(); c.arc(cx, cy, p.w * 0.3, 0, 6.28); c.stroke();
+  c.fillStyle = 'rgba(206,196,164,.16)';
+  c.beginPath(); c.arc(cx - 8, cy - 10, 5, 0, 6.28); c.fill();
+  c.strokeStyle = 'rgba(90,86,70,.8)';
+  c.lineWidth = 3;
+  c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + 20, cy + 16); c.stroke();
+}
+
+function fortTower(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.5)';
+  c.fillRect(p.x + 5, p.y + p.h, p.w, 8);
+  c.fillStyle = '#3a362c';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.strokeStyle = 'rgba(160,146,116,.2)';
+  c.lineWidth = 2;
+  c.strokeRect(p.x + 1, p.y + 1, p.w - 2, p.h - 2);
+  c.fillStyle = 'rgba(10,10,11,.85)';
+  c.fillRect(p.x + 7, p.y + 7, p.w - 14, p.h - 14);
+  c.fillStyle = 'rgba(255,206,130,.22)';
+  c.fillRect(p.x + 10, p.y + 10, p.w - 20, 5);
+  /* прожектор */
+  c.fillStyle = '#4d4838';
+  c.beginPath(); c.arc(p.x + p.w / 2, p.y + p.h / 2, 5, 0, 6.28); c.fill();
+}
+
+function fortPit(c, p) {
+  /* мешки по кругу */
+  for (let a = 0; a < 6.28; a += 0.42) {
+    const bx = p.x + p.w / 2 + Math.cos(a) * (p.w * 0.46);
+    const by = p.y + p.h / 2 + Math.sin(a) * (p.h * 0.44);
+    c.save();
+    c.translate(bx, by);
+    c.rotate(a + 0.3);
+    c.fillStyle = a % 1.2 < 0.6 ? '#5a513f' : '#4d4636';
+    roundRect(c, -13, -6, 26, 12, 5); c.fill();
+    c.strokeStyle = 'rgba(18,16,12,.5)';
+    c.lineWidth = 1;
+    c.stroke();
+    c.restore();
+  }
+  c.fillStyle = 'rgba(14,13,12,.7)';
+  c.beginPath();
+  c.ellipse(p.x + p.w / 2, p.y + p.h / 2, p.w * 0.3, p.h * 0.3, 0, 0, 6.28);
+  c.fill();
+}
+
+function fortSandbag(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.4)';
+  c.fillRect(p.x + 2, p.y + p.h - 3, p.w, 6);
+  for (let row = 0; row < 2; row++) {
+    for (let x = 0; x < p.w - 4; x += 22) {
+      c.fillStyle = row % 2 ? '#57503e' : '#615944';
+      roundRect(c, p.x + x + 2, p.y + row * (p.h / 2) + 1, 20, p.h / 2 - 2, 4);
+      c.fill();
+      c.strokeStyle = 'rgba(18,16,12,.45)';
+      c.lineWidth = 1;
+      c.stroke();
+    }
+  }
+}
+
+function fortCrateProp(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.fillRect(p.x + 3, p.y + p.h - 2, p.w, 6);
+  c.fillStyle = '#5c5138';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.strokeStyle = 'rgba(24,20,14,.6)';
+  c.lineWidth = 2;
+  c.strokeRect(p.x + 1, p.y + 1, p.w - 2, p.h - 2);
+  c.beginPath(); c.moveTo(p.x + 2, p.y + 2); c.lineTo(p.x + p.w - 2, p.y + p.h - 2); c.stroke();
+  c.beginPath(); c.moveTo(p.x + p.w - 2, p.y + 2); c.lineTo(p.x + 2, p.y + p.h - 2); c.stroke();
+}
+
+function fortTruck(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.5)';
+  c.fillRect(p.x + 4, p.y + p.h - 4, p.w, 9);
+  c.fillStyle = '#3e4636';
+  c.fillRect(p.x, p.y + 8, p.w, p.h - 16);
+  c.fillStyle = '#4b5540';
+  c.fillRect(p.x + p.w - 34, p.y + 4, 30, p.h - 8);
+  c.fillStyle = 'rgba(18,20,16,.9)';
+  c.fillRect(p.x + p.w - 28, p.y + 10, 16, p.h - 20);
+  c.fillStyle = 'rgba(14,14,12,.95)';
+  c.fillRect(p.x + 10, p.y + 2, 14, 8);
+  c.fillRect(p.x + 10, p.y + p.h - 10, 14, 8);
+  c.fillRect(p.x + p.w - 44, p.y + 2, 14, 8);
+  c.fillRect(p.x + p.w - 44, p.y + p.h - 10, 14, 8);
+  c.fillStyle = 'rgba(150,138,110,.18)';
+  c.font = 'bold 9px Consolas, monospace';
+  c.fillText('ГРУЗ', p.x + 16, p.y + p.h * 0.6);
+}
+
+function fortFlood(c, p) {
+  c.fillStyle = '#3a3830';
+  c.fillRect(p.x + p.w / 2 - 2, p.y + p.h / 2, 4, 26);
+  c.fillStyle = '#4b4738';
+  roundRect(c, p.x, p.y, p.w, p.h, 4); c.fill();
+  c.fillStyle = 'rgba(255,226,170,.75)';
+  c.beginPath(); c.arc(p.x + p.w / 2, p.y + p.h / 2, 6, 0, 6.28); c.fill();
+}
+
+function fortBarrier(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.4)';
+  c.fillRect(p.x + 2, p.y + p.h - 2, p.w, 5);
+  for (let x = 0; x < p.w; x += 20) {
+    c.fillStyle = (Math.round(x) / 20) % 2 ? 'rgba(190,178,146,.5)' : 'rgba(120,52,40,.7)';
+    c.fillRect(p.x + x, p.y, 18, p.h);
+  }
+  c.strokeStyle = 'rgba(16,14,12,.5)';
+  c.lineWidth = 1;
+  c.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
+}
+
+function buildFortRoom() {
+  reseed(880813);
+  const c = rctx;
+  c.clearRect(0, 0, W, H);
+
+  /* колючая проволока по периметру */
+  c.strokeStyle = 'rgba(150,146,132,.20)';
+  c.lineWidth = 1;
+  for (let x = 40; x < W - 30; x += 26) {
+    c.beginPath(); c.moveTo(x, 34); c.lineTo(x + 13, 44); c.lineTo(x + 26, 34); c.stroke();
+  }
+  for (let y = 40; y < H - 30; y += 26) {
+    c.beginPath(); c.moveTo(34, y); c.lineTo(44, y + 13); c.lineTo(34, y + 26); c.stroke();
+  }
+
+  for (const p of FORT_PROPS) {
+    if (p.type === 'bldg') fortBrickWall(c, p);
+    else if (p.type === 'shed') fortShed(c, p);
+    else if (p.type === 'fuel') fortFuel(c, p);
+    else if (p.type === 'tower') fortTower(c, p);
+    else if (p.type === 'pit') fortPit(c, p);
+    else if (p.type === 'sandbag') fortSandbag(c, p);
+    else if (p.type === 'crate') fortCrateProp(c, p);
+    else if (p.type === 'truck') fortTruck(c, p);
+    else if (p.type === 'flood') fortFlood(c, p);
+    else if (p.type === 'barrier') fortBarrier(c, p);
+  }
+
+  /* стойка ворот: бетонные быки */
+  c.fillStyle = 'rgba(48,45,38,.95)';
+  c.fillRect(FORT_GATE.x - 14, FORT_GATE.y - 22, 16, 22);
+  c.fillRect(FORT_GATE.x - 14, FORT_GATE.y + FORT_GATE.h, 16, 22);
+
+  /* подпись сектора на бетоне */
+  c.save();
+  c.fillStyle = 'rgba(214,204,176,.07)';
+  c.font = 'bold 26px Consolas, monospace';
+  c.textAlign = 'center';
+  c.fillText('СЕКТОР 8', 498, 372);
+  c.restore();
+}
+
+/* ---------- свет ---------- */
+
+function fortLighting() {
+  lctx.setTransform(1, 0, 0, 1, 0, 0);
+  lctx.globalCompositeOperation = 'source-over';
+  lctx.clearRect(0, 0, W, H);
+  lctx.fillStyle = 'rgba(6,9,15,0.5)';
+  lctx.fillRect(0, 0, W, H);
+  lctx.fillStyle = 'rgba(4,6,11,0.22)';
+  lctx.fillRect(0, 0, W, 120);
+
+  lctx.globalCompositeOperation = 'destination-out';
+
+  /* прожекторы форта */
+  radial(lctx, 897, 212, 300, 0.42);
+  radial(lctx, 897, 470, 210, 0.26);
+  radial(lctx, 785, 470, 240, 0.4);
+  radial(lctx, 186, 470, 260, 0.34);
+  radial(lctx, 470, 300, 420, 0.18);
+  radial(lctx, 740, 120, 220, 0.12);
+
+  /* игрок */
+  radial(lctx, player.x, player.y, 330, 0.56);
+  playerCone(lctx, 470, 0.42, 0.95);
+
+  for (const f of fires) {
+    const k = Math.min(1, f.life / 1.2);
+    radial(lctx, f.x, f.y, f.r * 1.6 * k, 0.95 * k);
+  }
+  if (player.muzzle > 0) {
+    radial(lctx, player.x + Math.cos(player.ang) * 28, player.y + Math.sin(player.ang) * 28,
+      player.weapon === 'plasma' ? 200 : 160, 0.7);
+  }
+  if (tank && tank.muzzle > 0) {
+    radial(lctx, tank.x + Math.cos(tank.turret) * 50, tank.y + Math.sin(tank.turret) * 50, 260, 0.85);
+  }
+  for (const e of enemies) {
+    if (e.muzzle > 0) radial(lctx, e.x + Math.cos(e.ang) * 22, e.y + Math.sin(e.ang) * 22, 130, 0.6);
+  }
+  for (const a of allies) {
+    if (a.muzzle > 0) radial(lctx, a.x + Math.cos(a.ang) * 22, a.y + Math.sin(a.ang) * 22, 120, 0.55);
+  }
+  for (const s of fortShells) {
+    if (s.kind === 'mortar') radial(lctx, s.x, s.y - (s.z || 0) * 0.2, 130, 0.55);
+  }
+
+  lctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(lightCv, 0, 0);
+}
+
+function drawFortGlow() {
+  /* мерцание прожекторов */
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const fl = 0.9 + 0.1 * Math.sin(state.time * 7.3) + 0.05 * Math.sin(state.time * 17.1);
+  const g = ctx.createRadialGradient(897, 212, 6, 897, 212, 240);
+  g.addColorStop(0, 'rgba(255,236,190,' + (0.13 * fl).toFixed(3) + ')');
+  g.addColorStop(1, 'rgba(255,236,190,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(897, 212, 240, 0, 6.28); ctx.fill();
+
+  /* лампа автопарка */
+  const h = ctx.createRadialGradient(186, 470, 4, 186, 470, 210);
+  h.addColorStop(0, 'rgba(255,206,140,.10)');
+  h.addColorStop(1, 'rgba(255,206,140,0)');
+  ctx.fillStyle = h;
+  ctx.beginPath(); ctx.arc(186, 470, 210, 0, 6.28); ctx.fill();
+
+  /* выхлоп танка */
+  if (tank && !tank.dead && tank.started) {
+    const cx = tank.x - Math.cos(tank.ang) * 34, cy = tank.y - Math.sin(tank.ang) * 34;
+    const sg = ctx.createRadialGradient(cx, cy, 2, cx, cy, 60);
+    sg.addColorStop(0, 'rgba(180,174,160,.12)');
+    sg.addColorStop(1, 'rgba(180,174,160,0)');
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(cx, cy, 60, 0, 6.28); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ---------------- МИССИЯ 08: динамика ---------------- */
+
+function drawTank() {
+  if (!tank) return;
+  const t = tank;
+  const dead = t.dead;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,.5)';
+  ctx.beginPath();
+  ctx.ellipse(t.x + 5, t.y + 7, 44, 30, t.ang, 0, 6.28);
+  ctx.fill();
+
+  ctx.translate(t.x, t.y);
+  ctx.rotate(t.ang);
+
+  /* гусеницы */
+  const tg = dead ? '#1b1a18' : '#232420';
+  ctx.fillStyle = tg;
+  roundRect(ctx, -40, -30, 80, 14, 4); ctx.fill();
+  roundRect(ctx, -40, 16, 80, 14, 4); ctx.fill();
+  ctx.strokeStyle = 'rgba(140,134,116,.16)';
+  ctx.lineWidth = 1;
+  const off = ((t.tread || 0) % 6);
+  for (let x = -38 + off; x < 40; x += 6) {
+    ctx.beginPath();
+    ctx.moveTo(x, -29); ctx.lineTo(x, -17);
+    ctx.moveTo(x, 17); ctx.lineTo(x, 29);
+    ctx.stroke();
+  }
+
+  /* корпус */
+  const g = ctx.createLinearGradient(-36, -22, 30, 24);
+  if (dead) {
+    g.addColorStop(0, '#2c2a24');
+    g.addColorStop(1, '#191814');
+  } else {
+    g.addColorStop(0, '#5a5f45');
+    g.addColorStop(0.5, '#4a4f3a');
+    g.addColorStop(1, '#33362a');
+  }
+  ctx.fillStyle = g;
+  roundRect(ctx, -38, -22, 76, 44, 5); ctx.fill();
+  ctx.strokeStyle = 'rgba(14,14,12,.65)';
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  /* лобовая плита и корма */
+  ctx.fillStyle = dead ? 'rgba(20,19,16,.9)' : 'rgba(96,100,74,.55)';
+  roundRect(ctx, 24, -20, 14, 40, 4); ctx.fill();
+  ctx.fillStyle = 'rgba(20,20,17,.5)';
+  roundRect(ctx, -38, -20, 8, 40, 3); ctx.fill();
+
+  /* ящики на корме */
+  ctx.fillStyle = '#3d4030';
+  ctx.fillRect(-34, -16, 12, 9);
+  ctx.fillRect(-34, 8, 12, 9);
+
+  /* башня */
+  const ba = t.turret - t.ang;
+  ctx.save();
+  ctx.rotate(ba);
+
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  ctx.beginPath(); ctx.arc(2, 3, 19, 0, 6.28); ctx.fill();
+
+  const bg = ctx.createRadialGradient(-4, -5, 3, 0, 0, 22);
+  bg.addColorStop(0, dead ? '#3a3830' : '#606848');
+  bg.addColorStop(0.7, dead ? '#2a2822' : '#48503a');
+  bg.addColorStop(1, dead ? '#1c1a16' : '#33382a');
+  ctx.fillStyle = bg;
+  ctx.beginPath(); ctx.arc(0, 0, 18, 0, 6.28); ctx.fill();
+  ctx.strokeStyle = 'rgba(14,14,12,.7)';
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  /* ствол */
+  ctx.fillStyle = dead ? '#26241e' : '#5b6142';
+  ctx.fillRect(14, -3.6, 44, 7.2);
+  ctx.strokeStyle = 'rgba(10,10,8,.75)';
+  ctx.lineWidth = 1.2;
+  ctx.strokeRect(14, -3.6, 44, 7.2);
+  ctx.fillStyle = 'rgba(198,196,164,.35)';
+  ctx.fillRect(15, -3.2, 42, 2);
+  ctx.fillStyle = dead ? '#1c1a16' : '#2c2f22';
+  ctx.fillRect(56, -5.2, 9, 10.4);
+  ctx.fillStyle = 'rgba(150,150,126,.3)';
+  ctx.fillRect(57, -4.6, 7, 2);
+
+  /* спаренный пулемёт */
+  ctx.fillStyle = 'rgba(24,23,19,.9)';
+  ctx.fillRect(12, 6, 16, 3);
+
+  /* люк */
+  if (state.riding && !dead) {
+    ctx.fillStyle = 'rgba(12,12,10,.9)';
+    ctx.beginPath(); ctx.arc(-4, -2, 8, 0, 6.28); ctx.fill();
+    /* командир в люке */
+    ctx.fillStyle = '#4a4636';
+    ctx.beginPath(); ctx.arc(-4, -2, 5.4, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#6e6552';
+    ctx.beginPath(); ctx.arc(-5.4, -3.4, 2.6, 0, 6.28); ctx.fill();
+  } else {
+    ctx.fillStyle = dead ? '#1a1915' : '#2f3226';
+    ctx.beginPath(); ctx.arc(-4, -2, 8, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = 'rgba(160,152,124,.28)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    if (dead) {
+      ctx.strokeStyle = 'rgba(10,10,9,.9)';
+      ctx.beginPath(); ctx.moveTo(-10, -8); ctx.lineTo(2, 4); ctx.stroke();
+    }
+  }
+
+  /* номер на башне */
+  ctx.fillStyle = 'rgba(214,204,172,.28)';
+  ctx.font = 'bold 7px Consolas, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('317', 4, 12);
+  ctx.textAlign = 'left';
+
+  if (t.muzzle > 0 && !dead) {
+    ctx.fillStyle = 'rgba(255,226,160,' + (t.muzzle / 0.12 * 0.9).toFixed(2) + ')';
+    ctx.beginPath();
+    ctx.moveTo(64, 0);
+    ctx.lineTo(82, -9);
+    ctx.lineTo(64, 0);
+    ctx.lineTo(70, 8);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.restore();
+
+  /* дым при повреждениях */
+  if (!dead && t.hp < t.maxhp * 0.55 && Math.random() < 0.35) {
+    parts.push({
+      x: t.x - Math.cos(t.ang) * 20 + rnd(-6, 6), y: t.y - Math.sin(t.ang) * 20 + rnd(-6, 6),
+      vx: rnd(-8, 8), vy: rnd(-26, -10), life: rnd(0.6, 1.4), max: 1.4,
+      col: 'rgba(70,66,58,0.35)', size: rnd(2, 4.6), grav: -8
+    });
+  }
+
+}
+
+function drawFortMortar() {
+  if (!fortMortar) return;
+  const m = fortMortar;
+  const a = m.aim || -1.2;
+
+  const pulse = 0.5 + 0.5 * Math.sin(state.time * 2.4);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = 'rgba(230,196,128,' + (state.mortarOn ? 0.30 : 0.12 + pulse * 0.10).toFixed(2) + ')';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(m.x, m.y + 6, 34, 22, 0, 0, 6.28); ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(m.x, m.y);
+
+  /* плита */
+  ctx.fillStyle = 'rgba(20,19,16,.85)';
+  ctx.beginPath(); ctx.ellipse(0, 6, 26, 15, 0, 0, 6.28); ctx.fill();
+
+  /* ствол в наклон */
+  ctx.save();
+  ctx.rotate(a);
+  ctx.fillStyle = '#4a4a40';
+  roundRect(ctx, -6, -4.5, 42, 9, 3); ctx.fill();
+  ctx.strokeStyle = 'rgba(14,14,12,.7)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(170,164,140,.22)';
+  ctx.fillRect(4, -3.6, 26, 1.6);
+  ctx.fillStyle = '#2a2a24';
+  ctx.beginPath(); ctx.arc(36, 0, 5, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#39392f';
+  ctx.beginPath(); ctx.arc(0, 0, 8, 0, 6.28); ctx.fill();
+  ctx.restore();
+
+  /* сошки */
+  ctx.strokeStyle = 'rgba(60,58,48,.9)';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(0, 2); ctx.lineTo(-14, 16);
+  ctx.moveTo(0, 2); ctx.lineTo(14, 16);
+  ctx.stroke();
+
+  /* ящик с минами */
+  ctx.fillStyle = '#4b422e';
+  roundRect(ctx, -40, 6, 26, 18, 3); ctx.fill();
+  ctx.strokeStyle = 'rgba(18,16,12,.6)';
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(214,204,170,.5)';
+  ctx.font = 'bold 7px Consolas, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('МИНЫ', -27, 18);
+  ctx.textAlign = 'left';
+
+  ctx.restore();
+}
+
+function drawFortGate() {
+  const g = FORT_GATE;
+  ctx.save();
+  if (!state.doorsOpen) {
+    ctx.fillStyle = 'rgba(30,31,28,.96)';
+    ctx.fillRect(g.x, g.y, g.w, g.h);
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = i % 2 ? 'rgba(150,60,44,.7)' : 'rgba(198,188,158,.6)';
+      ctx.fillRect(g.x + 2, g.y + i * (g.h / 8), g.w - 4, g.h / 8 - 2);
+    }
+    ctx.strokeStyle = 'rgba(12,12,10,.8)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(g.x + 1, g.y + 1, g.w - 2, g.h - 2);
+    ctx.fillStyle = 'rgba(16,16,14,.9)';
+    ctx.fillRect(g.x + 4, g.y + g.h * 0.44, g.w - 8, 10);
+    /* замок */
+    ctx.fillStyle = 'rgba(196,164,88,.75)';
+    ctx.beginPath(); ctx.arc(g.x + g.w / 2, g.y + g.h * 0.5, 4, 0, 6.28); ctx.fill();
+  } else {
+    /* створки выбиты наружу */
+    ctx.fillStyle = 'rgba(34,34,30,.9)';
+    ctx.save();
+    ctx.translate(g.x, g.y + 6);
+    ctx.rotate(0.9);
+    ctx.fillRect(0, 0, 14, g.h * 0.48);
+    ctx.restore();
+    ctx.save();
+    ctx.translate(g.x, g.y + g.h - 6);
+    ctx.rotate(-0.9);
+    ctx.fillRect(0, -g.h * 0.48, 14, g.h * 0.48);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawFortShells() {
+  for (const s of fortShells) {
+    if (s.kind === 'mortar') {
+      const z = s.z || 0;
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,.3)';
+      ctx.beginPath(); ctx.ellipse(s.x, s.y, 6, 3, 0, 0, 6.28); ctx.fill();
+      ctx.fillStyle = 'rgba(220,214,190,.9)';
+      ctx.beginPath(); ctx.arc(s.x, s.y - z * 0.16, 3.6, 0, 6.28); ctx.fill();
+      ctx.fillStyle = 'rgba(255,220,150,.5)';
+      ctx.beginPath(); ctx.arc(s.x, s.y - z * 0.16, 7, 0, 6.28); ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const a = Math.atan2(s.vy, s.vx);
+      ctx.strokeStyle = 'rgba(255,214,150,.8)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(s.x - Math.cos(a) * 22, s.y - Math.sin(a) * 22);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,240,200,.9)';
+      ctx.beginPath(); ctx.arc(s.x, s.y, 3.4, 0, 6.28); ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+function drawAtShells() {
+  for (const s of atShells) {
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.rotate(s.ang);
+    ctx.fillStyle = 'rgba(210,196,168,.85)';
+    ctx.fillRect(-6, -2, 12, 4);
+    ctx.fillStyle = 'rgba(200,110,70,.9)';
+    ctx.beginPath();
+    ctx.moveTo(6, -3); ctx.lineTo(12, 0); ctx.lineTo(6, 3);
+    ctx.closePath(); ctx.fill();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(255,180,110,.5)';
+    ctx.beginPath(); ctx.arc(-9, 0, 5, 0, 6.28); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawFortDrop() {
+  if (state.dropT <= 0) return;
+  const k = clamp(state.dropT / 2.7, 0, 1);
+  const cx = player.x + 6, cy = player.y - 74 * k - 30;
+  const rx = 26 + 22 * k, ry = 10 + 8 * k;
+
+  ctx.save();
+  /* тень купола на бетоне */
+  ctx.fillStyle = 'rgba(0,0,0,' + (0.10 + k * 0.14).toFixed(2) + ')';
+  ctx.beginPath();
+  ctx.ellipse(player.x + 16, player.y + 16, 22 + k * 14, 9 + k * 6, 0, 0, 6.28);
+  ctx.fill();
+
+  /* стропы */
+  ctx.strokeStyle = 'rgba(222,216,196,.40)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 6; i++) {
+    const a = -Math.PI * 0.9 + (i / 5) * Math.PI * 0.8;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * rx * 0.94, cy + Math.sin(a) * ry * 0.9);
+    ctx.lineTo(player.x + (i - 2.5) * 2.4, player.y - 6);
+    ctx.stroke();
+  }
+
+  /* купол: чуть наклонён, сжимается по мере снижения */
+  ctx.translate(cx, cy);
+  ctx.rotate(-0.16);
+  const g = ctx.createLinearGradient(0, -ry, 0, ry);
+  g.addColorStop(0, 'rgba(196,188,162,.95)');
+  g.addColorStop(0.55, 'rgba(148,140,116,.92)');
+  g.addColorStop(1, 'rgba(96,92,76,.9)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, rx, ry, 0, 0, 6.28);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(58,54,44,.55)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(70,66,54,.45)';
+  ctx.lineWidth = 1;
+  for (let i = -2; i <= 2; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * rx * 0.34, -ry * 0.86);
+    ctx.lineTo(i * rx * 0.38, ry * 0.86);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  /* скорость снижения */
+  ctx.save();
+  ctx.strokeStyle = 'rgba(214,208,190,.16)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    const ox = player.x - 26 + i * 26;
+    ctx.beginPath();
+    ctx.moveTo(ox, player.y - 34 - i * 5);
+    ctx.lineTo(ox, player.y - 52 - i * 5);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawFortPrompt() {
+  if (level.id !== 'fort' || state.mode !== 'play') return;
+  const pulse = 0.55 + 0.45 * Math.sin(state.time * 4);
+
+  /* броня танка — поверх затемнения */
+  if (tank) {
+    const w = 78, hx = tank.x - w / 2, hy = tank.y - 56;
+    const k = clamp(tank.hp / tank.maxhp, 0, 1);
+    ctx.save();
+    ctx.fillStyle = 'rgba(10,10,12,.72)';
+    ctx.fillRect(hx, hy, w, 6);
+    ctx.fillStyle = k > 0.55 ? 'rgba(150,200,140,.9)' : (k > 0.28 ? 'rgba(224,180,96,.92)' : 'rgba(214,92,66,.92)');
+    ctx.fillRect(hx + 1, hy + 1, (w - 2) * k, 4);
+    ctx.fillStyle = 'rgba(232,224,202,.62)';
+    ctx.font = 'bold 7px Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(tank.dead ? 'ТАНК УНИЧТОЖЕН' : 'БРОНЯ ' + Math.round(k * 100) + '%', tank.x, hy - 5);
+    ctx.restore();
+  }
+
+  /* указатель выхода за створками */
+  const ex = FORT_EXIT, gx = FORT_GATE.x;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = 'rgba(217,162,74,' + (state.doorsOpen ? 0.10 + pulse * 0.12 : 0.04) + ')';
+  ctx.fillRect(ex.x, ex.y, ex.w, ex.h);
+  ctx.fillStyle = 'rgba(240,206,138,' + (0.42 + pulse * 0.4) + ')';
+  ctx.font = 'bold 11px Consolas, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('ВЫХОД', ex.x + ex.w / 2, ex.y - 10);
+  ctx.fillStyle = 'rgba(240,206,138,' + (0.5 + pulse * 0.5) + ')';
+  const ax = ex.x + 6 - pulse * 3;
+  ctx.beginPath();
+  ctx.moveTo(ax + 14, ex.y + ex.h / 2);
+  ctx.lineTo(ax + 2, ex.y + ex.h / 2 - 8);
+  ctx.lineTo(ax + 2, ex.y + ex.h / 2 + 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  /* состояние створок и подпись миномёта */
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 9px Consolas, monospace';
+  ctx.fillStyle = state.doorsOpen ? 'rgba(150,206,140,.62)' : 'rgba(228,132,108,.55)';
+  ctx.fillText(state.doorsOpen ? 'ОТКРЫТО' : 'ЗАКРЫТО', gx + FORT_GATE.w / 2, FORT_GATE.y - 14);
+  if (fortMortar) {
+    ctx.fillStyle = state.mortarOn ? 'rgba(238,216,160,.92)' : 'rgba(222,210,182,.55)';
+    ctx.font = 'bold 10px Consolas, monospace';
+    ctx.fillText('МИНОМЁТ · ' + state.mortarAmmo, fortMortar.x, fortMortar.y - 38);
+  }
+  ctx.restore();
+
+  if (state.dropT > 0) {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 10px Consolas, monospace';
+    ctx.fillStyle = 'rgba(226,218,196,' + (0.4 + pulse * 0.3) + ')';
+    ctx.fillText('ВЫСАДКА · ДЕРЖИСЬ', player.x, player.y + 44);
+    ctx.restore();
+    return;
+  }
+
+  if (!tank || tank.dead) return;
+
+  /* подсказка у танка */
+  const dT = Math.hypot(player.x - tank.x, player.y - tank.y);
+  if (!state.riding && !state.mortarOn && dT < 120) {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 11px Consolas, monospace';
+    ctx.fillStyle = 'rgba(236,229,215,' + pulse.toFixed(2) + ')';
+    ctx.fillText(tank.started ? '[E] В ТАНК' : '[E] ЗАВЕСТИ ТАНК', tank.x, tank.y - 66);
+    ctx.font = 'bold 8px Consolas, monospace';
+    ctx.fillStyle = 'rgba(210,200,176,.45)';
+    ctx.fillText(tank.started ? (state.riding ? '' : 'ИЛИ ПРИКРЫВАЙ ПЕШИМ · МИНОМЁТ У ВОРОТ')
+      : 'БЕЗ ТЕБЯ ЗА РЫЧАГАМИ ОСТАНЕТСЯ МИНОМЁТ', tank.x, tank.y - 54);
+    ctx.restore();
+  }
+
+  /* выход из танка */
+  if (state.riding) {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.fillStyle = 'rgba(226,218,196,.42)';
+    ctx.fillText('[E] ВЫЙТИ ИЗ ТАНКА', tank.x, tank.y + 74);
+    ctx.restore();
+  }
+
+  /* подсказка у миномёта */
+  if (fortMortar && !state.riding) {
+    const dM = Math.hypot(player.x - fortMortar.x, player.y - fortMortar.y);
+    if (dM < 150 && !state.mortarOn) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 10px Consolas, monospace';
+      ctx.fillStyle = 'rgba(232,206,150,' + (0.45 + pulse * 0.35) + ')';
+      ctx.fillText('[E] К МИНОМЁТУ', fortMortar.x, fortMortar.y + 62);
+      ctx.font = 'bold 8px Consolas, monospace';
+      ctx.fillStyle = 'rgba(210,200,176,.4)';
+      ctx.fillText('МИН ' + state.mortarAmmo + ' · СИДЯ У СТВОЛА ТЫ НЕ СТРЕЛЯЕШЬ ИЗ АВТОМАТА', fortMortar.x, fortMortar.y + 74);
+      ctx.restore();
+    }
+  }
+
+  /* наводка миномёта */
+  if (state.mortarOn) {
+    const d = Math.hypot(mouse.x - fortMortar.x, mouse.y - fortMortar.y);
+    const k = Math.min(1, 700 / (d || 1));
+    const tx = fortMortar.x + (mouse.x - fortMortar.x) * k;
+    const ty = fortMortar.y + (mouse.y - fortMortar.y) * k;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = 'rgba(238,208,146,' + (0.35 + pulse * 0.3) + ')';
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([6, 7]);
+    ctx.beginPath(); ctx.arc(tx, ty, 34, 0, 6.28); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx - 46, ty); ctx.lineTo(tx - 22, ty); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx + 22, ty); ctx.lineTo(tx + 46, ty); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx, ty - 46); ctx.lineTo(tx, ty - 22); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx, ty + 22); ctx.lineTo(tx, ty + 46); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.fillStyle = 'rgba(238,214,160,.6)';
+    ctx.fillText(fortMortar.cd > 0 ? 'ПЕРЕЗАРЯДКА' : (state.mortarAmmo > 0 ? 'ЛКМ · ВЫСТРЕЛ' : 'МИН НЕТ'),
+      fortMortar.x, fortMortar.y - 46);
+    ctx.restore();
+  }
+
+  /* маркер ворот */
+  if (!state.doorsOpen) {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.fillStyle = 'rgba(214,120,96,' + (0.35 + pulse * 0.3) + ')';
+    ctx.fillText('ВОРОТА ДЕРЖАТ', FORT_GATE.x + FORT_GATE.w / 2, FORT_GATE.y + FORT_GATE.h + 26);
+    ctx.restore();
+  }
+
+  /* заряд сапёров у створок */
+  if (state.chargeOn === 'gate') {
+    const gx = FORT_GATE.x - 4;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 10px Consolas, monospace';
+    ctx.fillStyle = 'rgba(140,240,166,' + pulse.toFixed(2) + ')';
+    ctx.fillText('[E] ЗАРЯД', gx, FORT_GATE.y - 34);
+    const p = clamp(state.chargeT / 2.2, 0, 1);
+    ctx.fillStyle = 'rgba(20,22,18,.8)';
+    ctx.fillRect(gx - 34, FORT_GATE.y - 28, 68, 7);
+    ctx.fillStyle = 'rgba(140,240,166,.9)';
+    ctx.fillRect(gx - 33, FORT_GATE.y - 27, 66 * p, 5);
+    ctx.restore();
+  } else if ((SQUADS[state.squad] || SQUADS.assault).kind === 'sapper' && !state.doorsOpen) {
+    const dg = Math.hypot(player.x - FORT_GATE.x, player.y - 556);
+    if (dg < 140) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 9px Consolas, monospace';
+      ctx.fillStyle = 'rgba(140,240,166,.5)';
+      ctx.fillText('УДЕРЖИ E — ЗАРЯД У ВОРОТ', FORT_GATE.x, FORT_GATE.y - 34);
+      ctx.restore();
+    }
+  }
+}
+
+/* ---------------- МИССИЯ 08: брифинг и отряд ---------------- */
+
+const FORT_SQUAD_DESC = {
+  assault: 'Два бойца прикроют танк с флангов, пока ты ведёшь его через двор.',
+  sniper: 'Снимает гранатомётчиков со склада, пока они не прожгли броню.',
+  sappers: 'Вскрывают ворота зарядом с E, если танк встал перед створками.',
+  solo: 'Тише и дешевле. Танк, ворота и весь гарнизон — на тебе.'
+};
+
+function fortBriefFill() {
+  els.briefKicker.textContent = 'МИССИЯ 08 · ФОРТ · 06:20';
+  els.briefTitle.textContent = 'Последний заказ';
+  els.briefText.innerHTML =
+    'Форт за перевалом — последняя точка на карте. Под навесом автопарка стоит танк: ' +
+    'на нём из этого города и уходят, другого хода нет.<br />' +
+    'Борт высадит тебя с воздуха. Дальше — только ты, броня и бетон.';
+  els.briefBody.innerHTML =
+    'Заведи танк (<b>E</b>) — он пойдёт к воротам сам. Дальше на выбор: <b>сесть за рычаги</b> ' +
+    '(<b>E</b> у танка, <b>W/S</b> — ход, <b>A/D</b> — поворот, <b>ЛКМ</b> — орудие) или ' +
+    '<b>идти рядом</b> и прикрывать. Пешком у тебя остаётся <b>миномёт</b> у ворот: ' +
+    '<b>E</b> у ствола, наводка мышью, <b>ЛКМ</b> — мина.<br />' +
+    'Ворота держат, пока танк их не снесёт, а гранатомётчики бьют по броне. ' +
+    'Перед вылетом можно нанять отряд.' +
+    (state.pendingCarry && state.pendingCarry.hp < 55 ? ' Ты еле стоишь — держись за бронёй.' : '');
+}
 
 const LEVELS = {
   bar: {
@@ -3786,6 +5325,28 @@ const LEVELS = {
       { id: 'cargo', text: 'Забрать груз на последнем этаже (0 / 3)', done: false, active: false },
       { id: 'load', text: 'Погрузить груз в вертолёт (0 / 3)', done: false, active: false }
     ]
+  },
+  fort: {
+    id: 'fort', num: 8, name: 'Последний заказ · форт',
+    props: FORT_PROPS, spawns: FORT_SPAWNS, stages: [],
+    start: { x: FORT_LAND.x, y: FORT_LAND.y },
+    exit: FORT_EXIT,
+    doorSolid: FORT_GATE,
+    fallback: { x: 466, y: 300 },
+    ammoSpots: FORT_AMMO,
+    intro: 'Форт. В автопарке — танк, у ворот — миномёт. Заводи (E) и выводи броню за ворота.',
+    pauseLead: 'Двор пуст, но створки держат. Пока танк не встал — время ещё есть.',
+    floor: buildFortFloor,
+    room: buildFortRoom,
+    light: fortLighting,
+    pickups: fortPickups,
+    update: updateFort,
+    objectives: () => [
+      { id: 'land', text: 'Высадиться в форте', done: false, active: true },
+      { id: 'tank', text: 'Завести танк (E)', done: false, active: false },
+      { id: 'ride', text: 'Сопроводить танк к воротам (миномёт — E)', done: false, active: false },
+      { id: 'gate', text: 'Пробить ворота танком', done: false, active: false }
+    ]
   }
 };
 
@@ -3812,7 +5373,9 @@ const state = {
   squad: 'assault', mortarKills: 0, roofLoaded: 0, carrying: null,
   chargeT: 0, chargeOn: null, descended: false,
   kills: 0, shots: 0, hits: 0, bottlesUsed: 0,
-  objectives: [], entryCarry: null, lastSaveAt: 0
+  objectives: [], entryCarry: null, lastSaveAt: 0,
+  dropT: 0, dropY: 0, dropLine: null, riding: false, mortarOn: false,
+  mortarAmmo: 0, fortWave: 0, gateCrack: 0, tankWarned: false, tankKills: 0
 };
 
 function makePlayer() {
@@ -3849,6 +5412,10 @@ function resetWorld() {
   state.mortarKills = 0; state.roofLoaded = 0; state.carrying = null;
   state.chargeT = 0; state.chargeOn = null; state.descended = false;
   mortars = []; mortarShells = []; allies = []; tracers = []; crates = [];
+  tank = null; fortMortar = null; fortShells = []; atShells = [];
+  state.dropT = 0; state.riding = false; state.mortarOn = false;
+  state.mortarAmmo = FORT_MORTAR_AMMO; state.fortWave = 0; state.gateCrack = 0;
+  state.tankWarned = false; state.tankKills = 0;
   aas = []; flaks = []; airStrikes = []; bombs = [];
   state.kills = 0; state.shots = 0; state.hits = 0; state.bottlesUsed = 0;
 }
@@ -3931,9 +5498,10 @@ function enterLevel(id, carry) {
   if (level.id === 'village') spawnAA();
   if (level.id === 'farm' && !player.binocs.owned) player.binocs.owned = true;
   if (level.id === 'roof') { spawnMortars(); spawnSquad(); }
+  if (level.id === 'fort') { spawnFort(); spawnSquad(); }
   state.objectives = level.objectives();
   els.missionTag.textContent = 'МИССИЯ 0' + level.num;
-  els.waveLabel.textContent = level.id === 'bar' ? 'ВОЛНА' : (level.id === 'village' ? 'ПВО' : (level.id === 'farm' ? 'АВИАУДАР' : (level.id === 'roof' ? 'МИНОМЁТЫ' : 'РУБЕЖ')));
+  els.waveLabel.textContent = level.id === 'bar' ? 'ВОЛНА' : (level.id === 'village' ? 'ПВО' : (level.id === 'farm' ? 'АВИАУДАР' : (level.id === 'roof' ? 'МИНОМЁТЫ' : (level.id === 'fort' ? 'БРОНЯ' : 'РУБЕЖ'))));
 
   if (level.id === 'bar') { state.wave = -1; }
   else { state.stage = -1; syncDoorSolid(); }
@@ -6423,6 +7991,20 @@ function updateWaveHud() {
       : (alive > 0 ? alive + ' В ПОЛЕ · ЗАХОДОВ' : (state.doorsOpen ? 'ПОЛЕ ЧИСТО' : 'ЖДЁМ КОЛОННУ'));
     return;
   }
+  if (level.id === 'fort') {
+    if (!tank) { els.waveNum.textContent = '—'; els.waveLeft.textContent = 'ТИШИНА'; return; }
+    const k = tank.dead ? 0 : Math.max(0, tank.hp) / tank.maxhp;
+    els.waveNum.textContent = Math.round(k * 100) + '%';
+    if (tank.dead) { els.waveLeft.textContent = 'БРОНЯ ВСТАЛА'; return; }
+    if (state.doorsOpen && tank.x > 918) { els.waveLeft.textContent = 'ВЫШЛИ ЗА ВОРОТА'; return; }
+    if (state.dropT > 0) { els.waveLeft.textContent = 'ВЫСАДКА'; return; }
+    if (!tank.started) { els.waveLeft.textContent = 'ТАНК В АВТОПАРКЕ'; return; }
+    if (state.riding) { els.waveLeft.textContent = 'ЗА РЫЧАГАМИ'; return; }
+    const left = enemies.length + state.waveQueue.length;
+    els.waveLeft.textContent = state.doorsOpen ? 'ДОРОГА ОТКРЫТА'
+      : (left > 0 ? left + ' ВРАГОВ · БРОНЯ' : 'К ВОРОТАМ');
+    return;
+  }
   if (level.id === 'roof') {
     const n = Math.min(2, state.mortarKills) + '/' + 2;
     els.waveNum.textContent = n;
@@ -6496,6 +8078,7 @@ function shoot() {
   if (state.mode !== 'play') return;
   if (level.id === 'farm' && player.binocs && player.binocs.on) return;
   if (state.carrying) return;
+  if (state.riding || state.mortarOn) return;
   const w = curWeapon(), cfg = wcfg();
   if (!w.owned || player.reloading > 0 || player.fireCd > 0) return;
   if (w.mag <= 0) { sfx.dry(); tryReload(); return; }
@@ -6581,6 +8164,7 @@ function throwMolotov() {
 function hurtPlayer(n, ignoreInvuln) {
   if (state.mode !== 'play') return;
   if (!ignoreInvuln && player.invuln > 0) return;
+  if (level.id === 'fort' && state.riding) n *= 0.2;
   player.hp -= n;
   player.hurt = 0.45;
   player.invuln = Math.max(player.invuln, 0.4);
@@ -6677,9 +8261,9 @@ function updateEnemies(dt) {
     e.cd -= dt;
 
     let mx = 0, my = 0;
-    const ranged = e.type === 'shooter' || e.type === 'trooper' || e.type === 'elite' || e.type === 'smg';
+    const ranged = e.type === 'shooter' || e.type === 'trooper' || e.type === 'elite' || e.type === 'smg' || e.type === 'at';
     if (ranged) {
-      const ideal = e.type === 'elite' ? 280 : (e.type === 'trooper' ? 200 : (e.type === 'smg' ? 215 : 250));
+      const ideal = e.type === 'at' ? 300 : (e.type === 'elite' ? 280 : (e.type === 'trooper' ? 200 : (e.type === 'smg' ? 215 : 250)));
       if (d > ideal + 90) { mx = Math.cos(aim); my = Math.sin(aim); }
       else if (d < ideal - 70) { mx = -Math.cos(aim); my = -Math.sin(aim); }
       else { mx = Math.cos(aim + Math.PI / 2) * e.strafe; my = Math.sin(aim + Math.PI / 2) * e.strafe; }
@@ -8084,6 +9668,19 @@ function updateSchool(dt) {
 
 /* ---------------- игрок ---------------- */
 function updatePlayer(dt) {
+  if (level.id === 'fort') {
+    if (state.dropT > 0) {
+      player.ang = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+      player.invuln = Math.max(player.invuln, 0.2);
+      return;
+    }
+    if (state.riding) { updateFortDriving(dt); return; }
+    if (state.mortarOn) {
+      player.ang = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+      player.invuln = Math.max(player.invuln, 0.12);
+      return;
+    }
+  }
   let vx = 0, vy = 0;
   if (keys.has('KeyA') || keys.has('ArrowLeft')) vx -= 1;
   if (keys.has('KeyD') || keys.has('ArrowRight')) vx += 1;
@@ -8130,11 +9727,10 @@ function updatePlayer(dt) {
 /* ---------------- выход ---------------- */
 function checkExit() {
   if (!state.exitUnlocked) return;
-  if (level.id === 'roof') return;
+  if (level.id === 'roof' || level.id === 'fort') return;
   const ex = level.exit;
   if (player.x > ex.x && player.y > ex.y && player.y < ex.y + ex.h) {
-    if (level.id === 'farm') finalWin();
-    else missionComplete();
+    missionComplete();
   }
 }
 
@@ -8398,7 +9994,7 @@ function drawPickups() {
 }
 
 function drawExitZone() {
-  if (level.id === 'village' || level.id === 'farm' || level.id === 'roof') return;
+  if (level.id === 'village' || level.id === 'farm' || level.id === 'roof' || level.id === 'fort') return;
   const ex = level.exit;
   const unlocked = state.exitUnlocked;
   const pulse = 0.5 + 0.5 * Math.sin(state.time * 3);
@@ -9011,16 +10607,19 @@ function render() {
   ctx.drawImage(roomCv, 0, 0);
   if (level.id === 'street') drawBraziers();
   drawExitZone();
+  if (level.id === 'fort') { drawFortGate(); drawFortMortar(); }
   drawPickups();
   if (level.id === 'village') aas.forEach(drawVillageAA);
   if (level.id === 'farm') drawFarmMarker();
   if (level.id === 'roof') drawRoofCrates();
+  if (level.id === 'fort') { drawFortShells(); drawAtShells(); drawTank(); }
   drawCasings();
   if (level.id === 'roof') { mortars.forEach(drawMortar); drawMortarShells(); }
   if (level.id === 'roof') drawAllies();
   for (const e of enemies) drawEnemy(e);
   if (level.id === 'school') drawPrisoners();
-  drawPlayer();
+  if (!(level.id === 'fort' && state.riding)) drawPlayer();
+  if (level.id === 'fort') drawFortDrop();
   if (level.id === 'farm') drawFarmHeli();
   if (level.id === 'roof') { drawCarriedCrate(); drawRoofHeli(); drawTracers(); }
   if (level.id === 'school') drawCage();
@@ -9036,6 +10635,7 @@ function render() {
     if (level.id === 'farm') { drawFarmGlow(); drawFarmOptics(); }
     if (level.id === 'factory') drawFactoryGlow();
     if (level.id === 'roof') drawRoofGlow();
+    if (level.id === 'fort') drawFortGlow();
     if (level.id === 'school') drawSchoolGlow();
     drawRain();
   }
@@ -9045,6 +10645,7 @@ function render() {
   if (level.id === 'village') drawVillagePrompt();
   if (level.id === 'farm') drawFarmPrompt();
   if (level.id === 'roof') drawRoofPrompt();
+  if (level.id === 'fort') drawFortPrompt();
   drawEdgeVignette();
 
   if (state.lightning > 0) {
@@ -9058,9 +10659,10 @@ function render() {
 const SAVE_KEY = 'lastorder.save.v1';
 const PROGRESS_KEY = 'lastorder.progress.v1';
 
-const MISSION_ORDER = ['bar', 'street', 'school', 'village', 'factory', 'farm', 'roof'];
+const MISSION_ORDER = ['bar', 'street', 'school', 'village', 'factory', 'farm', 'roof', 'fort'];
 const MISSION_TITLES = ['Бар «У Гая»', 'Улица · телестанция', 'Школа №4 · больница',
-  'Деревня и три ПВО', 'Завод №7', 'Ферма у реки', 'Крыша и два миномёта'];
+  'Деревня и три ПВО', 'Завод №7', 'Ферма у реки', 'Крыша и два миномёта',
+  'Форт и последний танк'];
 
 let progress = { done: {} };
 
@@ -9172,13 +10774,13 @@ function startMissionFromSelect(n) {
   ac();
   state.mode = 'menu';
   els.select.classList.add('hidden');
-  if (id === 'roof') {
-    state.pendingNext = 'roof';
+  if (id === 'roof' || id === 'fort') {
+    state.pendingNext = id;
     state.pendingCarry = missionLoadout(n);
     state.mode = 'brief';
     els.brief.classList.remove('hidden');
-    els.briefBtn.textContent = 'Вылет на крышу';
-    roofBriefFill();
+    els.briefBtn.textContent = id === 'fort' ? 'Прыжок в форт' : 'Вылет на крышу';
+    if (id === 'fort') fortBriefFill(); else roofBriefFill();
     showSquadPick();
     return;
   }
@@ -9233,6 +10835,7 @@ function collectSave() {
     },
     aa: aas.map(a => ({ id: a.id, hp: a.hp, destroyed: a.destroyed, captured: a.captured })),
     sq: state.squad,
+    tank: tank ? { x: tank.x, y: tank.y, ang: tank.ang, hp: tank.hp, started: tank.started, wp: tank.wp } : null,
     mortars: mortars.map(m => ({ id: m.id, hp: m.hp, destroyed: m.destroyed })),
     crates: crates.map(c => ({ id: c.id, taken: c.taken, loaded: c.loaded })),
     allies: allies.map(a => ({ kind: a.kind, x: a.x, y: a.y, hp: a.hp, down: a.down })),
@@ -9251,7 +10854,9 @@ function collectSave() {
       strikesUsed: state.strikesUsed, farmAmmo: state.farmAmmo,
       heliLoaded: state.heliLoaded, heliLift: state.heliLift,
       mortarKills: state.mortarKills, roofLoaded: state.roofLoaded,
-      carrying: state.carrying, descended: state.descended
+      carrying: state.carrying, descended: state.descended,
+      dropT: state.dropT, mortarOn: state.mortarOn, mortarAmmo: state.mortarAmmo,
+      fortWave: state.fortWave, gateCrack: state.gateCrack
     }
   };
 }
@@ -9337,6 +10942,12 @@ function loadGame() {
       hp: a.hp, maxhp: 130, hitT: 0, down: !!a.down, muzzle: 0, follow: 0.5
     }));
   }
+  if (d.tank && level.id === 'fort' && tank) {
+    tank.x = d.tank.x; tank.y = d.tank.y; tank.ang = d.tank.ang;
+    tank.hp = d.tank.hp; tank.started = !!d.tank.started; tank.wp = d.tank.wp || 0;
+    state.riding = false; state.mortarOn = false;
+    state.mortarAmmo = typeof d.st === 'object' && d.st ? state.mortarAmmo : FORT_MORTAR_AMMO;
+  }
   if (!player.weapons[player.weapon].owned) player.weapon = 'pistol';
 
   enemies = (d.enemies || []).map(e => {
@@ -9360,7 +10971,8 @@ function loadGame() {
       'exitUnlocked', 'exitHintShown', 'stage', 'stagesDone', 'stageCleared',
       'doorsOpen', 'cageOpen', 'prisonersFreed', 'schoolHint', 'aaKills', 'aaCaptured',
       'strikesUsed', 'farmAmmo', 'heliLoaded', 'heliLift',
-      'mortarKills', 'roofLoaded', 'carrying', 'descended'].forEach(k => { if (d.st[k] !== undefined) state[k] = d.st[k]; });
+      'mortarKills', 'roofLoaded', 'carrying', 'descended',
+      'dropT', 'mortarOn', 'mortarAmmo', 'fortWave', 'gateCrack'].forEach(k => { if (d.st[k] !== undefined) state[k] = d.st[k]; });
     state.waveQueue = Array.isArray(d.st.waveQueue) ? d.st.waveQueue.slice() : [];
   }
   state.entryCarry = Object.assign(snapshotCarry(), { hp: player.maxhp });
@@ -9373,6 +10985,7 @@ function loadGame() {
   showPlay();
   updateHud(); updateObjectives(); updateWaveHud();
   if (level.id === 'roof') syncRoofObjectives();
+  if (level.id === 'fort') syncFortObjectives();
   toast('Загружено · ' + level.name, 2000);
   return true;
 }
@@ -9541,6 +11154,11 @@ function missionComplete() {
       'Следи, чтобы не накрыть себя: осколки достают и своих.<br />' +
       'Когда поле замолчит — забери патроны в <b>овчарнике</b> у двора и затащи ящик в вертолёт на площадке (<b>E</b>).';
     if (btn) btn.textContent = 'Выехать на ферму';
+  } else if (level.id === 'roof') {
+    state.pendingNext = 'fort';
+    fortBriefFill();
+    if (btn) btn.textContent = 'Прыжок в форт';
+    showSquadPick();
   } else {
     state.pendingNext = 'farm';
     els.briefKicker.textContent = 'МИССИЯ 06 · ФЕРМА';
@@ -9579,9 +11197,16 @@ function endGame(win) {
   const village = level.id === 'village';
   const factory = level.id === 'factory';
   const farm = level.id === 'farm';
+  const fort = level.id === 'fort';
 
   els.endKicker.textContent = 'МИССИЯ 0' + level.num + ' · ' + (win ? 'ВЫПОЛНЕНА' : 'ПРОВАЛЕНА');
-  if (win && farm) {
+  if (win && fort) {
+    els.endTitle.textContent = 'Последний заказ закрыт';
+    els.endText.innerHTML =
+      'Танк выходит за ворота, и бетон форта остаётся позади. Гарнизон так и не понял, ' +
+      'что именно уехало у него из автопарка. В наушниках тихо: заказ закрыт, ' +
+      'и отвечать больше некому.';
+  } else if (win && farm) {
     els.endTitle.textContent = 'Последний заказ закрыт';
     els.endText.innerHTML =
       'Ящик ложится в борт, дверь уезжает в сторону, и пашня уходит вниз. ' +
@@ -9613,6 +11238,11 @@ function endGame(win) {
   } else if (win) {
     els.endTitle.textContent = 'Последний заказ закрыт';
     els.endText.innerHTML = 'Ты выходишь в переулок. За спиной — бар, который больше никогда не включит неон.';
+  } else if (fort) {
+    els.endTitle.textContent = 'Форт не отпустил';
+    els.endText.innerHTML =
+      'Броня встала у самых ворот, и двор снова заняли чужие. ' +
+      'Последний заказ остался на той стороне бетона — вместе с танком и тобой.';
   } else if (farm) {
     els.endTitle.textContent = 'Ферма не отпустила';
     els.endText.innerHTML =
@@ -9753,7 +11383,7 @@ $('menuBtn').addEventListener('click', () => {
 $('quitBtn2').addEventListener('click', quitGame);
 $('quitBackBtn').addEventListener('click', goMenu);
 $('briefBtn').addEventListener('click', () => {
-  if (state.pendingNext === 'roof') state.squad = readSquadPick();
+  if (state.pendingNext === 'roof' || state.pendingNext === 'fort') state.squad = readSquadPick();
   enterLevel(state.pendingNext || 'street', state.pendingCarry);
   saveGame(true);
   updateSaveMeta();
@@ -9798,6 +11428,13 @@ window.LO = {
   get allies() { return allies; },
   get crates() { return crates; },
   roofInteract, damageMortar, updateRoof, syncRoofObjectives, spawnSquad, render, update,
+  fortInteract, updateFort, syncFortObjectives, fortRamGate, fortMortarFire, damageTank,
+  get tank() { return tank; },
+  get fortMortar() { return fortMortar; },
+  get fortShells() { return fortShells; },
+  get atShells() { return atShells; },
+  get FORT_GATE() { return FORT_GATE; },
+  get FORT_MORTAR() { return FORT_MORTAR; },
   killAll() { enemies.slice().forEach(e => damageEnemy(e, 9999, 0)); },
   hurt(n) { hurtPlayer(n); }
 };
