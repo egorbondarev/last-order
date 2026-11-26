@@ -78,7 +78,7 @@ canvas{position:absolute; inset:0; width:100%; height:100%; display:block; curso
 .gear-item>span:first-child{font-size:1.85em; line-height:1; letter-spacing:.03em}
 .gear-item.dim>span:first-child{color:var(--dim)}
 
-#toast{position:absolute; left:50%; top:16%; transform:translateX(-50%);
+#toast{position:absolute; left:50%; top:26%; transform:translateX(-50%);
   font-size:1.35cqw; letter-spacing:.12em; text-align:center; line-height:1.5;
   color:var(--ink); text-shadow:0 0 .8cqw #000; opacity:0; transition:opacity .35s ease; max-width:60cqw}
 #toast.show{opacity:1}
@@ -237,6 +237,7 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
 @media (prefers-reduced-motion: reduce){
   *{transition:none !important; animation:none !important}
 }
+
 </style>
 </head>
 <body>
@@ -289,14 +290,14 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
 
   <div id="menu" class="screen">
     <div class="card menu-card">
-      <p class="kicker">WORLD OF WARS · ВОСЕМЬ МИССИЙ</p>
+      <p class="kicker">WORLD OF WARS · ДЕВЯТЬ МИССИЙ</p>
       <h1>Последний<br /><em>заказ</em></h1>
       <p class="lead">
         Марк, бармен. Вчера здесь играли джаз и наливали до утра.<br />
         Сегодня в городе война: бар разгромлен, а на улице ждёт плазменный бластер.
       </p>
       <p class="body">
-        Восемь заказов одной ночью: бар, улица, школа, деревня, завод, ферма, крыша и военный форт.<br />
+        Девять заказов одной ночью: бар, улица, школа, деревня, завод, ферма, крыша, форт и резиденция президента.<br />
         Каждый следующий открывается после предыдущего — прогресс хранится в браузере.
       </p>
       <ul class="keys">
@@ -330,7 +331,7 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
   <div id="select" class="screen hidden">
     <div class="card select-card">
       <p class="kicker">КАМПАНИЯ · ВЫБОР МИССИИ</p>
-      <h2>Восемь заказов</h2>
+      <h2>Девять заказов</h2>
       <p class="lead" id="selectLead">Открыта первая миссия. Следующая — после прохождения предыдущей.</p>
       <div id="missionGrid" class="mission-grid"></div>
       <p id="selectHint" class="select-hint">Выбери миссию.</p>
@@ -471,7 +472,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Digit3') switchWeapon('shotgun');
   if (e.code === 'Digit4') switchWeapon('smg');
   if (e.code === 'Digit0' || e.code === 'Numpad0') toggleOptics();
-  if (e.code === 'KeyE') { if (level.id === 'roof') roofInteract(); else if (level.id === 'fort') fortInteract(); else tryFreePrisoners(); }
+  if (e.code === 'KeyE') { if (level.id === 'roof') roofInteract(); else if (level.id === 'fort') fortInteract(); else if (level.id === 'res') resInteract(); else tryFreePrisoners(); }
   if (e.code === 'Enter' && state.mode === 'menu' && els.select && els.select.classList.contains('hidden')) newGame();
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
@@ -4154,7 +4155,7 @@ function updateFort(dt) {
   if (state.doorsOpen && tank.x > 918 && !tank.dead) {
     state.endTimer += dt;
     player.invuln = Math.max(player.invuln, 0.4);
-    if (state.endTimer > 0.7) finalWin();
+    if (state.endTimer > 0.7) missionComplete();
   }
 
   syncFortObjectives();
@@ -5187,6 +5188,1249 @@ function fortBriefFill() {
     (state.pendingCarry && state.pendingCarry.hp < 55 ? ' Ты еле стоишь — держись за бронёй.' : '');
 }
 
+/* ===========================================================
+   МИССИЯ 09: «ПОСЛЕДНИЙ ЗАКАЗ · РЕЗИДЕНЦИЯ»
+   Три этажа. Лестничные площадки телепортируют на следующий/прошлый этаж.
+   На верхнем этаже — ЭДО (энергетическая дальнобойная орудийная система)
+   и президент с пулемётом: его надо взять живым. Это финал первого акта.
+   =========================================================== */
+
+const RES_FLOORS = 3;
+const RES_NAMES = ['ВЕСТИБЮЛЬ', 'КАБИНЕТЫ', 'ПРЕЗИДЕНТСКИЙ ЭТАЖ'];
+
+/* внутренняя обшивка стен: комнаты, а не ангар */
+const RES_WALLS = [
+  { type: 'dado', x: 30, y: 30, w: 940, h: 16, wd: 'h' },
+  { type: 'dado', x: 30, y: 634, w: 940, h: 16, wd: 'h' },
+  { type: 'dado', x: 30, y: 30, w: 16, h: 620, wd: 'v' },
+  { type: 'dado', x: 954, y: 30, w: 16, h: 620, wd: 'v' }
+];
+
+/* лестничные площадки — одни и те же на всех этажах */
+const RES_PAD_UP = { x: 826, y: 286, w: 100, h: 86 };
+const RES_PAD_DN = { x: 826, y: 414, w: 100, h: 86 };
+const RES_ARRIVE_UP = { x: 876, y: 262 };
+const RES_ARRIVE_DN = { x: 876, y: 524 };
+const RES_STAIR_MID = { x: 826, y: 372, w: 100, h: 42 };
+
+/* ЭДО — орудие в западном зале последнего этажа */
+const RES_EDO = { x: 190, y: 320, r: 46, maxhp: 720 };
+/* президент за столом в восточной половине */
+const RES_PRES = { x: 720, y: 168, r: 15, maxhp: 520, downAt: 150 };
+const RES_PRES_CD = 1.9;
+const RES_CAPTURE_T = 2.0;
+
+const RES_PROPS = [
+  /* ---- этаж 1: вестибюль ---- */
+  [
+    { type: 'desk',    x: 150, y: 170, w: 200, h: 62 },
+    { type: 'col',     x: 200, y: 300, w: 48, h: 48 },
+    { type: 'col',     x: 200, y: 420, w: 48, h: 48 },
+    { type: 'sofa',    x: 80,  y: 300, w: 54, h: 140 },
+    { type: 'sofa',    x: 560, y: 470, w: 150, h: 56 },
+    { type: 'plant',   x: 700, y: 110, w: 46, h: 46 },
+    { type: 'plant',   x: 120, y: 586, w: 44, h: 44 },
+    { type: 'barrier', x: 330, y: 560, w: 170, h: 26 },
+    { type: 'crate',   x: 430, y: 200, w: 44, h: 44 }
+  ],
+  /* ---- этаж 2: кабинеты ---- */
+  [
+    { type: 'part',    x: 520, y: 110, w: 24, h: 160 },
+    { type: 'part',    x: 520, y: 400, w: 24, h: 170 },
+    { type: 'desk',    x: 170, y: 130, w: 150, h: 60 },
+    { type: 'desk',    x: 170, y: 290, w: 150, h: 60 },
+    { type: 'desk',    x: 170, y: 450, w: 150, h: 60 },
+    { type: 'rack',    x: 690, y: 140, w: 72, h: 120 },
+    { type: 'cabinet', x: 690, y: 520, w: 86, h: 60 },
+    { type: 'plant',   x: 620, y: 586, w: 40, h: 40 },
+    { type: 'col',     x: 380, y: 200, w: 44, h: 44 },
+    { type: 'col',     x: 380, y: 440, w: 44, h: 44 }
+  ],
+  /* ---- этаж 3: президентский ---- */
+  [
+    { type: 'edobase', x: 132, y: 262, w: 116, h: 116 },
+    { type: 'console', x: 290, y: 170, w: 86, h: 28 },
+    { type: 'console', x: 290, y: 452, w: 86, h: 28 },
+    { type: 'pdesk',   x: 640, y: 210, w: 180, h: 66 },
+    { type: 'col',     x: 452, y: 110, w: 44, h: 44 },
+    { type: 'col',     x: 452, y: 520, w: 44, h: 44 },
+    { type: 'crate',   x: 560, y: 330, w: 44, h: 44 },
+    { type: 'plant',   x: 100, y: 586, w: 42, h: 42 }
+  ]
+];
+
+const RES_SPAWNS = [
+  [{ x: 640, y: 210 }, { x: 700, y: 420 }, { x: 520, y: 300 }, { x: 300, y: 520 }],
+  [{ x: 640, y: 150 }, { x: 660, y: 330 }, { x: 640, y: 520 }, { x: 400, y: 300 }, { x: 300, y: 560 }],
+  [{ x: 600, y: 430 }, { x: 420, y: 300 }, { x: 600, y: 140 }]
+];
+
+const RES_START = { x: 86, y: 600 };
+
+const RES_PICKUPS = [
+  [
+    { type: 'ammo',   x: 300, y: 240, amount: 30 },
+    { type: 'medkit', x: 660, y: 560 },
+    { type: 'bottle', x: 96,  y: 120 },
+    { type: 'cell',   x: 470, y: 620, amount: 40 }
+  ],
+  [
+    { type: 'ammo',   x: 560, y: 300, amount: 30 },
+    { type: 'cell',   x: 740, y: 330, amount: 40 },
+    { type: 'medkit', x: 110, y: 610 },
+    { type: 'bottle', x: 90,  y: 200 },
+    { type: 'smgmag', x: 620, y: 300, amount: 32 }
+  ],
+  [
+    { type: 'cell',   x: 350, y: 320, amount: 40 },
+    { type: 'smgmag', x: 540, y: 560, amount: 32 },
+    { type: 'medkit', x: 880, y: 600 },
+    { type: 'ammo',   x: 420, y: 160, amount: 30 },
+    { type: 'bottle', x: 620, y: 430 }
+  ]
+];
+
+let resFloor = 0;
+let resVisited = [false, false, false];
+let resFight = false;
+let resCaptured = false;
+let resEdo = null;
+let resPres = null;
+let resStairLock = 0;
+let resAwayTick = 0;
+
+/* ---------- сборка этажа ---------- */
+
+function resProps(f) {
+  return RES_WALLS.concat(RES_PROPS[f]);
+}
+
+function resPickupsList() {
+  const out = [];
+  for (let f = 0; f < RES_FLOORS; f++) {
+    for (const p of RES_PICKUPS[f]) {
+      out.push({
+        type: p.type, amount: p.amount,
+        x: p.x, y: p.y, baseX: p.x, baseY: p.y, floor: f,
+        taken: false, t: rnd(0, 2)
+      });
+    }
+  }
+  return resPlacePickups(out);
+}
+
+function resPlacePickups(list) {
+  const out = list || pickups;
+  for (const p of out) {
+    if (p.baseX === undefined) { p.baseX = p.x; p.baseY = p.y; }
+    if (p.floor !== undefined && p.floor !== resFloor) {
+      p.x = 100000; p.y = 100000;
+    } else {
+      p.x = p.baseX; p.y = p.baseY;
+    }
+  }
+  return out;
+}
+
+function spawnRes() {
+  resFloor = 0;
+  resVisited = [false, false, false];
+  resFight = true;
+  resCaptured = false;
+  resStairLock = 0;
+  resEdo = { hp: RES_EDO.maxhp, dead: false, ang: 0, cd: 3.4, charge: 0, fired: 0, cool: 0 };
+  resPres = {
+    x: RES_PRES.x, y: RES_PRES.y, r: RES_PRES.r, ang: Math.PI * 0.5,
+    hp: RES_PRES.maxhp, down: false, hurt: 0, muzzle: 0, cd: 1.6, burst: 0, capT: 0
+  };
+  state.doorsOpen = false;
+  state.endTimer = 0;
+  state.captureOn = null;
+  state.captureT = 0;
+  player.invuln = 2.4;
+  resVisit(0, true);
+}
+
+/* переход на этаж: геометрия, враги, предметы, свет */
+function resVisit(f, silent) {
+  resFloor = clamp(f, 0, RES_FLOORS - 1);
+  level.props = resProps(resFloor);
+  props = level.props;
+  solids = walls.concat(props);
+  level.floor();
+  level.room();
+  resPlacePickups();
+  for (const e of enemies) {
+    if (e.floor === undefined) { e.floor = 0; e.spawn = e.spawn || { x: e.x, y: e.y }; }
+    if (e.floor !== resFloor) { e.away = true; e.x = 100000; e.y = 100000; }
+    else { e.away = false; }
+  }
+  if (!resVisited[resFloor]) {
+    resVisited[resFloor] = true;
+    const pts = RES_SPAWNS[resFloor];
+    const list = resFloor === 0 ? ['trooper', 'smg', 'trooper', 'trooper']
+      : (resFloor === 1 ? ['trooper', 'smg', 'elite', 'trooper', 'smg'] : ['elite', 'smg', 'brute']);
+    for (let i = 0; i < list.length; i++) {
+      const sp = pts[i % pts.length];
+      spawnEnemy(list[i], { x: sp.x, y: sp.y });
+      const e = enemies[enemies.length - 1];
+      e.floor = resFloor;
+      e.spawn = { x: sp.x, y: sp.y };
+    }
+  }
+  bullets = []; molotovs = []; fires = []; casings = []; decals = []; parts = [];
+  syncResObjectives();
+  updateObjectives();
+  updateWaveHud();
+  if (!silent) {
+    toast('ЭТАЖ ' + (resFloor + 1) + '/3 · ' + RES_NAMES[resFloor] +
+      (resFloor === 2 ? '. ЭДО и президент здесь.' : ''), 2400);
+    sfx.wave();
+  }
+}
+
+function resChangeFloor(dir) {
+  const nx = resFloor + dir;
+  if (nx < 0) { toast('Ниже только улица. Вход позади.', 1500); return false; }
+  if (nx > RES_FLOORS - 1) { toast('Выше этажей нет — президент здесь.', 1500); return false; }
+  resStairLock = 0.9;
+  state.flash = 0.4;
+  spark(player.x, player.y, 16, '#a8e8ff', 190);
+  noiseHit(0.16, 0.05, 900, 1.6);
+  tone(dir > 0 ? 520 : 320, 0.14, 'sine', 0.05, dir > 0 ? 760 : 220);
+  resVisit(nx, false);
+  player.x = dir > 0 ? RES_ARRIVE_UP.x : RES_ARRIVE_DN.x;
+  player.y = dir > 0 ? RES_ARRIVE_UP.y : RES_ARRIVE_DN.y;
+  player.invuln = Math.max(player.invuln, 1.2);
+  return true;
+}
+
+function resStairCheck(dt) {
+  resStairLock = Math.max(0, resStairLock - dt);
+  if (resStairLock > 0 || state.mode !== 'play') return;
+  const inRect = (r) => player.x > r.x && player.x < r.x + r.w && player.y > r.y && player.y < r.y + r.h;
+  if (inRect(RES_PAD_UP) && resFloor < RES_FLOORS - 1) resChangeFloor(1);
+  else if (inRect(RES_PAD_DN) && resFloor > 0) resChangeFloor(-1);
+}
+
+/* ---------- ЭДО ---------- */
+
+function resEdoFire() {
+  if (!resEdo || resEdo.dead) return;
+  resEdo.charge = 1;
+  resEdo.fired = 0.5;
+  state.shake = Math.max(state.shake, 10);
+  state.flash = 0.5;
+  noiseHit(0.5, 0.2, 220, 0.5);
+  tone(58, 0.7, 'sawtooth', 0.09, 30);
+  const a = resEdo.ang;
+  addBeamFx(RES_EDO.x + Math.cos(a) * 62, RES_EDO.y + Math.sin(a) * 62, a);
+}
+
+const resBeams = [];
+
+function addBeamFx(x, y, a) {
+  resBeams.push({ x, y, a, life: 0.42, max: 0.42 });
+  /* луч достаёт всё, что стоит на линии */
+  for (let d = 70; d < 900; d += 26) {
+    const bx = x + Math.cos(a) * d, by = y + Math.sin(a) * d;
+    if (pointInSolid(bx, by)) break;
+    if (Math.hypot(player.x - bx, player.y - by) < 26) {
+      hurtPlayer(26);
+      break;
+    }
+    for (const e of enemies) {
+      if (e.floor !== resFloor || e.away) continue;
+      if (Math.hypot(e.x - bx, e.y - by) < e.r + 10) damageEnemy(e, 70, a);
+    }
+  }
+}
+
+function damageEdo(n) {
+  if (!resEdo || resEdo.dead) return;
+  resEdo.hp -= n;
+  spark(RES_EDO.x + rnd(-26, 26), RES_EDO.y + rnd(-26, 26), 4, '#a8e8ff', 140);
+  if (resEdo.hp > 0) return;
+  resEdo.hp = 0;
+  resEdo.dead = true;
+  state.shake = Math.max(state.shake, 16);
+  state.flash = 0.7;
+  for (let i = 0; i < 4; i++) {
+    spark(RES_EDO.x + rnd(-30, 30), RES_EDO.y + rnd(-30, 30), 24, '#cfefff', 250);
+    smokePuff(RES_EDO.x + rnd(-26, 26), RES_EDO.y + rnd(-26, 26), 9);
+  }
+  decals.push({ x: RES_EDO.x, y: RES_EDO.y, r: 46, rot: rnd(0, 6.28), a: 0.5, col: 'rgba(18,16,14,.6)' });
+  noiseHit(0.9, 0.2, 150, 0.4);
+  tone(48, 1.1, 'sine', 0.09, 24);
+  toast('ЭДО разбита. Орудие больше не выстрелит.', 2800);
+  syncResObjectives();
+  updateWaveHud();
+}
+
+function resUpdateEdo(dt) {
+  if (!resEdo || resEdo.dead || resFloor !== 2) return;
+  resEdo.charge = Math.max(0, resEdo.charge - dt);
+  resEdo.fired = Math.max(0, resEdo.fired - dt);
+  resEdo.cool = Math.max(0, resEdo.cool - dt);
+  const dx = player.x - RES_EDO.x, dy = player.y - RES_EDO.y;
+  const want = Math.atan2(dy, dx);
+  resEdo.ang += clamp(angNorm(want - resEdo.ang), -0.55 * dt, 0.55 * dt);
+  const mx = RES_EDO.x + Math.cos(resEdo.ang) * 62;
+  const my = RES_EDO.y + Math.sin(resEdo.ang) * 62;
+  if (resEdo.fired > 0 || resEdo.cool > 0) { resEdo.charge = Math.max(0, resEdo.charge - dt); return; }
+  if (!los(mx, my, player.x, player.y)) { resEdo.cd = Math.max(resEdo.cd, 0.8); resEdo.charge = 0; return; }
+  resEdo.cd -= dt;
+  if (resEdo.cd > 0) {
+    resEdo.charge = resEdo.cd < 0.9 ? clamp(1 - resEdo.cd / 0.9, 0, 1) : 0;
+    return;
+  }
+  resEdoFire();
+  resEdo.cd = 3.1;
+  resEdo.cool = 0.6;
+}
+
+/* ---------- президент ---------- */
+
+function resUpdatePresident(dt) {
+  const p = resPres;
+  if (!p || resFloor !== 2) return;
+  p.hurt = Math.max(0, p.hurt - dt);
+  p.muzzle = Math.max(0, p.muzzle - dt);
+  p.cd = Math.max(0, p.cd - dt);
+  if (resCaptured) { p.ang = Math.PI * 0.5; return; }
+
+  const aim = Math.atan2(player.y - p.y, player.x - p.x);
+  p.ang += clamp(angNorm(aim - p.ang), -1.6 * dt, 1.6 * dt);
+
+  if (p.down) return;
+  if (p.cd > 0) return;
+  if (!los(p.x, p.y, player.x, player.y)) return;
+  if (Math.hypot(player.x - p.x, player.y - p.y) > 620) return;
+
+  p.burst = p.burst > 0 ? p.burst - 1 : 4;
+  p.cd = p.burst > 0 ? 0.11 : RES_PRES_CD * rnd(0.9, 1.15);
+  p.muzzle = 0.07;
+  const a = aim + rnd(-0.06, 0.06);
+  bullets.push({
+    x: p.x + Math.cos(a) * 26, y: p.y + Math.sin(a) * 26,
+    vx: Math.cos(a) * 560, vy: Math.sin(a) * 560,
+    r: 3, dmg: 8, life: 2.2, from: 'enemy', bolt: false, pierce: 0, hitList: [], tl: true
+  });
+  noiseHit(0.04, 0.07, 1300, 1.5);
+  tone(150, 0.035, 'square', 0.028, 95);
+  spark(p.x + Math.cos(a) * 30, p.y + Math.sin(a) * 30, 3, '#ffe0a0', 120);
+}
+
+function damagePresident(n) {
+  const p = resPres;
+  if (!p || resCaptured) return;
+  p.hp -= n;
+  p.hurt = 0.12;
+  blood(p.x, p.y, 6, 0);
+  if (p.hp > RES_PRES.downAt) { noiseHit(0.05, 0.08, 600, 1.5); return; }
+  if (p.down) return;
+  p.down = true;
+  p.burst = 0;
+  toast('Президент бросил пулемёт и опустился на колено. Держи E — взять живым.', 3600);
+  sfx.win();
+  syncResObjectives();
+}
+
+function resUpdateCapture(dt) {
+  const p = resPres;
+  if (!p || resCaptured || resFloor !== 2) return;
+  const d = Math.hypot(player.x - p.x, player.y - p.y);
+  const holding = keys.has('KeyE');
+  if (!p.down) { p.capT = Math.max(0, p.capT - dt * 2); return; }
+  if (d > 78) { p.capT = Math.max(0, p.capT - dt * 2); return; }
+  if (!holding) { p.capT = Math.max(0, p.capT - dt * 2.5); return; }
+  if (!resEdo.dead) {
+    if (Math.random() < dt * 2) toast('Президент не сдастся, пока ЭДО стреляет. Сначала — орудие.', 1600);
+    p.capT = Math.max(0, p.capT - dt * 2);
+    return;
+  }
+  p.capT += dt;
+  if (Math.random() < dt * 9) spark(p.x + rnd(-12, 12), p.y + rnd(-12, 12), 2, '#8cf0a6', 60);
+  if (p.capT < RES_CAPTURE_T) return;
+
+  resCaptured = true;
+  p.capT = 0;
+  state.captureOn = null;
+  player.invuln = 5;
+  toast('Президент взят живым. Первый акт закрыт.', 4200);
+  sfx.win();
+  syncResObjectives();
+  state.endTimer = 1.5;
+}
+
+/* ---------- цели ---------- */
+
+function resObjectives() {
+  return [
+    { id: 'lobby', text: 'Пробиться через вестибюль', done: false, active: true },
+    { id: 'offices', text: 'Занять второй этаж', done: false, active: false },
+    { id: 'edo', text: 'Уничтожить ЭДО на верхнем этаже', done: false, active: false },
+    { id: 'pres', text: 'Взять президента живым (E — удержание)', done: false, active: false }
+  ];
+}
+
+function resCount(f) {
+  let n = 0;
+  for (const e of enemies) if ((e.floor || 0) === f) n++;
+  return n;
+}
+
+function syncResObjectives() {
+  const o1 = obj('lobby'), o2 = obj('offices'), o3 = obj('edo'), o4 = obj('pres');
+  if (!o1) return;
+  const c0 = resCount(0), c1 = resCount(1);
+  o1.done = resVisited[0] && c0 === 0;
+  o1.text = o1.done ? 'Вестибюль зачищен' : 'Пробиться через вестибюль' + (c0 ? ' (' + c0 + ' живых)' : '');
+  o1.active = !o1.done;
+
+  o2.done = resVisited[1] && c1 === 0 && resVisited[0];
+  o2.text = o2.done ? 'Второй этаж занят' : 'Занять второй этаж' + (c1 ? ' (' + c1 + ' живых)' : '');
+  o2.active = o1.done && !o2.done;
+
+  o3.done = !!(resEdo && resEdo.dead);
+  o3.text = o3.done ? 'ЭДО уничтожена'
+    : 'Уничтожить ЭДО' + (resEdo ? ' (' + Math.max(0, Math.round(resEdo.hp)) + ')' : '');
+  o3.active = o2.done && !o3.done;
+
+  o4.done = resCaptured;
+  o4.text = o4.done ? 'Президент взят живым' : 'Взять президента живым (E — удержание)';
+  o4.active = o3.done && !o4.done;
+}
+
+function resSyncSig() {
+  const sig = state.objectives.map(o => (o.done ? '1' : '0') + (o.active ? '1' : '0') + o.text).join('|');
+  if (sig !== state.resSig) { state.resSig = sig; updateObjectives(); }
+}
+
+/* ---------- тик уровня ---------- */
+
+function resUpdate(dt) {
+  if (!resPres) return;
+  resStairCheck(dt);
+  resUpdateEdo(dt);
+  resUpdatePresident(dt);
+  resUpdateCapture(dt);
+  for (let i = resBeams.length - 1; i >= 0; i--) {
+    resBeams[i].life -= dt;
+    if (resBeams[i].life <= 0) resBeams.splice(i, 1);
+  }
+  syncResObjectives();
+  resSyncSig();
+  if (state.endTimer > 0) {
+    state.endTimer -= dt;
+    player.invuln = Math.max(player.invuln, 0.5);
+    if (state.endTimer <= 0) finalWin();
+  } else if (resCaptured) {
+    state.endTimer = 1.2;
+  }
+}
+
+/* E без удержания — короткая подсказка, чтобы клавиша не казалась мёртвой */
+function resInteract() {
+  if (!resPres) return;
+  if (resFloor === 2 && resPres.down) {
+    toast('Держи E рядом с президентом — связать его.', 1700);
+    return;
+  }
+  if (resFloor === 2 && !resEdo.dead) {
+    toast('ЭДО снимается только огнём: стреляй по орудию.', 1700);
+    return;
+  }
+  toast('Справа лестница: встань на площадку — этаж сменится сам.', 1700);
+}
+
+/* ---------- сохранение ---------- */
+
+function resSaveData() {
+  return {
+    floor: resFloor, visited: resVisited.slice(), captured: resCaptured,
+    edo: resEdo ? { hp: resEdo.hp, dead: resEdo.dead } : null,
+    pres: resPres ? { hp: resPres.hp, down: resPres.down, capT: resPres.capT } : null,
+    floors: RES_FLOORS === 3 ? [resCount(0), resCount(1), resCount(2)] : null,
+    pickups: pickups.map(p => ({ type: p.type, baseX: p.baseX, baseY: p.baseY, floor: p.floor, taken: p.taken }))
+  };
+}
+
+function resApplyLoad(d) {
+  if (!d) return;
+  resVisited = Array.isArray(d.visited) ? d.visited.map(Boolean) : [true, false, false];
+  resCaptured = !!d.captured;
+  if (d.edo && resEdo) { resEdo.hp = d.edo.hp; resEdo.dead = !!d.edo.dead; }
+  if (d.pres && resPres) {
+    resPres.hp = d.pres.hp;
+    resPres.down = !!d.pres.down;
+    resPres.capT = d.pres.capT || 0;
+  }
+  resFloor = clamp(d.floor || 0, 0, RES_FLOORS - 1);
+  pickups = resPickupsList();
+  const saved = Array.isArray(d.pickups) ? d.pickups : [];
+  for (const sv of saved) {
+    if (!sv.taken) continue;
+    for (const p of pickups) {
+      if (p.type === sv.type && p.floor === sv.floor && Math.abs(p.baseX - sv.baseX) < 2 && Math.abs(p.baseY - sv.baseY) < 2) p.taken = true;
+    }
+  }
+  for (const e of enemies) { e.floor = resFloor; e.away = false; }
+  resVisit(resFloor, true);
+  syncResObjectives();
+  updateObjectives();
+  updateWaveHud();
+}
+
+/* ===========================================================
+   МИССИЯ 09: РЕЗИДЕНЦИЯ · графика
+   =========================================================== */
+
+function resFloorBase() {
+  if (resFloor === 1) return ['#2f2a24', '#241f1a'];        /* кабинеты: тёмный паркет */
+  if (resFloor === 2) return ['#262a30', '#1b1f24'];        /* президентский: мрамор */
+  return ['#33302b', '#26241f'];                           /* вестибюль: мрамор */
+}
+
+function buildResFloor() {
+  reseed(909100 + resFloor * 37);
+  const c = fctx;
+  const [base, dark] = resFloorBase();
+  c.fillStyle = base;
+  c.fillRect(0, 0, W, H);
+
+  /* плитка/паркет */
+  if (resFloor === 1) {
+    const ph = 22;
+    for (let y = 0; y < H; y += ph) {
+      for (let x = -60; x < W; x += 118) {
+        const off = ((y / ph) % 2) ? 59 : 0;
+        const v = 34 + srnd() * 22;
+        c.fillStyle = 'rgba(' + (v + 12 | 0) + ',' + (v + 4 | 0) + ',' + (v - 4 | 0) + ',' + (0.35 + srnd() * 0.3).toFixed(2) + ')';
+        c.fillRect(x + off, y, 112, ph - 2);
+      }
+    }
+    c.strokeStyle = 'rgba(12,10,8,.35)';
+    c.lineWidth = 1;
+    for (let y = 0; y < H; y += ph) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+  } else {
+    for (let y = 30; y < H; y += 82) {
+      for (let x = 30; x < W; x += 82) {
+        const v = 32 + srnd() * 20;
+        c.fillStyle = 'rgba(' + (v | 0) + ',' + ((v + 2) | 0) + ',' + ((v + 5) | 0) + ',' + (0.3 + srnd() * 0.34).toFixed(2) + ')';
+        c.fillRect(x + 2, y + 2, 78, 78);
+      }
+    }
+    c.strokeStyle = 'rgba(10,10,12,.32)';
+    c.lineWidth = 1.4;
+    for (let y = 30; y <= H; y += 82) { c.beginPath(); c.moveTo(30, y); c.lineTo(W - 30, y); c.stroke(); }
+    for (let x = 30; x <= W; x += 82) { c.beginPath(); c.moveTo(x, 30); c.lineTo(x, H - 30); c.stroke(); }
+  }
+
+  /* зерно и потёртости */
+  for (let i = 0; i < 9000; i++) {
+    const x = srnd() * W, y = srnd() * H, v = 30 + srnd() * 34;
+    c.fillStyle = 'rgba(' + (v | 0) + ',' + ((v - 2) | 0) + ',' + ((v - 4) | 0) + ',' + (0.05 + srnd() * 0.2).toFixed(2) + ')';
+    c.fillRect(x, y, 1 + srnd() * 2.2, 1 + srnd() * 2.2);
+  }
+
+  /* ковровая дорожка по центру */
+  if (resFloor !== 1) {
+    const g = c.createLinearGradient(0, 300, 0, 400);
+    g.addColorStop(0, 'rgba(88,26,24,.5)');
+    g.addColorStop(0.5, 'rgba(112,32,28,.55)');
+    g.addColorStop(1, 'rgba(84,24,22,.5)');
+    c.fillStyle = g;
+    c.fillRect(300, 300, 380, 96);
+    c.strokeStyle = 'rgba(214,182,120,.22)';
+    c.lineWidth = 2;
+    c.strokeRect(306, 306, 368, 84);
+    c.strokeStyle = 'rgba(214,182,120,.12)';
+    c.strokeRect(314, 314, 352, 68);
+  }
+
+  /* пятна, кровь на полу, мусор */
+  for (let i = 0; i < 10; i++) {
+    const x = 60 + srnd() * (W - 120), y = 60 + srnd() * (H - 120), r = 16 + srnd() * 40;
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(8,8,10,.28)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g;
+    c.beginPath(); c.ellipse(x, y, r, r * 0.6, srnd() * 3, 0, 6.28); c.fill();
+  }
+  for (let i = 0; i < 18; i++) {
+    const x = 60 + srnd() * (W - 120), y = 60 + srnd() * (H - 120);
+    c.fillStyle = 'rgba(196,190,172,' + (0.05 + srnd() * 0.1).toFixed(2) + ')';
+    c.fillRect(x, y, 2 + srnd() * 5, 1 + srnd() * 3);
+  }
+
+  /* вход: дверь и следы боя */
+  if (resFloor === 0) {
+    c.fillStyle = '#141210';
+    c.fillRect(58, 620, 96, 30);
+    c.fillStyle = 'rgba(226,210,168,.16)';
+    c.fillRect(58, 620, 96, 3);
+    c.save();
+    c.fillStyle = 'rgba(220,206,170,.14)';
+    c.font = 'bold 9px Consolas, monospace';
+    c.textAlign = 'center';
+    c.fillText('ВХОД', 106, 612);
+    c.restore();
+    for (let i = 0; i < 5; i++) {
+      c.strokeStyle = 'rgba(120,20,14,.20)';
+      c.lineWidth = 3 + srnd() * 4;
+      const y = 300 + srnd() * 240;
+      c.beginPath(); c.moveTo(120 + srnd() * 40, y); c.lineTo(220 + srnd() * 90, y + rnd(-12, 12)); c.stroke();
+    }
+  }
+
+  /* ковёр/пол под лестницей */
+  c.fillStyle = 'rgba(0,0,0,.22)';
+  c.fillRect(RES_PAD_UP.x - 6, RES_PAD_UP.y - 6, 112, 220);
+}
+
+/* ---------- элементы интерьера ---------- */
+
+function resDado(c, p) {
+  const g = c.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
+  g.addColorStop(0, '#5a5148');
+  g.addColorStop(0.5, '#463f37');
+  g.addColorStop(1, '#332d27');
+  c.fillStyle = g;
+  c.fillRect(p.x, p.y, p.w, p.h);
+  /* панель и золочёный молдинг */
+  const vert = p.wd === 'v';
+  if (!vert) {
+    c.fillStyle = 'rgba(206,188,140,.20)';
+    c.fillRect(p.x, p.y + (p.y < 100 ? 3 : p.h - 4), p.w, 1.4);
+    for (let x = p.x + 20; x < p.x + p.w - 10; x += 68) {
+      c.fillStyle = 'rgba(12,11,10,.35)';
+      c.fillRect(x, p.y + 5, 1.2, p.h - 10);
+    }
+  } else {
+    c.fillStyle = 'rgba(206,188,140,.18)';
+    c.fillRect(p.x + (p.x < 100 ? 3 : p.w - 4), p.y, 1.4, p.h);
+    for (let y = p.y + 20; y < p.y + p.h - 10; y += 68) {
+      c.fillStyle = 'rgba(12,11,10,.35)';
+      c.fillRect(p.x + 5, y, p.w - 10, 1.2);
+    }
+  }
+}
+
+function resDesk(c, p, pres) {
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.fillRect(p.x + 5, p.y + p.h - 2, p.w, 9);
+  const g = c.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
+  if (pres) { g.addColorStop(0, '#5a4632'); g.addColorStop(1, '#37281c'); }
+  else { g.addColorStop(0, '#4a3d2e'); g.addColorStop(1, '#2c241a'); }
+  c.fillStyle = g;
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.fillStyle = 'rgba(224,204,158,.16)';
+  c.fillRect(p.x, p.y, p.w, 2);
+  c.fillStyle = 'rgba(0,0,0,.28)';
+  c.fillRect(p.x + 6, p.y + 10, p.w - 12, p.h - 16);
+  if (pres) {
+    c.fillStyle = 'rgba(206,168,96,.25)';
+    c.fillRect(p.x + 8, p.y + 6, p.w - 16, 2);
+    c.fillStyle = '#d8cba8';
+    c.fillRect(p.x + p.w * 0.5 - 10, p.y + 16, 20, 14);   /* папка */
+    c.fillStyle = 'rgba(150,40,32,.6)';
+    c.fillRect(p.x + p.w * 0.5 - 7, p.y + 19, 14, 2);
+  } else {
+    c.fillStyle = 'rgba(120,150,160,.18)';
+    c.fillRect(p.x + 14, p.y + 14, 34, 22);               /* монитор */
+  }
+}
+
+function resCol(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.5)';
+  c.beginPath(); c.ellipse(p.x + p.w / 2 + 4, p.y + p.h / 2 + 8, p.w * 0.6, p.h * 0.4, 0, 0, 6.28); c.fill();
+  const g = c.createRadialGradient(p.x + p.w * 0.36, p.y + p.h * 0.34, 2, p.x + p.w / 2, p.y + p.h / 2, p.w * 0.7);
+  g.addColorStop(0, '#7d7466');
+  g.addColorStop(1, '#433d34');
+  c.fillStyle = g;
+  c.beginPath(); c.arc(p.x + p.w / 2, p.y + p.h / 2, p.w / 2, 0, 6.28); c.fill();
+  c.strokeStyle = 'rgba(210,192,150,.14)';
+  c.lineWidth = 2;
+  c.beginPath(); c.arc(p.x + p.w / 2, p.y + p.h / 2, p.w / 2 - 3, 0, 6.28); c.stroke();
+}
+
+function resSofa(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.4)';
+  c.fillRect(p.x + 4, p.y + p.h - 3, p.w, 8);
+  c.fillStyle = '#4b2b2b';
+  roundRect(c, p.x, p.y, p.w, p.h, 8); c.fill();
+  c.fillStyle = '#5c3634';
+  roundRect(c, p.x + 4, p.y + 4, p.w - 8, p.h - 8, 6); c.fill();
+  c.strokeStyle = 'rgba(20,14,12,.35)';
+  c.lineWidth = 1;
+  if (p.w > p.h) {
+    for (let x = p.x + 20; x < p.x + p.w - 8; x += 34) { c.beginPath(); c.moveTo(x, p.y + 6); c.lineTo(x, p.y + p.h - 6); c.stroke(); }
+  } else {
+    for (let y = p.y + 20; y < p.y + p.h - 8; y += 34) { c.beginPath(); c.moveTo(p.x + 6, y); c.lineTo(p.x + p.w - 6, y); c.stroke(); }
+  }
+}
+
+function resPlant(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.4)';
+  c.beginPath(); c.ellipse(p.x + p.w / 2, p.y + p.h - 2, p.w * 0.5, p.h * 0.22, 0, 0, 6.28); c.fill();
+  c.fillStyle = '#3a2c22';
+  c.beginPath(); c.ellipse(p.x + p.w / 2, p.y + p.h * 0.78, p.w * 0.34, p.h * 0.2, 0, 0, 6.28); c.fill();
+  for (let i = 0; i < 9; i++) {
+    const a = i / 9 * 6.28 + 0.4;
+    c.fillStyle = i % 2 ? 'rgba(52,74,46,.85)' : 'rgba(60,86,52,.8)';
+    c.beginPath();
+    c.ellipse(p.x + p.w / 2 + Math.cos(a) * p.w * 0.24, p.y + p.h * 0.5 + Math.sin(a) * p.h * 0.24,
+      p.w * 0.2, p.h * 0.1, a, 0, 6.28);
+    c.fill();
+  }
+}
+
+function resBarrier(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.4)';
+  c.fillRect(p.x + 3, p.y + p.h - 2, p.w, 7);
+  c.fillStyle = '#4c4034';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.fillStyle = 'rgba(216,190,120,.18)';
+  const horiz = p.w > p.h;
+  for (let i = 0; i < (horiz ? p.w : p.h); i += 18) {
+    if (horiz) c.fillRect(p.x + i, p.y + 2, 9, p.h - 4);
+    else c.fillRect(p.x + 2, p.y + i, p.w - 4, 9);
+  }
+}
+
+function resCrate(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.42)';
+  c.fillRect(p.x + 4, p.y + p.h - 2, p.w, 8);
+  c.fillStyle = '#5a4a34';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.strokeStyle = 'rgba(24,18,12,.55)';
+  c.lineWidth = 2;
+  c.strokeRect(p.x + 1, p.y + 1, p.w - 2, p.h - 2);
+  c.beginPath(); c.moveTo(p.x + 3, p.y + 3); c.lineTo(p.x + p.w - 3, p.y + p.h - 3); c.stroke();
+  c.beginPath(); c.moveTo(p.x + p.w - 3, p.y + 3); c.lineTo(p.x + 3, p.y + p.h - 3); c.stroke();
+}
+
+function resPart(c, p) {
+  /* стеклянная перегородка с рамами */
+  c.fillStyle = 'rgba(120,160,170,.10)';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.strokeStyle = 'rgba(170,196,200,.28)';
+  c.lineWidth = 1.4;
+  c.strokeRect(p.x + 0.7, p.y + 0.7, p.w - 1.4, p.h - 1.4);
+  c.strokeStyle = 'rgba(170,196,200,.16)';
+  const vert = p.h > p.w;
+  if (vert) {
+    for (let y = p.y + 26; y < p.y + p.h; y += 34) { c.beginPath(); c.moveTo(p.x, y); c.lineTo(p.x + p.w, y); c.stroke(); }
+  } else {
+    for (let x = p.x + 26; x < p.x + p.w; x += 34) { c.beginPath(); c.moveTo(x, p.y); c.lineTo(x, p.y + p.h); c.stroke(); }
+  }
+  c.fillStyle = 'rgba(210,230,235,.06)';
+  c.fillRect(p.x + 2, p.y + 2, p.w - 4, 6);
+}
+
+function resRack(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.fillRect(p.x + 4, p.y + p.h - 2, p.w, 8);
+  c.fillStyle = '#22262a';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  for (let y = p.y + 6; y < p.y + p.h - 6; y += 11) {
+    c.fillStyle = 'rgba(90,120,130,.28)';
+    c.fillRect(p.x + 6, y, p.w - 12, 6);
+    if (Math.random() < 0.6) {
+      c.fillStyle = Math.random() < 0.5 ? 'rgba(120,235,255,.35)' : 'rgba(255,180,90,.3)';
+      c.fillRect(p.x + p.w - 14, y + 2, 3, 2);
+    }
+  }
+}
+
+function resCabinet(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.42)';
+  c.fillRect(p.x + 4, p.y + p.h - 2, p.w, 8);
+  c.fillStyle = '#3b342b';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.strokeStyle = 'rgba(14,12,10,.5)';
+  c.strokeRect(p.x + 2.5, p.y + 2.5, p.w - 5, p.h - 5);
+  c.strokeStyle = 'rgba(190,170,120,.2)';
+  c.beginPath(); c.moveTo(p.x + p.w / 2, p.y + 4); c.lineTo(p.x + p.w / 2, p.y + p.h - 4); c.stroke();
+  c.fillStyle = 'rgba(190,170,120,.3)';
+  c.fillRect(p.x + p.w / 2 - 12, p.y + p.h / 2 - 2, 6, 3);
+  c.fillRect(p.x + p.w / 2 + 6, p.y + p.h / 2 - 2, 6, 3);
+}
+
+function resEdobase(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.5)';
+  c.fillRect(p.x + 4, p.y + p.h - 4, p.w, 10);
+  c.fillStyle = '#2a2f36';
+  roundRect(c, p.x, p.y, p.w, p.h, 6); c.fill();
+  c.strokeStyle = 'rgba(140,220,255,.20)';
+  c.lineWidth = 2;
+  roundRect(c, p.x + 4, p.y + 4, p.w - 8, p.h - 8, 4); c.stroke();
+  /* рёбра охлаждения */
+  for (let i = 0; i < 6; i++) {
+    c.fillStyle = 'rgba(120,190,220,.10)';
+    c.fillRect(p.x + 10 + i * 16, p.y + 10, 9, p.h - 20);
+  }
+  /* кабели к полу */
+  c.strokeStyle = 'rgba(20,22,26,.9)';
+  c.lineWidth = 5;
+  for (let i = 0; i < 3; i++) {
+    c.beginPath();
+    c.moveTo(p.x + 18 + i * 32, p.y + p.h - 8);
+    c.quadraticCurveTo(p.x + 6 + i * 40, p.y + p.h + 26, p.x - 30 + i * 50, p.y + p.h + 40);
+    c.stroke();
+  }
+  c.save();
+  c.fillStyle = 'rgba(150,220,255,.22)';
+  c.font = 'bold 10px Consolas, monospace';
+  c.textAlign = 'center';
+  c.fillText('ЭДО', p.x + p.w / 2, p.y + p.h - 12);
+  c.restore();
+}
+
+function resConsole(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.fillRect(p.x + 3, p.y + p.h - 2, p.w, 7);
+  c.fillStyle = '#2b3038';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.fillStyle = 'rgba(120,220,255,.22)';
+  for (let i = 0; i < 5; i++) c.fillRect(p.x + 8 + i * 15, p.y + 7, 8, 5);
+  c.fillStyle = 'rgba(255,170,90,.22)';
+  c.fillRect(p.x + 8, p.y + 18, p.w - 16, 3);
+}
+
+/* ---------- комната: мебель, лестница ---------- */
+
+function buildResRoom() {
+  reseed(909200 + resFloor * 41);
+  const c = rctx;
+  c.clearRect(0, 0, W, H);
+
+  for (const p of resProps(resFloor)) {
+    if (p.type === 'dado') resDado(c, p);
+    else if (p.type === 'desk') resDesk(c, p, false);
+    else if (p.type === 'pdesk') resDesk(c, p, true);
+    else if (p.type === 'col') resCol(c, p);
+    else if (p.type === 'sofa') resSofa(c, p);
+    else if (p.type === 'plant') resPlant(c, p);
+    else if (p.type === 'barrier') resBarrier(c, p);
+    else if (p.type === 'crate') resCrate(c, p);
+    else if (p.type === 'part') resPart(c, p);
+    else if (p.type === 'rack') resRack(c, p);
+    else if (p.type === 'cabinet') resCabinet(c, p);
+    else if (p.type === 'edobase') resEdobase(c, p);
+    else if (p.type === 'console') resConsole(c, p);
+  }
+
+  /* лестничная клетка: марш между площадками */
+  const sx = RES_STAIR_MID.x, sy = RES_STAIR_MID.y;
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.fillRect(sx, sy, RES_STAIR_MID.w, RES_STAIR_MID.h);
+  for (let i = 0; i < 5; i++) {
+    const y = sy + i * 8;
+    c.fillStyle = i % 2 ? 'rgba(160,152,136,.22)' : 'rgba(190,182,164,.16)';
+    c.fillRect(sx + 4, y + 1, RES_STAIR_MID.w - 8, 7);
+    c.fillStyle = 'rgba(10,10,12,.35)';
+    c.fillRect(sx + 4, y + 7, RES_STAIR_MID.w - 8, 1);
+  }
+  /* перила */
+  c.strokeStyle = 'rgba(206,186,140,.35)';
+  c.lineWidth = 2;
+  c.beginPath(); c.moveTo(sx + 8, sy - 6); c.lineTo(sx + 8, sy + RES_STAIR_MID.h + 6); c.stroke();
+  c.beginPath(); c.moveTo(sx + RES_STAIR_MID.w - 8, sy - 6); c.lineTo(sx + RES_STAIR_MID.w - 8, sy + RES_STAIR_MID.h + 6); c.stroke();
+
+  /* площадки: светлый камень */
+  for (const pad of [RES_PAD_UP, RES_PAD_DN]) {
+    c.fillStyle = 'rgba(176,168,148,.14)';
+    c.fillRect(pad.x, pad.y, pad.w, pad.h);
+    c.strokeStyle = 'rgba(206,190,150,.22)';
+    c.lineWidth = 1.6;
+    c.strokeRect(pad.x + 1, pad.y + 1, pad.w - 2, pad.h - 2);
+  }
+
+  /* указатели этажей */
+  c.save();
+  c.textAlign = 'center';
+  c.font = 'bold 12px Consolas, monospace';
+  if (resFloor < RES_FLOORS - 1) {
+    c.fillStyle = 'rgba(200,232,255,.55)';
+    c.fillText('▲ ЭТАЖ ' + (resFloor + 2), RES_PAD_UP.x + RES_PAD_UP.w / 2, RES_PAD_UP.y + RES_PAD_UP.h / 2 + 4);
+  } else {
+    c.fillStyle = 'rgba(200,232,255,.22)';
+    c.fillText('ВЫШЕ НЕТ', RES_PAD_UP.x + RES_PAD_UP.w / 2, RES_PAD_UP.y + RES_PAD_UP.h / 2 + 4);
+  }
+  if (resFloor > 0) {
+    c.fillStyle = 'rgba(200,232,255,.55)';
+    c.fillText('▼ ЭТАЖ ' + resFloor, RES_PAD_DN.x + RES_PAD_DN.w / 2, RES_PAD_DN.y + RES_PAD_DN.h / 2 + 4);
+  } else {
+    c.fillStyle = 'rgba(200,232,255,.22)';
+    c.fillText('ВЫХОД', RES_PAD_DN.x + RES_PAD_DN.w / 2, RES_PAD_DN.y + RES_PAD_DN.h / 2 + 4);
+  }
+  c.fillStyle = 'rgba(206,190,150,.28)';
+  c.font = 'bold 8px Consolas, monospace';
+  c.fillText('ЛЕСТНИЦА', RES_STAIR_MID.x + RES_STAIR_MID.w / 2, RES_STAIR_MID.y + RES_STAIR_MID.h / 2 + 3);
+  c.restore();
+
+  /* номер этажа на полу */
+  c.save();
+  c.fillStyle = 'rgba(214,204,176,.05)';
+  c.font = 'bold 64px Consolas, monospace';
+  c.textAlign = 'center';
+  c.fillText(String(resFloor + 1), 120, 620);
+  c.restore();
+
+  /* последний этаж: герб на стене и флаг */
+  if (resFloor === 2) {
+    c.save();
+    c.translate(720, 96);
+    c.strokeStyle = 'rgba(214,182,110,.22)';
+    c.lineWidth = 2;
+    c.beginPath(); c.arc(0, 0, 26, 0, 6.28); c.stroke();
+    c.beginPath(); c.moveTo(-26, 0); c.lineTo(26, 0); c.stroke();
+    c.beginPath(); c.moveTo(0, -26); c.lineTo(0, 26); c.stroke();
+    c.fillStyle = 'rgba(214,182,110,.12)';
+    c.beginPath(); c.arc(0, 0, 26, 0, 6.28); c.fill();
+    c.restore();
+  }
+}
+
+/* ---------- свет ---------- */
+
+function resLighting() {
+  lctx.setTransform(1, 0, 0, 1, 0, 0);
+  lctx.globalCompositeOperation = 'source-over';
+  lctx.clearRect(0, 0, W, H);
+  lctx.fillStyle = resFloor === 2 ? 'rgba(6,8,14,0.52)' : 'rgba(7,7,11,0.56)';
+  lctx.fillRect(0, 0, W, H);
+  lctx.globalCompositeOperation = 'destination-out';
+
+  /* люстры и бра */
+  radial(lctx, 250, 210, 300, 0.42);
+  radial(lctx, 700, 210, 260, 0.34);
+  radial(lctx, 250, 480, 280, 0.34);
+  radial(lctx, 700, 480, 250, 0.3);
+  radial(lctx, 500, 340, 460, 0.16);
+  /* лестница */
+  radial(lctx, RES_STAIR_MID.x + RES_STAIR_MID.w / 2, RES_STAIR_MID.y + RES_STAIR_MID.h / 2, 190, 0.36);
+
+  if (resFloor === 2) {
+    radial(lctx, RES_EDO.x, RES_EDO.y, 250, resEdo && !resEdo.dead ? 0.44 : 0.2);
+    if (resEdo && !resEdo.dead) {
+      radial(lctx, RES_EDO.x + Math.cos(resEdo.ang) * 40, RES_EDO.y + Math.sin(resEdo.ang) * 40, 150, 0.4);
+    }
+    if (resPres && !resCaptured) radial(lctx, resPres.x, resPres.y, 170, 0.3);
+  }
+
+  radial(lctx, player.x, player.y, 330, 0.56);
+  playerCone(lctx, 470, 0.42, 0.95);
+
+  for (const f of fires) {
+    const k = Math.min(1, f.life / 1.2);
+    radial(lctx, f.x, f.y, f.r * 1.6 * k, 0.95 * k);
+  }
+  if (player.muzzle > 0) {
+    radial(lctx, player.x + Math.cos(player.ang) * 28, player.y + Math.sin(player.ang) * 28,
+      player.weapon === 'plasma' ? 200 : 160, 0.7);
+  }
+  for (const e of enemies) {
+    if (e.muzzle > 0) radial(lctx, e.x + Math.cos(e.ang) * 22, e.y + Math.sin(e.ang) * 22, 130, 0.6);
+  }
+  if (resPres && resPres.muzzle > 0) {
+    radial(lctx, resPres.x + Math.cos(resPres.ang) * 30, resPres.y + Math.sin(resPres.ang) * 30, 170, 0.7);
+  }
+  if (resEdo && resEdo.charge > 0) {
+    radial(lctx, RES_EDO.x + Math.cos(resEdo.ang) * 34, RES_EDO.y + Math.sin(resEdo.ang) * 34, 220, 0.8);
+  }
+
+  lctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(lightCv, 0, 0);
+}
+
+/* ---------- актёры ---------- */
+
+function resDrawEdo() {
+  if (!resEdo) return;
+  const x = RES_EDO.x, y = RES_EDO.y;
+  ctx.save();
+  if (resEdo.dead) ctx.globalAlpha = 0.55;
+  /* тень и станок */
+  ctx.fillStyle = 'rgba(0,0,0,.5)';
+  ctx.beginPath(); ctx.ellipse(x + 4, y + 12, 48, 26, 0, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#3a4048';
+  ctx.beginPath(); ctx.arc(x, y, 34, 0, 6.28); ctx.fill();
+  ctx.strokeStyle = 'rgba(150,226,255,.24)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, y, 27, 0, 6.28); ctx.stroke();
+
+  /* ствол-рельса */
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(resEdo.ang);
+  ctx.fillStyle = resEdo.dead ? '#2f3236' : '#454d56';
+  ctx.fillRect(10, -9, 62, 18);
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = resEdo.dead ? 'rgba(120,140,150,.2)' : 'rgba(130,220,255,.35)';
+    ctx.fillRect(18 + i * 14, -12, 6, 24);
+  }
+  ctx.fillStyle = '#22262b';
+  ctx.fillRect(66, -7, 16, 14);
+  /* ядро */
+  const core = resEdo.dead ? 'rgba(90,100,110,.35)'
+    : (resEdo.charge > 0 ? 'rgba(210,245,255,.95)' : 'rgba(140,225,255,' + (0.35 + 0.25 * Math.sin(state.time * 4)) + ')');
+  ctx.fillStyle = core;
+  ctx.beginPath(); ctx.arc(58, 0, 7, 0, 6.28); ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = 'rgba(150,226,255,.10)';
+  ctx.beginPath(); ctx.arc(x, y, 40 + (resEdo.charge > 0 ? 10 : 0), 0, 6.28); ctx.fill();
+  ctx.restore();
+}
+
+function resDrawPresident() {
+  const p = resPres;
+  if (!p) return;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,.55)';
+  ctx.beginPath(); ctx.ellipse(p.x + 2, p.y + 8, 24, 12, 0, 0, 6.28); ctx.fill();
+
+  /* пулемёт на станке */
+  if (!resCaptured && !p.down) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.ang);
+    ctx.fillStyle = '#2a2c31';
+    ctx.fillRect(16, -4, 34, 8);
+    ctx.fillStyle = '#3d4046';
+    ctx.fillRect(46, -5, 12, 10);
+    ctx.fillStyle = 'rgba(255,200,120,.35)';
+    ctx.fillRect(34, -7, 10, 3);
+    /* сошки */
+    ctx.strokeStyle = '#33363b';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(30, 4); ctx.lineTo(24, 16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(30, -4); ctx.lineTo(24, -16); ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.rotate(p.ang);
+  /* корпус в костюме */
+  ctx.fillStyle = p.hurt > 0 ? '#c8b8a4' : (resCaptured ? '#4c4a46' : '#23252c');
+  ctx.beginPath(); ctx.ellipse(-2, 0, 15, 12, 0, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#d8d2c4';
+  ctx.beginPath(); ctx.arc(7, 0, 6.4, 0, 6.28); ctx.fill();   /* рубашка/лицо */
+  ctx.fillStyle = p.hurt > 0 ? '#f0e0d0' : '#b6a894';
+  ctx.beginPath(); ctx.arc(9, 0, 5.2, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#1a1c22';
+  ctx.fillRect(2, -5.6, 5, 2);   /* тёмные волосы */
+  if (!resCaptured && !p.down) {
+    ctx.fillStyle = '#15161a';
+    ctx.fillRect(10, 3, 12, 3);  /* руки на пулемёте */
+  }
+  ctx.restore();
+
+  if (p.down || resCaptured) {
+    ctx.fillStyle = 'rgba(140,240,166,.85)';
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(resCaptured ? 'В ПЛЕНУ' : 'СДАЁТСЯ', p.x, p.y - 26);
+  }
+  ctx.restore();
+}
+
+function resDrawScene() {
+  if (resFloor === 2) {
+    resDrawEdo();
+    if (resPres && !resCaptured) resDrawPresident();
+    if (resPres && resCaptured) resDrawPresident();
+  }
+}
+
+/* ---------- свет и луч поверх затемнения ---------- */
+
+function resDrawGlow() {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  /* люстры */
+  for (const lp of [[250, 210], [700, 210], [250, 480], [700, 480]]) {
+    const fl = 0.86 + 0.08 * Math.sin(state.time * 3.1 + lp[0]) + 0.05 * Math.sin(state.time * 11.3);
+    const g = ctx.createRadialGradient(lp[0], lp[1], 4, lp[0], lp[1], 210);
+    g.addColorStop(0, 'rgba(255,232,186,' + (0.11 * fl).toFixed(3) + ')');
+    g.addColorStop(0.5, 'rgba(255,210,150,' + (0.04 * fl).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(255,200,140,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(lp[0], lp[1], 210, 0, 6.28); ctx.fill();
+  }
+
+  /* ЭДО: ядро и наводка */
+  if (resEdo && resFloor === 2 && !resEdo.dead) {
+    const ex = RES_EDO.x + Math.cos(resEdo.ang) * 62;
+    const ey = RES_EDO.y + Math.sin(resEdo.ang) * 62;
+    const pulse = 0.4 + 0.3 * Math.sin(state.time * 6);
+    const g = ctx.createRadialGradient(ex, ey, 0, ex, ey, 60);
+    g.addColorStop(0, 'rgba(180,240,255,' + (0.3 + pulse * 0.35).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(120,220,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(ex, ey, 60, 0, 6.28); ctx.fill();
+
+    /* прицельная линия заряда */
+    if (resEdo.charge > 0) {
+      ctx.strokeStyle = 'rgba(170,235,255,' + (0.25 + 0.4 * Math.sin(state.time * 30)).toFixed(3) + ')';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([12, 9]);
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex + Math.cos(resEdo.ang) * 900, ey + Math.sin(resEdo.ang) * 900);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  /* лучи */
+  for (const b of resBeams) {
+    const k = b.life / b.max;
+    const len = 980;
+    const ex = b.x + Math.cos(b.a) * len, ey = b.y + Math.sin(b.a) * len;
+    const g = ctx.createLinearGradient(b.x, b.y, ex, ey);
+    g.addColorStop(0, 'rgba(210,248,255,' + (0.9 * k).toFixed(3) + ')');
+    g.addColorStop(0.7, 'rgba(130,220,255,' + (0.55 * k).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(90,180,255,0)');
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 4 + 10 * k;
+    ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.75 * k).toFixed(3) + ')';
+    ctx.lineWidth = 2 + 3 * k;
+    ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(ex, ey); ctx.stroke();
+  }
+
+  /* дульная вспышка президента */
+  if (resPres && resPres.muzzle > 0) {
+    const mx = resPres.x + Math.cos(resPres.ang) * 30, my = resPres.y + Math.sin(resPres.ang) * 30;
+    const g = ctx.createRadialGradient(mx, my, 0, mx, my, 64);
+    g.addColorStop(0, 'rgba(255,230,170,.55)');
+    g.addColorStop(1, 'rgba(255,180,90,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(mx, my, 64, 0, 6.28); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ---------- подписи поверх затемнения ---------- */
+
+function resDrawPrompt() {
+  if (!player) return;
+  const t = state.time;
+  ctx.save();
+  ctx.textAlign = 'center';
+
+  /* этаж */
+  ctx.font = 'bold 11px Consolas, monospace';
+  ctx.fillStyle = 'rgba(222,214,190,.5)';
+  ctx.fillText('ЭТАЖ ' + (resFloor + 1) + '/3 · ' + RES_NAMES[resFloor], W / 2, H - 22);
+
+  /* площадки */
+  const padPulse = 0.45 + 0.35 * Math.sin(t * 3);
+  const pads = [];
+  if (resFloor < RES_FLOORS - 1) pads.push([RES_PAD_UP, '▲ НА ЭТАЖ ' + (resFloor + 2), 'rgba(168,232,255,']);
+  if (resFloor > 0) pads.push([RES_PAD_DN, '▼ НА ЭТАЖ ' + resFloor, 'rgba(168,232,255,']);
+  for (const [pad, label, col] of pads) {
+    ctx.strokeStyle = col + (0.18 + padPulse * 0.4).toFixed(3) + ')';
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([7, 6]);
+    ctx.strokeRect(pad.x + 3, pad.y + 3, pad.w - 6, pad.h - 6);
+    ctx.setLineDash([]);
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.fillStyle = col + (0.5 + padPulse * 0.4).toFixed(3) + ')';
+    ctx.fillText(label, pad.x + pad.w / 2, pad.y - 8);
+  }
+
+  if (resFloor === 1 && resVisited[1] && resCount(1) > 0) {
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.fillStyle = 'rgba(214,120,96,.55)';
+    ctx.fillText('ЭТАЖ ДЕРЖАТ: ' + resCount(1), W / 2, H - 40);
+  }
+
+  /* ЭДО */
+  if (resFloor === 2 && resEdo && !resEdo.dead) {
+    const w = 128, x = RES_EDO.x - w / 2, y = RES_EDO.y - 74;
+    ctx.fillStyle = 'rgba(8,12,16,.72)';
+    ctx.fillRect(x - 2, y - 12, w + 4, 22);
+    ctx.fillStyle = 'rgba(168,232,255,.9)';
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.fillText('ЭДО · ' + Math.max(0, Math.round(resEdo.hp)), RES_EDO.x, y - 3);
+    ctx.fillStyle = 'rgba(255,255,255,.16)';
+    ctx.fillRect(x, y + 2, w, 4);
+    ctx.fillStyle = 'rgba(150,225,255,.85)';
+    ctx.fillRect(x, y + 2, w * clamp(resEdo.hp / RES_EDO.maxhp, 0, 1), 4);
+    if (resEdo.charge > 0) {
+      ctx.fillStyle = 'rgba(255,140,110,' + (0.55 + 0.4 * Math.sin(t * 22)).toFixed(3) + ')';
+      ctx.font = 'bold 10px Consolas, monospace';
+      ctx.fillText('ЗАРЯД — УХОДИ С ЛИНИИ', RES_EDO.x, y - 20);
+    }
+  }
+
+  /* президент */
+  if (resFloor === 2 && resPres) {
+    const w = 150, x = resPres.x - w / 2, y = resPres.y - 52;
+    ctx.fillStyle = 'rgba(8,10,14,.72)';
+    ctx.fillRect(x - 2, y - 13, w + 4, 23);
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.fillStyle = resCaptured ? 'rgba(140,240,166,.9)' : 'rgba(238,214,160,.92)';
+    ctx.fillText(resCaptured ? 'ПРЕЗИДЕНТ · В ПЛЕНУ' : 'ПРЕЗИДЕНТ', resPres.x, y - 4);
+    if (!resCaptured) {
+      ctx.fillStyle = 'rgba(255,255,255,.16)';
+      ctx.fillRect(x, y + 1, w, 4);
+      ctx.fillStyle = resPres.down ? 'rgba(140,240,166,.85)' : 'rgba(216,120,96,.85)';
+      ctx.fillRect(x, y + 1, w * clamp(resPres.hp / RES_PRES.maxhp, 0, 1), 4);
+    }
+
+    const d = Math.hypot(player.x - resPres.x, player.y - resPres.y);
+    if (!resCaptured && d < 120) {
+      ctx.font = 'bold 10px Consolas, monospace';
+      if (!resPres.down) {
+        ctx.fillStyle = 'rgba(238,210,160,.6)';
+        ctx.fillText('ОН ЖИВ — НЕ УБЕЙ. СБЕЙ ЕГО С НОГ', resPres.x, y + 24);
+      } else if (!resEdo || !resEdo.dead) {
+        ctx.fillStyle = 'rgba(214,120,96,.85)';
+        ctx.fillText('СНАЧАЛА ЭДО — ПОТОМ ПЛЕН', resPres.x, y + 24);
+      } else {
+        ctx.fillStyle = 'rgba(140,240,166,' + (0.55 + 0.4 * Math.sin(t * 5)).toFixed(3) + ')';
+        ctx.fillText('УДЕРЖИВАЙ E — ВЗЯТЬ ЖИВЫМ', resPres.x, y + 24);
+        const p = clamp((resPres.capT || 0) / RES_CAPTURE_T, 0, 1);
+        ctx.fillStyle = 'rgba(20,24,18,.8)';
+        ctx.fillRect(resPres.x - 56, y + 30, 112, 8);
+        ctx.fillStyle = 'rgba(140,240,166,.9)';
+        ctx.fillRect(resPres.x - 55, y + 31, 110 * p, 6);
+      }
+    }
+  }
+
+  /* подсказка о лестнице при входе */
+  if (state.time < 24 && resFloor === 0) {
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.fillStyle = 'rgba(200,232,255,' + (0.35 + 0.25 * Math.sin(t * 3)).toFixed(3) + ')';
+    ctx.fillText('ВСТАНЬ НА ПЛОЩАДКУ СПРАВА — ПЕРЕЙДЁШЬ ЭТАЖОМ ВЫШЕ', W / 2, H - 56);
+  }
+  ctx.restore();
+}
+
+
+function resBriefFill() {
+  els.briefKicker.textContent = 'МИССИЯ 09 · РЕЗИДЕНЦИЯ · 08:40';
+  els.briefTitle.textContent = 'Последний заказ';
+  els.briefText.innerHTML =
+    'Резиденция президента — три этажа, и на верхнем он сам, с пулемётом. ' +
+    'Перед капитуляцией его надо взять живым: приказ — плен, не труп.<br />' +
+    'Там же стоит <b>ЭДО</b> — энергетическая дальнобойная орудийная система. Пока она стреляет, он не сдастся.';
+  els.briefBody.innerHTML =
+    'Лестница в правом конце этажа: встань на площадку — и ты уже на следующем (или прошлом) этаже.<br />' +
+    'ЭДО снимается только огнём. Президент стреляет очередями — сбей его с ног, затем подойди и ' +
+    '<b>удерживай E</b>. Это последний заказ: им закрывается первый акт.';
+  if (hideSquadPick) hideSquadPick();
+}
+
 const LEVELS = {
   bar: {
     id: 'bar', num: 1, name: 'Бар «У Гая»',
@@ -5347,6 +6591,22 @@ const LEVELS = {
       { id: 'ride', text: 'Сопроводить танк к воротам (миномёт — E)', done: false, active: false },
       { id: 'gate', text: 'Пробить ворота танком', done: false, active: false }
     ]
+  },
+  res: {
+    id: 'res', num: 9, name: 'Последний заказ · резиденция',
+    props: RES_WALLS.concat(RES_PROPS[0]), spawns: RES_SPAWNS[0], stages: [],
+    start: RES_START,
+    exit: { x: -200, y: -200, w: 1, h: 1 },
+    fallback: { x: 520, y: 340 },
+    ammoSpots: [],
+    intro: 'Резиденция. Три этажа, на верхнем — президент с пулемётом и ЭДО. Лестница справа переносит этажом выше.',
+    pauseLead: 'Три этажа резиденции. Наверху ждут орудие и президент — и он ещё не сдался.',
+    floor: buildResFloor,
+    room: buildResRoom,
+    light: resLighting,
+    pickups: resPickupsList,
+    update: resUpdate,
+    objectives: resObjectives
   }
 };
 
@@ -5417,6 +6677,9 @@ function resetWorld() {
   state.mortarAmmo = FORT_MORTAR_AMMO; state.fortWave = 0; state.gateCrack = 0;
   state.tankWarned = false; state.tankKills = 0;
   aas = []; flaks = []; airStrikes = []; bombs = [];
+  resFloor = 0; resVisited = [false, false, false]; resFight = false; resCaptured = false;
+  resEdo = null; resPres = null; resStairLock = 0; resBeams.length = 0;
+  state.resSig = ''; state.captureOn = null; state.captureT = 0;
   state.kills = 0; state.shots = 0; state.hits = 0; state.bottlesUsed = 0;
 }
 
@@ -5499,9 +6762,11 @@ function enterLevel(id, carry) {
   if (level.id === 'farm' && !player.binocs.owned) player.binocs.owned = true;
   if (level.id === 'roof') { spawnMortars(); spawnSquad(); }
   if (level.id === 'fort') { spawnFort(); spawnSquad(); }
+  if (level.id === 'res') spawnRes();
   state.objectives = level.objectives();
-  els.missionTag.textContent = 'МИССИЯ 0' + level.num;
-  els.waveLabel.textContent = level.id === 'bar' ? 'ВОЛНА' : (level.id === 'village' ? 'ПВО' : (level.id === 'farm' ? 'АВИАУДАР' : (level.id === 'roof' ? 'МИНОМЁТЫ' : (level.id === 'fort' ? 'БРОНЯ' : 'РУБЕЖ'))));
+  if (level.id === 'res') { syncResObjectives(); updateObjectives(); }
+  els.missionTag.textContent = 'МИССИЯ ' + (level.num < 10 ? '0' + level.num : level.num);
+  els.waveLabel.textContent = level.id === 'res' ? 'ЭТАЖ' : level.id === 'bar' ? 'ВОЛНА' : (level.id === 'village' ? 'ПВО' : (level.id === 'farm' ? 'АВИАУДАР' : (level.id === 'roof' ? 'МИНОМЁТЫ' : (level.id === 'fort' ? 'БРОНЯ' : 'РУБЕЖ'))));
 
   if (level.id === 'bar') { state.wave = -1; }
   else { state.stage = -1; syncDoorSolid(); }
@@ -7966,6 +9231,18 @@ function updateObjectives() {
 }
 
 function updateWaveHud() {
+  if (level.id === 'res') {
+    els.waveNum.textContent = (resFloor + 1) + '/3';
+    const n = resCount(resFloor);
+    if (resFloor === 2) {
+      els.waveLeft.textContent = resCaptured ? 'ПРЕЗИДЕНТ В ПЛЕНУ'
+        : (resEdo && !resEdo.dead ? 'ЭДО ' + Math.round(100 * Math.max(0, resEdo.hp) / RES_EDO.maxhp) + '%'
+          : (n > 0 ? n + ' ЖИВЫХ' : 'ЭТАЖ ЧИСТ'));
+    } else {
+      els.waveLeft.textContent = n > 0 ? n + ' ЖИВЫХ' : 'ЭТАЖ ЧИСТ';
+    }
+    return;
+  }
   if (level.id === 'bar') {
     if (state.exitUnlocked) { els.waveNum.textContent = '—'; els.waveLeft.textContent = 'ВЫХОД ОТКРЫТ'; return; }
     if (!state.wavesActive || state.wave < 0) { els.waveNum.textContent = '—'; els.waveLeft.textContent = 'ТИШИНА'; return; }
@@ -8252,6 +9529,7 @@ function damageEnemy(e, dmg, ang) {
 function updateEnemies(dt) {
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
+    if (e.away) continue;
     const cfg = ENEMY[e.type];
     const d = Math.hypot(player.x - e.x, player.y - e.y);
     const aim = Math.atan2(player.y - e.y, player.x - e.x);
@@ -8358,6 +9636,17 @@ function updateBullets(dt) {
               if (b.pierce > 0) { b.pierce--; } else { dead = true; }
               break;
             }
+          }
+        }
+        if (!dead && level.id === 'res' && resFloor === 2) {
+          if (resEdo && !resEdo.dead && Math.hypot(b.x - RES_EDO.x, b.y - RES_EDO.y) < RES_EDO.r + b.r) {
+            state.hits++;
+            damageEdo(b.dmg);
+            dead = true;
+          } else if (resPres && !resCaptured && Math.hypot(b.x - resPres.x, b.y - resPres.y) < resPres.r + b.r + 5) {
+            state.hits++;
+            damagePresident(b.dmg);
+            if (b.pierce > 0) b.pierce--; else dead = true;
           }
         }
         if (!dead && level.id === 'village') {
@@ -9727,7 +11016,7 @@ function updatePlayer(dt) {
 /* ---------------- выход ---------------- */
 function checkExit() {
   if (!state.exitUnlocked) return;
-  if (level.id === 'roof' || level.id === 'fort') return;
+  if (level.id === 'roof' || level.id === 'fort' || level.id === 'res') return;
   const ex = level.exit;
   if (player.x > ex.x && player.y > ex.y && player.y < ex.y + ex.h) {
     missionComplete();
@@ -9994,7 +11283,7 @@ function drawPickups() {
 }
 
 function drawExitZone() {
-  if (level.id === 'village' || level.id === 'farm' || level.id === 'roof' || level.id === 'fort') return;
+  if (level.id === 'village' || level.id === 'farm' || level.id === 'roof' || level.id === 'fort' || level.id === 'res') return;
   const ex = level.exit;
   const unlocked = state.exitUnlocked;
   const pulse = 0.5 + 0.5 * Math.sin(state.time * 3);
@@ -10609,6 +11898,7 @@ function render() {
   drawExitZone();
   if (level.id === 'fort') { drawFortGate(); drawFortMortar(); }
   drawPickups();
+  if (level.id === 'res') resDrawScene();
   if (level.id === 'village') aas.forEach(drawVillageAA);
   if (level.id === 'farm') drawFarmMarker();
   if (level.id === 'roof') drawRoofCrates();
@@ -10636,6 +11926,7 @@ function render() {
     if (level.id === 'factory') drawFactoryGlow();
     if (level.id === 'roof') drawRoofGlow();
     if (level.id === 'fort') drawFortGlow();
+    if (level.id === 'res') resDrawGlow();
     if (level.id === 'school') drawSchoolGlow();
     drawRain();
   }
@@ -10646,6 +11937,7 @@ function render() {
   if (level.id === 'farm') drawFarmPrompt();
   if (level.id === 'roof') drawRoofPrompt();
   if (level.id === 'fort') drawFortPrompt();
+  if (level.id === 'res') resDrawPrompt();
   drawEdgeVignette();
 
   if (state.lightning > 0) {
@@ -10659,10 +11951,10 @@ function render() {
 const SAVE_KEY = 'lastorder.save.v1';
 const PROGRESS_KEY = 'lastorder.progress.v1';
 
-const MISSION_ORDER = ['bar', 'street', 'school', 'village', 'factory', 'farm', 'roof', 'fort'];
+const MISSION_ORDER = ['bar', 'street', 'school', 'village', 'factory', 'farm', 'roof', 'fort', 'res'];
 const MISSION_TITLES = ['Бар «У Гая»', 'Улица · телестанция', 'Школа №4 · больница',
   'Деревня и три ПВО', 'Завод №7', 'Ферма у реки', 'Крыша и два миномёта',
-  'Форт и последний танк'];
+  'Форт и последний танк', 'Резиденция · президент'];
 
 let progress = { done: {} };
 
@@ -10774,14 +12066,15 @@ function startMissionFromSelect(n) {
   ac();
   state.mode = 'menu';
   els.select.classList.add('hidden');
-  if (id === 'roof' || id === 'fort') {
+  if (id === 'roof' || id === 'fort' || id === 'res') {
     state.pendingNext = id;
     state.pendingCarry = missionLoadout(n);
     state.mode = 'brief';
     els.brief.classList.remove('hidden');
-    els.briefBtn.textContent = id === 'fort' ? 'Прыжок в форт' : 'Вылет на крышу';
-    if (id === 'fort') fortBriefFill(); else roofBriefFill();
-    showSquadPick();
+    els.briefBtn.textContent = id === 'res' ? 'Штурм резиденции' : (id === 'fort' ? 'Прыжок в форт' : 'Вылет на крышу');
+    if (id === 'res') { resBriefFill(); hideSquadPick(); }
+    else if (id === 'fort') { fortBriefFill(); showSquadPick(); }
+    else { roofBriefFill(); showSquadPick(); }
     return;
   }
   state.pendingCarry = null;
@@ -10835,6 +12128,7 @@ function collectSave() {
     },
     aa: aas.map(a => ({ id: a.id, hp: a.hp, destroyed: a.destroyed, captured: a.captured })),
     sq: state.squad,
+    res: resSaveData(),
     tank: tank ? { x: tank.x, y: tank.y, ang: tank.ang, hp: tank.hp, started: tank.started, wp: tank.wp } : null,
     mortars: mortars.map(m => ({ id: m.id, hp: m.hp, destroyed: m.destroyed })),
     crates: crates.map(c => ({ id: c.id, taken: c.taken, loaded: c.loaded })),
@@ -10871,7 +12165,7 @@ function saveGame(silent) {
     updateSaveMeta();
     state.lastSaveAt = Date.now();
     if (!silent) {
-      toast('Сохранено · ' + level.name + ' · миссия 0' + level.num, 2200);
+      toast('Сохранено · ' + level.name + ' · миссия ' + (level.num < 10 ? '0' + level.num : level.num), 2200);
       updatePauseMeta();
     }
     return true;
@@ -10986,6 +12280,7 @@ function loadGame() {
   updateHud(); updateObjectives(); updateWaveHud();
   if (level.id === 'roof') syncRoofObjectives();
   if (level.id === 'fort') syncFortObjectives();
+  if (level.id === 'res') resApplyLoad(d.res);
   toast('Загружено · ' + level.name, 2000);
   return true;
 }
@@ -10996,7 +12291,7 @@ function updatePauseMeta() {
   const t = Math.floor(state.time);
   const mss = Math.floor(t / 60) + ':' + pad2(t % 60);
   const raw = readRaw();
-  let line = 'МИССИЯ 0' + level.num + ' · ' + level.name + ' · ' + mss;
+  let line = 'МИССИЯ ' + (level.num < 10 ? '0' + level.num : level.num) + ' · ' + level.name + ' · ' + mss;
   if (raw) {
     try {
       const d = JSON.parse(raw);
@@ -11159,6 +12454,14 @@ function missionComplete() {
     fortBriefFill();
     if (btn) btn.textContent = 'Прыжок в форт';
     showSquadPick();
+  } else if (level.id === 'fort') {
+    state.pendingNext = 'res';
+    resBriefFill();
+    if (btn) btn.textContent = 'Штурм резиденции';
+    hideSquadPick();
+  } else if (level.id === 'res') {
+    finalWin();
+    return;
   } else {
     state.pendingNext = 'farm';
     els.briefKicker.textContent = 'МИССИЯ 06 · ФЕРМА';
@@ -11198,9 +12501,21 @@ function endGame(win) {
   const factory = level.id === 'factory';
   const farm = level.id === 'farm';
   const fort = level.id === 'fort';
+  const res = level.id === 'res';
 
-  els.endKicker.textContent = 'МИССИЯ 0' + level.num + ' · ' + (win ? 'ВЫПОЛНЕНА' : 'ПРОВАЛЕНА');
-  if (win && fort) {
+  els.endKicker.textContent = 'МИССИЯ ' + (level.num < 10 ? '0' + level.num : level.num) + ' · ' + (win ? 'ВЫПОЛНЕНА' : 'ПРОВАЛЕНА');
+  if (win && res) {
+    els.endTitle.textContent = 'Акт I завершён';
+    els.endText.innerHTML =
+      'Президент лежит на ковре, руки связаны, пулемёт брошен рядом. Из-за стены ещё тянет ' +
+      'горелой плазмой — ЭДО больше не выстрелит. В наушниках щёлкает наш канал: ' +
+      'первый акт закрыт, город остался за гостями.';
+  } else if (!win && res) {
+    els.endTitle.textContent = 'Резиденция не отпустила';
+    els.endText.innerHTML =
+      'Лестница осталась за спиной, а наверху всё ещё ждут орудие и президент. ' +
+      'Первый акт остался открытым — и закрывать его больше некому.';
+  } else if (win && fort) {
     els.endTitle.textContent = 'Последний заказ закрыт';
     els.endText.innerHTML =
       'Танк выходит за ворота, и бетон форта остаётся позади. Гарнизон так и не понял, ' +
@@ -11435,6 +12750,11 @@ window.LO = {
   get atShells() { return atShells; },
   get FORT_GATE() { return FORT_GATE; },
   get FORT_MORTAR() { return FORT_MORTAR; },
+  resChangeFloor, resVisit, resInteract, resUpdate, syncResObjectives, resApplyLoad, resSaveData,
+  damageEdo, damagePresident, resDrawScene, get resEdo() { return resEdo; },
+  get resPres() { return resPres; }, get resBeams() { return resBeams; },
+  get resFloor() { return resFloor; }, get resVisited() { return resVisited; },
+  resCount, resPickupsList,
   killAll() { enemies.slice().forEach(e => damageEnemy(e, 9999, 0)); },
   hurt(n) { hurtPlayer(n); }
 };
