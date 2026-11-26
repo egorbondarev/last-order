@@ -8002,7 +8002,7 @@ function updateWaveHud() {
     if (state.riding) { els.waveLeft.textContent = 'ЗА РЫЧАГАМИ'; return; }
     const left = enemies.length + state.waveQueue.length;
     els.waveLeft.textContent = state.doorsOpen ? 'ДОРОГА ОТКРЫТА'
-      : (left > 0 ? left + ' ВРАГОВ · БРОНЯ' : 'К ВОРОТАМ');
+      : (left > 0 ? left + ' ВРАГОВ' : 'К ВОРОТАМ');
     return;
   }
   if (level.id === 'roof') {
