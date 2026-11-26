@@ -5214,7 +5214,7 @@ const RES_ARRIVE_DN = { x: 876, y: 524 };
 const RES_STAIR_MID = { x: 826, y: 372, w: 100, h: 42 };
 
 /* ЭДО — орудие в западном зале последнего этажа */
-const RES_EDO = { x: 190, y: 320, r: 46, maxhp: 720 };
+const RES_EDO = { x: 190, y: 320, r: 46, maxhp: 1100 };
 /* президент за столом в восточной половине */
 const RES_PRES = { x: 720, y: 168, r: 15, maxhp: 520, downAt: 150 };
 const RES_PRES_CD = 1.9;
@@ -5446,6 +5446,15 @@ function addBeamFx(x, y, a) {
   }
 }
 
+/* корпус ЭДО — это его же твёрдое тело: попадание считаем до столкновения со стенкой */
+function resEdoHit(b) {
+  const r = b.r || 3;
+  if (b.x > 132 - r - 4 && b.x < 248 + r + 4 && b.y > 262 - r - 4 && b.y < 378 + r + 4) return true;
+  const mx = RES_EDO.x + Math.cos(resEdo.ang) * 62;
+  const my = RES_EDO.y + Math.sin(resEdo.ang) * 62;
+  return Math.hypot(b.x - mx, b.y - my) < 24 + r;
+}
+
 function damageEdo(n) {
   if (!resEdo || resEdo.dead) return;
   resEdo.hp -= n;
@@ -5523,12 +5532,12 @@ function resUpdatePresident(dt) {
 
 function damagePresident(n) {
   const p = resPres;
-  if (!p || resCaptured) return;
+  if (!p || resCaptured || p.down) return;
   p.hp -= n;
   p.hurt = 0.12;
   blood(p.x, p.y, 6, 0);
   if (p.hp > RES_PRES.downAt) { noiseHit(0.05, 0.08, 600, 1.5); return; }
-  if (p.down) return;
+  p.hp = Math.max(p.hp, 1);
   p.down = true;
   p.burst = 0;
   toast('Президент бросил пулемёт и опустился на колено. Держи E — взять живым.', 3600);
@@ -9612,6 +9621,12 @@ function updateBullets(dt) {
     for (let s = 0; s < steps && !dead; s++) {
       b.x += b.vx * dt / steps;
       b.y += b.vy * dt / steps;
+      if (b.from === 'player' && level.id === 'res' && resFloor === 2 && resEdo && !resEdo.dead && resEdoHit(b)) {
+        state.hits++;
+        damageEdo(b.dmg);
+        dead = true;
+        break;
+      }
       if (pointInSolid(b.x, b.y)) { impact(b); dead = true; break; }
 
       if (b.from === 'player') {
@@ -9639,11 +9654,7 @@ function updateBullets(dt) {
           }
         }
         if (!dead && level.id === 'res' && resFloor === 2) {
-          if (resEdo && !resEdo.dead && Math.hypot(b.x - RES_EDO.x, b.y - RES_EDO.y) < RES_EDO.r + b.r) {
-            state.hits++;
-            damageEdo(b.dmg);
-            dead = true;
-          } else if (resPres && !resCaptured && Math.hypot(b.x - resPres.x, b.y - resPres.y) < resPres.r + b.r + 5) {
+          if (resPres && !resCaptured && Math.hypot(b.x - resPres.x, b.y - resPres.y) < resPres.r + b.r + 5) {
             state.hits++;
             damagePresident(b.dmg);
             if (b.pierce > 0) b.pierce--; else dead = true;
