@@ -203,8 +203,41 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
 .squad-card .sq-desc{font-size:max(9px,.9cqw); line-height:1.35; color:var(--dim)}
 .pick-hint{font-family:var(--mono); font-size:max(9px,.9cqw); letter-spacing:.12em; color:var(--dim); margin:.8cqw 0 0; min-height:1.3em}
 
+/* настройки */
+#settings{place-items:center; grid-template-columns:1fr; text-align:left}
+.settings-card{max-width:44cqw; border:1px solid var(--line); padding:2.6cqw 2.8cqw; background:var(--panel)}
+.settings-card h2{font-size:3.6cqw; margin:0 0 .7cqw}
+.settings-card .lead{font-size:max(11px,1.15cqw); line-height:1.5; margin-bottom:1.6cqw; max-width:40cqw}
+.set-kicker{font-family:var(--mono); font-size:max(9px,.95cqw); letter-spacing:.28em; color:var(--rust); margin:0 0 .8cqw}
+.diff-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.7cqw; margin-bottom:.7cqw}
+.diff-card{display:flex; flex-direction:column; gap:.35cqw; align-items:flex-start; text-align:left;
+  padding:.8cqw 1cqw; background:rgba(9,10,12,.6); border:1px solid var(--line); color:var(--ink);
+  font-family:var(--sans); cursor:pointer; transition:background .15s ease, border-color .15s ease}
+.diff-card:hover{background:rgba(217,162,74,.07); border-color:rgba(217,162,74,.4)}
+.diff-card.on{border-color:rgba(217,162,74,.8); background:rgba(217,162,74,.12)}
+.diff-card .df-name{font-family:var(--mono); font-size:max(10px,1.05cqw); letter-spacing:.14em}
+.diff-card.on .df-name{color:var(--amber)}
+.diff-card .df-desc{font-size:max(9px,.88cqw); line-height:1.35; color:var(--dim)}
+.set-hint{font-family:var(--mono); font-size:max(9px,.9cqw); letter-spacing:.08em; color:var(--dim); margin:0}
+.settings-toggles{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.7cqw; margin:1.6cqw 0}
+.set-toggle{display:flex; align-items:center; justify-content:space-between; gap:1cqw;
+  padding:.85cqw 1.1cqw; background:rgba(9,10,12,.6); border:1px solid var(--line); color:var(--ink);
+  font-family:var(--mono); font-size:max(10px,1cqw); letter-spacing:.1em; cursor:pointer;
+  transition:background .15s ease, border-color .15s ease}
+.set-toggle:hover{background:rgba(236,229,215,.06); border-color:rgba(236,229,215,.4)}
+.set-toggle .st-val{color:var(--amber)}
+.set-toggle.off .st-val{color:var(--dim)}
+#diffTag{color:rgba(217,162,74,.55)}
+
 /* компактный режим для невысоких окон */
 @container (max-height: 620px){
+  .settings-card{max-width:54cqw; padding:2cqw 2.2cqw}
+  .settings-card h2{font-size:2.8cqw; margin-bottom:.5cqw}
+  .settings-card .lead{display:none}
+  .set-kicker{margin-bottom:.5cqw}
+  .diff-card{padding:.6cqw .8cqw}
+  .settings-toggles{margin:1cqw 0}
+  .set-toggle{padding:.6cqw .85cqw}
   h1{font-size:6.2cqw; margin-bottom:1.2cqw}
   .kicker{margin-bottom:1cqw}
   .lead{font-size:max(11px,1.2cqw); line-height:1.5; margin-bottom:1cqw}
@@ -313,6 +346,7 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
         <button id="startBtn" class="btn">Новая игра</button>
         <button id="selectBtn" class="btn secondary">Выбор миссии</button>
         <button id="loadBtn" class="btn secondary">Загрузить</button>
+        <button id="settingsBtn" class="btn secondary">Настройки</button>
         <button id="quitBtn" class="btn ghost">Выход</button>
       </div>
       <p id="saveMeta">СОХРАНЕНИЙ НЕТ</p>
@@ -325,6 +359,7 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
     <div class="menu-aside">
       <span>НЕ ВЫХОДИ НА УЛИЦУ</span>
       <span>СВЕТ ВЫКЛЮЧЕН · 04:12</span>
+      <span id="diffTag">СЛОЖНОСТЬ · ОБЫЧНЫЙ</span>
     </div>
   </div>
 
@@ -341,6 +376,30 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
     </div>
   </div>
 
+  <div id="settings" class="screen hidden">
+    <div class="card settings-card">
+      <p class="kicker">НАСТРОЙКИ</p>
+      <h2>Последняя настройка</h2>
+      <p class="lead" id="settingsLead">Сложность меняется в любой момент: она влияет на новых врагов и на урон, который достаётся тебе.</p>
+      <div class="settings-group">
+        <p class="set-kicker">УРОВЕНЬ СЛОЖНОСТИ</p>
+        <div id="diffGrid" class="diff-grid"></div>
+        <p id="diffHint" class="set-hint"></p>
+      </div>
+      <div class="settings-toggles">
+        <button id="soundToggle" class="set-toggle" type="button">
+          <span class="st-label">Звук</span><span class="st-val">ВКЛ</span>
+        </button>
+        <button id="shakeToggle" class="set-toggle" type="button">
+          <span class="st-label">Тряска экрана</span><span class="st-val">ВКЛ</span>
+        </button>
+      </div>
+      <div class="menu-actions">
+        <button id="settingsBackBtn" class="btn secondary">Назад</button>
+      </div>
+    </div>
+  </div>
+
   <div id="pause" class="screen hidden">
     <div class="card small pause-card">
       <p class="kicker">ПАУЗА · ESC</p>
@@ -350,6 +409,7 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
         <button id="resumeBtn" class="btn">Продолжить</button>
         <button id="saveBtn" class="btn secondary">Сохранить</button>
         <button id="loadBtn2" class="btn secondary">Загрузить</button>
+        <button id="settingsBtn2" class="btn secondary">Настройки</button>
         <button id="menuBtn" class="btn ghost">Главное меню</button>
         <button id="quitBtn2" class="btn ghost">Выйти из игры</button>
       </div>
@@ -441,7 +501,9 @@ const els = {
   briefKicker: $('briefKicker'), briefTitle: $('briefTitle'),
   briefText: $('briefText'), briefBody: $('briefBody'), briefBtn: $('briefBtn'),
   squadPick: $('squadPick'), squadGrid: $('squadGrid'), squadHint: $('squadHint'),
-  againBtn: $('againBtn')
+  againBtn: $('againBtn'),
+  settings: $('settings'), diffGrid: $('diffGrid'), diffHint: $('diffHint'),
+  soundToggle: $('soundToggle'), shakeToggle: $('shakeToggle'), diffTag: $('diffTag')
 };
 
 let dpr = 1;
@@ -463,6 +525,7 @@ window.addEventListener('keydown', e => {
   keys.add(e.code);
   if (e.code === 'KeyR') tryReload();
   if (e.code === 'Escape') {
+    if (els.settings && !els.settings.classList.contains('hidden')) { closeSettings(); return; }
     if (state.mode === 'menu' && els.select && !els.select.classList.contains('hidden')) { closeMissionSelect(); return; }
     togglePause();
   }
@@ -505,8 +568,43 @@ window.addEventListener('mouseup', e => {
 });
 cv.addEventListener('contextmenu', e => e.preventDefault());
 
+/* ---------------- настройки ---------------- */
+const SETTINGS_KEY = 'lastorder.settings.v1';
+const DIFFICULTY = {
+  easy:   { label: 'ЛЁГКИЙ',  dmgIn: 0.6, enemyHp: 0.75,
+            desc: 'Враги бьют вполсилы, стволы крепче держат удар.' },
+  normal: { label: 'ОБЫЧНЫЙ', dmgIn: 1.0, enemyHp: 1.0,
+            desc: 'Как задумано: ни поблажек, ни лишней злости.' },
+  hard:   { label: 'СЛОЖНЫЙ', dmgIn: 1.5, enemyHp: 1.3,
+            desc: 'Урон вдвое больнее, враги злее и крепче.' }
+};
+const DIFF_ORDER = ['easy', 'normal', 'hard'];
+const settings = { difficulty: 'normal', sound: true, shake: true };
+
+function readSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (!d) return;
+    if (DIFFICULTY[d.difficulty]) settings.difficulty = d.difficulty;
+    if (typeof d.sound === 'boolean') settings.sound = d.sound;
+    if (typeof d.shake === 'boolean') settings.shake = d.shake;
+  } catch (e) { /* настройки по умолчанию */ }
+}
+function saveSettings() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      v: 1, difficulty: settings.difficulty, sound: settings.sound, shake: settings.shake
+    }));
+  } catch (e) { /* приватный режим */ }
+}
+function diff() { return DIFFICULTY[settings.difficulty] || DIFFICULTY.normal; }
+
 /* ---------------- звук ---------------- */
 let actx = null, soundOn = true, noiseBuf = null;
+readSettings();
+soundOn = settings.sound;
 function ac() {
   if (!actx) {
     try {
@@ -559,7 +657,10 @@ const sfx = {
 };
 function toggleSound() {
   soundOn = !soundOn;
+  settings.sound = soundOn;
+  saveSettings();
   if (state.mode === 'play') toast(soundOn ? 'Звук включён' : 'Звук выключен', 900);
+  if (els.settings && !els.settings.classList.contains('hidden')) renderSettings();
 }
 
 /* ===========================================================
@@ -3797,6 +3898,7 @@ function fortBoom(x, y, r, dmg, heavy) {
 
 function damageTank(n) {
   if (!tank || tank.dead) return;
+  n *= diff().dmgIn;
   tank.hp -= n;
   tank.hit = 0.24;
   spark(tank.x + rnd(-16, 16), tank.y + rnd(-14, 14), 8, '#ffd0a0', 150);
@@ -6814,6 +6916,7 @@ function showPlay() {
   els.brief.classList.add('hidden');
   els.end.classList.add('hidden');
   els.quit.classList.add('hidden');
+  if (els.settings) els.settings.classList.add('hidden');
   els.hud.classList.remove('hidden');
   els.hud.classList.toggle('armed', weaponOwned());
   keys.clear();
@@ -9474,6 +9577,7 @@ function hurtPlayer(n, ignoreInvuln) {
   if (state.mode !== 'play') return;
   if (!ignoreInvuln && player.invuln > 0) return;
   if (level.id === 'fort' && state.riding) n *= 0.2;
+  n *= diff().dmgIn;
   player.hp -= n;
   player.hurt = 0.45;
   player.invuln = Math.max(player.invuln, 0.4);
@@ -9540,9 +9644,10 @@ function spawnEnemy(type, at) {
     base = { x: cand.x + rnd(-12, 12), y: cand.y + rnd(-10, 10) };
   }
   const sp = freeSpot(base.x, base.y, cfg.r);
+  const ehp = Math.max(1, Math.round(cfg.hp * diff().enemyHp));
   const e = {
     type, x: sp.x, y: sp.y, r: cfg.r,
-    hp: cfg.hp, maxhp: cfg.hp, ang: rnd(0, 6.28), cd: rnd(0.5, 1.4),
+    hp: ehp, maxhp: ehp, ang: rnd(0, 6.28), cd: rnd(0.5, 1.4),
     hitT: 0, walk: rnd(0, 6), strafe: Math.random() < 0.5 ? 1 : -1, lunge: 0,
     burst: 0, muzzle: 0
   };
@@ -11964,7 +12069,7 @@ function render() {
   ctx.clearRect(0, 0, W, H);
 
   ctx.save();
-  if (state.shake > 0.3) ctx.translate(rnd(-state.shake, state.shake), rnd(-state.shake, state.shake));
+  if (settings.shake && state.shake > 0.3) ctx.translate(rnd(-state.shake, state.shake), rnd(-state.shake, state.shake));
 
   ctx.drawImage(floorCv, 0, 0);
   drawDecals();
@@ -12159,6 +12264,81 @@ function startMissionFromSelect(n) {
   updateSaveMeta();
 }
 
+/* ---------------- экран настроек ---------------- */
+let settingsReturn = 'menu';
+
+function renderSettings() {
+  if (els.diffGrid) {
+    els.diffGrid.innerHTML = DIFF_ORDER.map(id => {
+      const d = DIFFICULTY[id];
+      const on = settings.difficulty === id ? ' on' : '';
+      return '<button class="diff-card' + on + '" data-diff="' + id + '" type="button">' +
+        '<span class="df-name">' + d.label + '</span>' +
+        '<span class="df-desc">' + d.desc + '</span>' +
+        '</button>';
+    }).join('');
+  }
+  if (els.diffHint) {
+    const d = diff();
+    els.diffHint.textContent = 'Сейчас: ' + d.label + '. Враги наносят ' + Math.round(d.dmgIn * 100) +
+      '% обычного урона, прочности у них — ' + Math.round(d.enemyHp * 100) + '%.';
+  }
+  if (els.soundToggle) {
+    els.soundToggle.classList.toggle('off', !settings.sound);
+    const v = els.soundToggle.querySelector('.st-val'); if (v) v.textContent = settings.sound ? 'ВКЛ' : 'ВЫКЛ';
+  }
+  if (els.shakeToggle) {
+    els.shakeToggle.classList.toggle('off', !settings.shake);
+    const v = els.shakeToggle.querySelector('.st-val'); if (v) v.textContent = settings.shake ? 'ВКЛ' : 'ВЫКЛ';
+  }
+  if (els.diffTag) els.diffTag.textContent = 'СЛОЖНОСТЬ · ' + diff().label;
+}
+
+function openSettings(from) {
+  if (!els.settings) return;
+  settingsReturn = from || 'menu';
+  renderSettings();
+  if (settingsReturn === 'pause') els.pause.classList.add('hidden');
+  else { els.menu.classList.add('hidden'); if (els.select) els.select.classList.add('hidden'); }
+  els.settings.classList.remove('hidden');
+}
+
+function closeSettings() {
+  if (!els.settings) return;
+  els.settings.classList.add('hidden');
+  if (settingsReturn === 'pause' && state.mode === 'paused') {
+    updatePauseMeta();
+    els.pause.classList.remove('hidden');
+  } else {
+    if (state.mode === 'menu') els.menu.classList.remove('hidden');
+    updateSaveMeta();
+  }
+}
+
+function setDifficulty(id) {
+  if (!DIFFICULTY[id]) return;
+  if (settings.difficulty === id) { renderSettings(); return; }
+  settings.difficulty = id;
+  saveSettings();
+  renderSettings();
+  tone(660, 0.07, 'triangle', 0.05);
+}
+
+function toggleSettingSound() {
+  settings.sound = !settings.sound;
+  soundOn = settings.sound;
+  saveSettings();
+  renderSettings();
+  if (settings.sound) tone(660, 0.07, 'triangle', 0.05);
+}
+
+function toggleSettingShake() {
+  settings.shake = !settings.shake;
+  saveSettings();
+  renderSettings();
+  if (settings.shake) state.shake = Math.max(state.shake, 6);
+}
+
 function readRaw() {
   try { return localStorage.getItem(SAVE_KEY); } catch (e) { return null; }
 }
@@ -12323,7 +12503,7 @@ function loadGame() {
     const cfg = ENEMY[e.type] || ENEMY.looter;
     return {
       type: ENEMY[e.type] ? e.type : 'looter',
-      x: e.x, y: e.y, r: cfg.r, hp: e.hp, maxhp: cfg.hp,
+      x: e.x, y: e.y, r: cfg.r, hp: e.hp, maxhp: Math.max(e.hp, Math.round(cfg.hp * diff().enemyHp)),
       ang: 0, cd: rnd(0.4, 1.2), hitT: 0, walk: 0, strafe: 1, lunge: 0, burst: 0, muzzle: 0
     };
   });
@@ -12376,6 +12556,7 @@ function updatePauseMeta() {
   } else {
     line += '\nСОХРАНЕНИЙ ЕЩЁ НЕ БЫЛО';
   }
+  line += '\nСЛОЖНОСТЬ · ' + diff().label;
   els.pauseMeta.textContent = line;
   if (els.pauseLead) {
     els.pauseLead.textContent = level.pauseLead ||
@@ -12407,8 +12588,10 @@ function goMenu() {
   els.end.classList.add('hidden');
   els.quit.classList.add('hidden');
   if (els.select) els.select.classList.add('hidden');
+  if (els.settings) els.settings.classList.add('hidden');
   els.menu.classList.remove('hidden');
   els.toast.classList.remove('show');
+  renderSettings();
   updateSaveMeta();
 }
 
@@ -12421,6 +12604,7 @@ function quitGame() {
   els.brief.classList.add('hidden');
   els.end.classList.add('hidden');
   if (els.select) els.select.classList.add('hidden');
+  if (els.settings) els.settings.classList.add('hidden');
   els.menu.classList.add('hidden');
   els.quit.classList.remove('hidden');
   els.toast.classList.remove('show');
@@ -12746,6 +12930,7 @@ state.time = 0;
 readProgress();
 syncProgressFromSave();
 updateSaveMeta();
+renderSettings();
 updateHud();
 updateObjectives();
 els.hud.classList.add('hidden');
@@ -12756,6 +12941,16 @@ requestAnimationFrame(frame);
 $('startBtn').addEventListener('click', newGame);
 $('selectBtn').addEventListener('click', openMissionSelect);
 $('selectBackBtn').addEventListener('click', closeMissionSelect);
+$('settingsBtn').addEventListener('click', () => openSettings('menu'));
+$('settingsBtn2').addEventListener('click', () => openSettings('pause'));
+$('settingsBackBtn').addEventListener('click', closeSettings);
+$('soundToggle').addEventListener('click', toggleSettingSound);
+$('shakeToggle').addEventListener('click', toggleSettingShake);
+$('diffGrid').addEventListener('click', e => {
+  const card = e.target.closest('[data-diff]');
+  if (!card) return;
+  setDifficulty(card.getAttribute('data-diff'));
+});
 $('missionGrid').addEventListener('click', e => {
   const card = e.target.closest('[data-mission]');
   if (!card) return;
@@ -12799,7 +12994,8 @@ window.addEventListener('error', e => {
 
 /* отладочный доступ для проверок */
 window.LO = {
-  state, LEVELS, els,
+  state, LEVELS, els, settings, diff,
+  setDifficulty, openSettings, closeSettings, renderSettings, saveSettings, readSettings,
   get player() { return player; },
   get enemies() { return enemies; },
   get pickups() { return pickups; },
