@@ -188,6 +188,16 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
 .select-hint{font-family:var(--mono); font-size:max(9px,.95cqw); letter-spacing:.12em; color:var(--dim);
   margin:1.1cqw 0 0; min-height:1.4em}
 
+/* Deathmatch: одиннадцать арен на одной карточке */
+#deathmatch{place-items:center; grid-template-columns:1fr; text-align:left}
+#dmGrid{grid-template-columns:repeat(3,minmax(0,1fr)); gap:.6cqw; max-width:64cqw; margin-top:1cqw}
+#dmGrid .mission-card{padding:.62cqw .85cqw; border-color:rgba(217,162,74,.42); background:rgba(217,162,74,.055)}
+#dmGrid .mission-card .m-name{font-size:max(10px,1cqw)}
+#dmGrid .mission-card .m-state{letter-spacing:.1em}
+#dmGrid .mission-card.dm-arena{border-color:rgba(120,235,255,.4); background:rgba(120,235,255,.06)}
+#dmGrid .mission-card.dm-arena .m-num{color:#7fd8ea}
+#dmGrid .mission-card.dm-arena .m-state{color:#9fd6e2}
+
 /* выбор отряда в брифинге */
 .squad-pick{margin:1.4cqw 0 2.2cqw; max-width:46cqw}
 .pick-kicker{font-family:var(--mono); font-size:max(9px,.95cqw); letter-spacing:.28em; color:var(--rust); margin:0 0 .8cqw}
@@ -265,6 +275,9 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
   .mission-card{padding:.65cqw .9cqw}
   .mission-card .m-name{font-size:max(9px,.95cqw)}
   .select-card h2{font-size:3.2cqw; margin-bottom:.6cqw}
+  #dmGrid{grid-template-columns:repeat(2,minmax(0,1fr)); max-width:74cqw; gap:.5cqw}
+  #dmGrid .mission-card{padding:.5cqw .7cqw}
+  #dmGrid .mission-card .m-name{font-size:max(9px,.92cqw)}
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -345,6 +358,7 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
       <div class="menu-actions">
         <button id="startBtn" class="btn">Новая игра</button>
         <button id="selectBtn" class="btn secondary">Выбор миссии</button>
+        <button id="dmBtn" class="btn secondary">Deathmatch</button>
         <button id="loadBtn" class="btn secondary">Загрузить</button>
         <button id="settingsBtn" class="btn secondary">Настройки</button>
         <button id="quitBtn" class="btn ghost">Выход</button>
@@ -372,6 +386,22 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
       <p id="selectHint" class="select-hint">Выбери миссию.</p>
       <div class="menu-actions">
         <button id="selectBackBtn" class="btn secondary">Назад</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="deathmatch" class="screen hidden">
+    <div class="card select-card">
+      <p class="kicker">DEATHMATCH · БОТЫ И ИГРОКИ</p>
+      <h2>Одиннадцать арен</h2>
+      <p class="lead" id="dmLead">
+        Против тебя семь бойцов-ботов, матч — до 30 фрагов. Каждую минуту карта обновляется,
+        а в бинокле ровно 12 зарядов снабжения.
+      </p>
+      <div id="dmGrid" class="mission-grid dm-grid"></div>
+      <p id="dmHint" class="select-hint">На арене бинокль всегда с собой: 0 — оптика, ЛКМ — сброс боеприпасов, ПКМ — сброс аптечки. В миссиях то же самое, как только найдёшь бинокль.</p>
+      <div class="menu-actions">
+        <button id="dmBackBtn" class="btn secondary">Назад</button>
       </div>
     </div>
   </div>
@@ -503,7 +533,8 @@ const els = {
   squadPick: $('squadPick'), squadGrid: $('squadGrid'), squadHint: $('squadHint'),
   againBtn: $('againBtn'),
   settings: $('settings'), diffGrid: $('diffGrid'), diffHint: $('diffHint'),
-  soundToggle: $('soundToggle'), shakeToggle: $('shakeToggle'), diffTag: $('diffTag')
+  soundToggle: $('soundToggle'), shakeToggle: $('shakeToggle'), diffTag: $('diffTag'),
+  deathmatch: $('deathmatch'), dmGrid: $('dmGrid'), dmLead: $('dmLead'), dmHint: $('dmHint')
 };
 
 let dpr = 1;
@@ -527,6 +558,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Escape') {
     if (els.settings && !els.settings.classList.contains('hidden')) { closeSettings(); return; }
     if (state.mode === 'menu' && els.select && !els.select.classList.contains('hidden')) { closeMissionSelect(); return; }
+    if (state.mode === 'menu' && els.deathmatch && !els.deathmatch.classList.contains('hidden')) { closeDeathmatch(); return; }
     togglePause();
   }
   if (e.code === 'KeyM') toggleSound();
@@ -561,13 +593,17 @@ cv.addEventListener('mousedown', e => {
   toWorld(e);
   if (state.mode !== 'play') return;
   if (e.button === 0) {
-    if (level.id === 'farm' && player && player.binocs && player.binocs.on) {
-      designateStrike(mouse.x, mouse.y);
-      return;
+    if (player && player.binocs && player.binocs.on) {
+      if (level.id === 'farm') { designateStrike(mouse.x, mouse.y); return; }
+      if (dropSupply('ammo')) return;
     }
     mouse.down = true;
   }
-  if (e.button === 2) { mouse.right = true; throwMolotov(); }
+  if (e.button === 2) {
+    /* в бинокле ПКМ — не молотов, а сброс аптечки */
+    if (player && player.binocs && player.binocs.owned && player.binocs.on && dropSupply('medkit')) return;
+    mouse.right = true; throwMolotov();
+  }
 });
 window.addEventListener('mouseup', e => {
   if (e.button === 0) mouse.down = false;
@@ -7558,7 +7594,8 @@ const state = {
   objectives: [], entryCarry: null, lastSaveAt: 0,
   dropT: 0, dropY: 0, dropLine: null, riding: false, mortarOn: false,
   mortarAmmo: 0, fortWave: 0, gateCrack: 0, tankWarned: false, tankKills: 0,
-  mayorUse: false, mayorShots: 0, secret: null, secretFrom: null
+  mayorUse: false, mayorShots: 0, secret: null, secretFrom: null,
+  dm: null, dmScore: { you: 0, losses: 0 }, dmRefreshT: 0
 };
 
 function makePlayer() {
@@ -7570,7 +7607,7 @@ function makePlayer() {
       shotgun: { owned: false, mag: 0, reserve: 0 },
       smg: { owned: false, mag: 0, reserve: 0 }
     },
-    binocs: { owned: false, on: false },
+    binocs: { owned: false, on: false, charges: Infinity },
     weapon: 'pistol', fireCd: 0, reloading: 0, invuln: 0, hurt: 0, walk: 0, muzzle: 0
   };
 }
@@ -7673,6 +7710,7 @@ function syncDoorSolid() {
 
 function enterLevel(id, carry) {
   level = LEVELS[id];
+  if (!level.dm) { state.dm = null; state.dmScore = { you: 0, losses: 0 }; dmRoster.length = 0; }
   props = level.props;
   solids = walls.concat(props);
   level.floor();
@@ -7694,7 +7732,7 @@ function enterLevel(id, carry) {
   if (level.id === 'res') { syncResObjectives(); updateObjectives(); }
   if (level.id === 'mayor') { syncMayorObjectives(); updateObjectives(); }
   els.missionTag.textContent = level.tag || ('МИССИЯ ' + (level.num < 10 ? '0' + level.num : level.num));
-  els.waveLabel.textContent = level.id === 'mayor' ? 'АРХИВ' : (level.id === 'res' ? 'ЭТАЖ' : level.id === 'bar' ? 'ВОЛНА' : (level.id === 'village' ? 'ПВО' : (level.id === 'farm' ? 'АВИАУДАР' : (level.id === 'roof' ? 'МИНОМЁТЫ' : (level.id === 'fort' ? 'БРОНЯ' : 'РУБЕЖ')))));
+  els.waveLabel.textContent = level.dm ? 'ФРАГИ' : (level.id === 'mayor' ? 'АРХИВ' : (level.id === 'res' ? 'ЭТАЖ' : level.id === 'bar' ? 'ВОЛНА' : (level.id === 'village' ? 'ПВО' : (level.id === 'farm' ? 'АВИАУДАР' : (level.id === 'roof' ? 'МИНОМЁТЫ' : (level.id === 'fort' ? 'БРОНЯ' : 'РУБЕЖ'))))));
 
   if (level.id === 'bar') { state.wave = -1; }
   else { state.stage = -1; syncDoorSolid(); }
@@ -10065,6 +10103,7 @@ function drawOpticsOverlay() {
   ctx.fillText('ОПТИКА ×8', mx + 50, my + 58);
   ctx.fillStyle = 'rgba(210,235,240,.32)';
   ctx.fillText('0 — СНЯТЬ', mx + 50, my + 70);
+  drawSupplyScopeInfo(mx + 50, my + 82);
 
   /* метки ПВО на дальности */
   VILLAGE_AA.forEach(a => {
@@ -10174,6 +10213,11 @@ function updateObjectives() {
 }
 
 function updateWaveHud() {
+  if (level.dm) {
+    els.waveNum.textContent = String(state.dmScore.you);
+    els.waveLeft.textContent = 'ФРАГОВ · ОБНОВА ' + Math.ceil(Math.max(0, state.dmRefreshT)) + 'С';
+    return;
+  }
   if (level.id === 'mayor') {
     els.waveNum.textContent = mayorFiles + '/3';
     els.waveLeft.textContent = mayorCopied ? 'ВЗЯЛИ'
@@ -10400,7 +10444,10 @@ function hurtPlayer(n, ignoreInvuln) {
   sfx.hurt();
   blood(player.x, player.y, 8);
   updateHud();
-  if (player.hp <= 0) { player.hp = 0; endGame(false); }
+  if (player.hp <= 0) {
+    player.hp = 0;
+    if (level.dm) dmPlayerDown(); else endGame(false);
+  }
 }
 
 /* ---------------- враги ---------------- */
@@ -10469,16 +10516,18 @@ function spawnEnemy(type, at) {
   spark(e.x, e.y, 6, '#8a7a66', 80);
 }
 
-function enemyShoot(e) {
+function enemyShoot(e, tx, ty) {
   const cfg = ENEMY[e.type];
   const smg = !!cfg.smg;
-  const a = Math.atan2(player.y - e.y, player.x - e.x) + rnd(smg ? -0.12 : -0.07, smg ? 0.12 : 0.07);
+  const aimX = tx === undefined ? player.x : tx;
+  const aimY = ty === undefined ? player.y : ty;
+  const a = Math.atan2(aimY - e.y, aimX - e.x) + rnd(smg ? -0.12 : -0.07, smg ? 0.12 : 0.07);
   const plasma = !!cfg.plasma;
   bullets.push({
     x: e.x + Math.cos(a) * 16, y: e.y + Math.sin(a) * 16,
     vx: Math.cos(a) * (plasma ? 320 : 380), vy: Math.sin(a) * (plasma ? 320 : 380),
     r: plasma ? 5 : 3, dmg: cfg.dmg, life: plasma ? 2.8 : 2, from: 'enemy',
-    bolt: plasma, pierce: 0, hitList: []
+    bolt: plasma, pierce: 0, hitList: [], shooter: e.isBot ? e : null
   });
   e.muzzle = 0.07;
   if (plasma) { tone(320, 0.2, 'sawtooth', 0.045, 120); }
@@ -10501,6 +10550,7 @@ function dropFor(e) {
 }
 
 function damageEnemy(e, dmg, ang) {
+  if (e.isBot) { damageDmBot(e, dmg, ang, null); return; }
   e.hp -= dmg;
   e.hitT = 0.12;
   blood(e.x, e.y, 6, ang);
@@ -10656,7 +10706,20 @@ function updateBullets(dt) {
           }
         }
       } else {
-        if (Math.hypot(b.x - player.x, b.y - player.y) < player.r + b.r) {
+        /* в Deathmatch пуля бота достаёт и других ботов */
+        if (level.dm && b.shooter) {
+          for (let j = 0; j < enemies.length; j++) {
+            const o = enemies[j];
+            if (o === b.shooter || !o.isBot || b.hitList.indexOf(o) >= 0) continue;
+            if (Math.hypot(b.x - o.x, b.y - o.y) < o.r + b.r) {
+              damageDmBot(o, b.dmg, Math.atan2(b.vy, b.vx), b.shooter);
+              b.hitList.push(o);
+              dead = true;
+              break;
+            }
+          }
+        }
+        if (!dead && Math.hypot(b.x - player.x, b.y - player.y) < player.r + b.r) {
           hurtPlayer(b.dmg);
           impact(b);
           dead = true; break;
@@ -10721,6 +10784,15 @@ function updateFires(dt) {
 function updatePickups(dt) {
   for (const p of pickups) {
     p.t += dt;
+    if (p.hidden) {                                  /* сброс ещё на парашюте */
+      p.air -= dt;
+      if (p.air <= 0) {
+        p.hidden = false;
+        spark(p.x, p.y, 10, '#d9a24a', 90);
+        smokePuff(p.x, p.y, 3);
+      }
+      continue;
+    }
     if (p.taken) continue;
     if (Math.hypot(player.x - p.x, player.y - p.y) > 26 + player.r) continue;
     p.taken = true;
@@ -10795,6 +10867,22 @@ function updatePickups(dt) {
       player.hp = Math.min(player.maxhp, player.hp + 45);
       floatText(player.x, player.y - 20, '+45', '#8fbf7a');
       toast('Аптечка. Бинт, жгут, обезболивающее — война в кармане.', 1800);
+      sfx.pick();
+
+    } else if (p.type === 'drop_medkit') {
+      player.hp = Math.min(player.maxhp, player.hp + 45);
+      floatText(player.x, player.y - 20, '+45', '#8fbf7a');
+      toast('Сброс снабжения: аптечка. +45', 1600);
+      sfx.pick();
+
+    } else if (p.type === 'drop_ammo') {
+      const amt = p.amount || 20;
+      player.weapons.pistol.reserve += amt;
+      if (player.weapons.plasma.owned) player.weapons.plasma.reserve += amt;
+      if (player.weapons.shotgun.owned) player.weapons.shotgun.reserve += amt;
+      if (player.weapons.smg.owned) player.weapons.smg.reserve += amt;
+      floatText(p.x, p.y - 22, 'ПАТРОНЫ +' + amt, '#d9a24a');
+      toast('Сброс снабжения: патроны +' + amt + ' ко всем стволам.', 1600);
       sfx.pick();
 
     } else if (p.type === 'ammo') {
@@ -11177,10 +11265,15 @@ function toggleOptics() {
   } else {
     tone(420, 0.07, 'triangle', 0.04);
   }
+  const ch = supplyCharges();
+  let hint;
+  if (ch <= 0) hint = ' Снабжение израсходовано.';
+  else hint = (level.id === 'farm' ? ' ПКМ — сброс аптечки' : ' ЛКМ — патроны, ПКМ — аптечка') +
+    (isFinite(ch) ? ', зарядов ' + ch + '.' : ', без счёта.');
   toast(player.binocs.on
     ? (level.id === 'farm'
-      ? 'Оптика. Наведи метку и жми ЛКМ — борт положит три бомбы.'
-      : 'Оптика. Дальше видно — по сторонам слепнешь.')
+      ? 'Оптика. Наведи метку и жми ЛКМ — борт положит три бомбы.' + hint
+      : 'Оптика. Дальше видно — по сторонам слепнешь.' + hint)
     : 'Бинокль убран.', level.id === 'farm' ? 2600 : 1600);
 }
 
@@ -11955,6 +12048,11 @@ function updateSchool(dt) {
 
 /* ---------------- игрок ---------------- */
 function updatePlayer(dt) {
+  if (level.dm && state.dm && state.dm.deadT > 0) {
+    player.ang = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+    updateHud();
+    return;
+  }
   if (level.id === 'fort') {
     if (state.dropT > 0) {
       player.ang = Math.atan2(mouse.y - player.y, mouse.x - player.x);
@@ -12070,7 +12168,7 @@ function update(dt) {
     : String(state.flash * 0.75);
 
   updatePlayer(dt);
-  updateEnemies(dt);
+  if (level.dm) updateDmBots(dt); else updateEnemies(dt);
   updateBullets(dt);
   updateMolotovs(dt);
   updateFires(dt);
@@ -12080,7 +12178,7 @@ function update(dt) {
   if (level.id === 'bar') updateBar(dt);
   else if (level.update) level.update(dt);
   else updateStreet(dt);
-  checkExit();
+  if (!level.dm) checkExit();
 
   if (level.id === 'bar' && !state.wavesActive && !state.exitUnlocked) {
     const o1 = obj('pistol'), o2 = obj('bottles');
@@ -12116,12 +12214,12 @@ function drawCasings() {
 
 function drawPickups() {
   for (const p of pickups) {
-    if (p.taken) continue;
+    if (p.taken || p.hidden) continue;
     const pulse = 0.5 + 0.5 * Math.sin(p.t * 3 + p.x * 0.05);
     const tint = p.type === 'plasma' || p.type === 'cell' ? '120,235,255'
-      : (p.type === 'medkit' ? '143,191,122'
+      : (p.type === 'medkit' || p.type === 'drop_medkit' ? '143,191,122'
         : (p.type === 'binocs' ? '150,210,180'
-          : (p.type === 'ammocrate' ? '235,190,110' : '217,162,74')));
+          : (p.type === 'ammocrate' || p.type === 'drop_ammo' ? '235,190,110' : '217,162,74')));
     ctx.strokeStyle = 'rgba(' + tint + ',' + (0.18 + pulse * 0.35) + ')';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -12177,7 +12275,7 @@ function drawPickups() {
       ctx.fillRect(-1.6, -10, 3.2, 4);
       ctx.fillStyle = '#e0cfae';
       ctx.fillRect(-3, -1, 6, 6);
-    } else if (p.type === 'medkit') {
+    } else if (p.type === 'medkit' || p.type === 'drop_medkit') {
       ctx.fillStyle = '#d8d2c4';
       roundRect(ctx, -8, -6, 16, 13, 2); ctx.fill();
       ctx.fillStyle = 'rgba(180,40,34,.9)';
@@ -12186,7 +12284,7 @@ function drawPickups() {
       ctx.strokeStyle = 'rgba(60,60,55,.6)';
       ctx.lineWidth = 1;
       ctx.strokeRect(-8, -6, 16, 13);
-    } else if (p.type === 'ammocrate') {
+    } else if (p.type === 'ammocrate' || p.type === 'drop_ammo') {
       ctx.fillStyle = '#5a4526';
       roundRect(ctx, -12, -8, 24, 17, 2); ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,.5)';
@@ -12896,6 +12994,7 @@ function render() {
   drawExitZone();
   if (level.id === 'fort') { drawFortGate(); drawFortMortar(); }
   drawPickups();
+  if (level.dm) drawDmSupply();
   if (level.id === 'res') resDrawScene();
   if (level.id === 'mayor') mayorGuards.forEach(drawMayorGuard);
   if (level.id === 'village') aas.forEach(drawVillageAA);
@@ -12906,6 +13005,7 @@ function render() {
   if (level.id === 'roof') { mortars.forEach(drawMortar); drawMortarShells(); }
   if (level.id === 'roof') drawAllies();
   for (const e of enemies) drawEnemy(e);
+  if (level.dm) drawDmTags();
   if (level.id === 'school') drawPrisoners();
   if (!(level.id === 'fort' && state.riding)) drawPlayer();
   if (level.id === 'fort') drawFortDrop();
@@ -12921,6 +13021,7 @@ function render() {
     drawLightingExtras();
     drawFireGlow();
     if (level.id === 'village') { drawVillageGlow(); drawOpticsOverlay(); }
+    if (level.dm) { drawDmGlow(); drawDmOptics(); }
     if (level.id === 'farm') { drawFarmGlow(); drawFarmOptics(); }
     if (level.id === 'factory') drawFactoryGlow();
     if (level.id === 'roof') drawRoofGlow();
@@ -12946,7 +13047,1044 @@ function render() {
     ctx.fillStyle = 'rgba(206,226,255,' + (0.15 * state.lightning).toFixed(3) + ')';
     ctx.fillRect(0, 0, W, H);
   }
-}/* ===========================================================
+}
+
+/* ===========================================================
+   DEATHMATCH · БОТЫ И ИГРОКИ
+   Одиннадцать арен: девять карт кампании плюс «Форт · дуэль»
+   и «Разбитый мост». На любой арене каждую минуту всё
+   обновляется, а в бинокле ровно 12 зарядов снабжения —
+   ЛКМ кладёт боеприпасы, ПКМ аптечку.
+   =========================================================== */
+
+const DM = {
+  refresh: 60,          /* сек: предметы и бойцы на карте обновляются */
+  supply: 12,           /* ровно 12 зарядов снабжения в бинокле */
+  bots: 7,              /* ботов-«игроков» в бою */
+  killTarget: 50,       /* до скольких фрагов идёт матч */
+  respawn: 4.5,         /* через сколько сек бот возвращается в бой */
+  playerRespawn: 2.6,
+  botFriendly: 0.5      /* боты бьют друг друга вполсилы: фри-фо-ол не выгорает за полминуты */
+};
+
+const DM_NAMES = ['Гай', 'Рэд', 'Сова', 'Костя', 'Вдова', 'Дизель', 'Пират',
+  'Молчун', 'Барс', 'Кобра', 'Тихий', 'Гром', 'Слепой', 'Пёс', 'Штырь'];
+const DM_CLASSES = ['looter', 'shooter', 'trooper', 'smg', 'elite', 'brute'];
+
+let dmRoster = [];
+let DM_LEVELS = null;
+
+const DM_ARENAS = [
+  { id: 'dm_bar',     src: 'bar',     title: 'Бар «У Гая»',         note: 'КАМПАНИЯ · 01' },
+  { id: 'dm_street',  src: 'street',  title: 'Улица · телестанция', note: 'КАМПАНИЯ · 02' },
+  { id: 'dm_school',  src: 'school',  title: 'Школа №4',            note: 'КАМПАНИЯ · 03' },
+  { id: 'dm_village', src: 'village', title: 'Деревня у реки',      note: 'КАМПАНИЯ · 04' },
+  { id: 'dm_factory', src: 'factory', title: 'Завод №7',            note: 'КАМПАНИЯ · 05' },
+  { id: 'dm_farm',    src: 'farm',    title: 'Ферма',               note: 'КАМПАНИЯ · 06' },
+  { id: 'dm_roof',    src: 'roof',    title: 'Крыша',               note: 'КАМПАНИЯ · 07' },
+  { id: 'dm_fort',    src: 'fort',    title: 'Форт',                note: 'КАМПАНИЯ · 08' },
+  { id: 'dm_res',     src: 'res',     title: 'Резиденция',          note: 'КАМПАНИЯ · 09' },
+  { id: 'arena_fort',   custom: 'fort',   title: 'Форт · дуэль',   note: 'DEATHMATCH' },
+  { id: 'arena_bridge', custom: 'bridge', title: 'Разбитый мост', note: 'DEATHMATCH' }
+];
+
+/* ---------- арена «Форт · дуэль» ---------- */
+const DM_FORT_PROPS = FORT_PROPS.filter(p => p.type !== 'pit').concat([
+  { type: 'sandbag',  x: 300, y: 130, w: 90, h: 26 },
+  { type: 'sandbag',  x: 556, y: 556, w: 96, h: 26 },
+  { type: 'crate',    x: 452, y: 236, w: 42, h: 42 },
+  { type: 'crate',    x: 812, y: 404, w: 42, h: 42 },
+  { type: 'barrier',  x: 216, y: 330, w: 22, h: 74 }
+]);
+
+/* ---------- арена «Разбитый мост» ---------- */
+const BR_SPAN  = { x: 296, y: 214, w: 148, h: 288 };   /* проезжая часть моста */
+const BR_RIVER = [
+  { type: 'water', x: 30,  y: 288, w: 266, h: 118 },
+  { type: 'water', x: 444, y: 288, w: 318, h: 118 },
+  { type: 'water', x: 884, y: 288, w: 86,  h: 118 }
+];
+const BR_CAUSE = { x: 762, y: 288, w: 122, h: 118 };   /* завал-переход через воду */
+const BRIDGE_PROPS = BR_RIVER.concat([
+  { type: 'car',     x: 306, y: 232, w: 62,  h: 34, tone: '#5a4a44', dir: 'h', burnt: true },
+  { type: 'car',     x: 376, y: 452, w: 60,  h: 32, tone: '#3f4a52', dir: 'h' },
+  { type: 'car',     x: 640, y: 150, w: 132, h: 56, tone: '#6a3f36', dir: 'h' },
+  { type: 'car',     x: 150, y: 470, w: 62,  h: 140, tone: '#45524a', dir: 'v', burnt: true },
+  { type: 'block',   x: 470, y: 214, w: 40,  h: 40 },
+  { type: 'block',   x: 246, y: 452, w: 40,  h: 40 },
+  { type: 'sandbag', x: 620, y: 470, w: 108, h: 28 },
+  { type: 'sandbag', x: 180, y: 190, w: 100, h: 28 },
+  { type: 'crate',   x: 806, y: 196, w: 44,  h: 44 },
+  { type: 'crate',   x: 902, y: 470, w: 44,  h: 44 }
+]);
+const BRIDGE_SPAWNS = [
+  { x: 150, y: 130 }, { x: 452, y: 110 }, { x: 800, y: 150 },
+  { x: 170, y: 560 }, { x: 470, y: 596 }, { x: 820, y: 540 },
+  { x: 400, y: 262 }, { x: 820, y: 340 }
+];
+const BRIDGE_AMMO = [
+  { x: 370, y: 480 }, { x: 240, y: 300 }, { x: 620, y: 470 }, { x: 900, y: 300 }
+];
+
+/* ---------- свет арены: одинаковый полумрак на всех картах ---------- */
+function dmLighting() {
+  lctx.setTransform(1, 0, 0, 1, 0, 0);
+  lctx.globalCompositeOperation = 'source-over';
+  lctx.clearRect(0, 0, W, H);
+  lctx.fillStyle = 'rgba(6,8,12,0.42)';
+  lctx.fillRect(0, 0, W, H);
+
+  lctx.globalCompositeOperation = 'destination-out';
+  radial(lctx, W * 0.5, H * 0.5, 1500, 0.40);
+
+  if (player) {
+    const optics = player.binocs && player.binocs.on;
+    radial(lctx, player.x, player.y, optics ? 170 : 380, optics ? 0.55 : 0.78);
+    playerCone(lctx, optics ? 1010 : 620, optics ? 0.17 : 0.5, optics ? 1 : 0.96);
+    if (player.muzzle > 0) {
+      radial(lctx, player.x + Math.cos(player.ang) * 28, player.y + Math.sin(player.ang) * 28,
+        player.weapon === 'plasma' ? 210 : 175, 0.8);
+    }
+    if (state.dm && state.dm.deadT > 0) radial(lctx, player.x, player.y, 320, 0.6);
+  }
+  for (const f of fires) {
+    const k = Math.min(1, f.life / 1.2);
+    radial(lctx, f.x, f.y, f.r * 1.6 * k, 0.95 * k);
+  }
+  for (const e of enemies) {
+    if (e.muzzle > 0) radial(lctx, e.x + Math.cos(e.ang) * 22, e.y + Math.sin(e.ang) * 22, 140, 0.62);
+  }
+
+  lctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(lightCv, 0, 0);
+}
+
+/* ---------- сборка уровней арены ---------- */
+function dmMakeLevel(def, srcLevel) {
+  return {
+    id: def.id, num: 0, dm: true, name: def.title, tag: 'DEATHMATCH',
+    exit: { x: -200, y: -200, w: 1, h: 1 },
+    intro: 'Deathmatch · ' + def.title +
+      '. Держи центр и сбивай фраги: каждую минуту карта обновляется заново.',
+    floor: srcLevel.floor, room: srcLevel.room, light: dmLighting,
+    pickups: () => dmPickups(def.id),
+    update: updateDm,
+    objectives: dmObjectives
+  };
+}
+
+function dmBuildLevels() {
+  const out = {};
+  DM_ARENAS.forEach(def => {
+    let lv, src;
+    if (def.custom === 'fort') {
+      lv = dmMakeLevel(def, { floor: buildFortFloor, room: buildFortRoom });
+      lv.props = DM_FORT_PROPS;
+      lv.spawns = FORT_SPAWNS;
+      lv.start = { x: FORT_LAND.x, y: FORT_LAND.y };
+      lv.fallback = { x: 470, y: 300 };
+      lv.ammoSpots = FORT_AMMO;
+    } else if (def.custom === 'bridge') {
+      lv = dmMakeLevel(def, { floor: buildBridgeFloor, room: buildBridgeRoom });
+      lv.props = BRIDGE_PROPS;
+      lv.spawns = BRIDGE_SPAWNS;
+      lv.start = { x: 370, y: 120 };
+      lv.fallback = { x: 620, y: 120 };
+      lv.ammoSpots = BRIDGE_AMMO;
+    } else {
+      src = LEVELS[def.src];
+      lv = dmMakeLevel(def, src);
+      lv.props = src.props;
+      lv.spawns = src.spawns;
+      lv.start = src.start;
+      lv.fallback = src.fallback || src.start;
+      lv.ammoSpots = src.ammoSpots || [];
+    }
+    out[def.id] = lv;
+  });
+  return out;
+}
+
+/* уровни арен подкладываются в общий список, чтобы enterLevel их видел */
+function ensureDmLevels() {
+  if (!DM_LEVELS) {
+    DM_LEVELS = dmBuildLevels();
+    Object.keys(DM_LEVELS).forEach(k => { LEVELS[k] = DM_LEVELS[k]; });
+  }
+  return DM_LEVELS;
+}
+function dmLevel(id) { return ensureDmLevels()[id]; }
+
+/* ---------- предметы арены: обновляются каждую минуту ---------- */
+function dmAmmoAmount(type) {
+  if (type === 'cell') return 40;
+  if (type === 'smgmag') return 24;
+  if (type === 'shells') return 10;
+  if (type === 'ammo') return 18;
+  if (type === 'ammocrate') return 26;
+  return 0;
+}
+
+function dmPickups(id) {
+  const lv = ensureDmLevels()[id];
+  const pts = [];
+  ((lv && lv.ammoSpots) || []).forEach(p => pts.push({ x: p.x, y: p.y }));
+  ((lv && lv.spawns) || []).forEach(p => pts.push({ x: p.x, y: p.y }));
+  if (!pts.length) pts.push({ x: W * 0.5, y: H * 0.5 });
+  const list = ['ammocrate', 'medkit', 'cell', 'smgmag', 'medkit', 'shells',
+    'ammo', 'ammocrate', 'whiskey', 'ammo', 'bottle', 'medkit'];
+  const out = [];
+  for (let i = 0; i < list.length; i++) {
+    const raw = pts[i % pts.length];
+    const off = ((i % 3) - 1) * 12;
+    const sp = freeSpot(
+      clamp(raw.x + off * 1.4, WALL + 22, W - WALL - 22),
+      clamp(raw.y + off, WALL + 22, H - WALL - 22), 16);
+    out.push({ type: list[i], x: sp.x, y: sp.y, taken: false, t: rnd(0, 3), amount: dmAmmoAmount(list[i]) });
+  }
+  return out;
+}
+
+/* ---------- боты-«игроки» ---------- */
+function dmIsRanged(type) {
+  return type === 'shooter' || type === 'trooper' || type === 'elite' || type === 'smg' || type === 'at';
+}
+
+function dmSpawnPoint() {
+  const pool = (level.spawns || []).filter(sp => !hits(sp.x, sp.y, 15));
+  const src = pool.length ? pool : (level.spawns || [{ x: W * 0.5, y: H * 0.5 }]);
+  const far = src.filter(sp => Math.hypot(sp.x - player.x, sp.y - player.y) > 180);
+  const use = far.length ? far : src;
+  const s = pick(use);
+  return freeSpot(s.x + rnd(-14, 14), s.y + rnd(-14, 14), 15);
+}
+
+function dmResetRoster() {
+  dmRoster = [];
+  const pool = DM_NAMES.slice();
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+  }
+  for (let i = 0; i < DM.bots; i++) {
+    dmRoster.push({
+      name: pool[i % pool.length],
+      type: DM_CLASSES[i % DM_CLASSES.length],
+      kills: 0, deaths: 0, alive: false, ref: null, respawnT: 0
+    });
+  }
+}
+
+function dmSpawnBot(b) {
+  const cfg = ENEMY[b.type];
+  const at = dmSpawnPoint();
+  const ehp = Math.max(1, Math.round(cfg.hp * diff().enemyHp));
+  const e = {
+    type: b.type, isBot: true, name: b.name, roster: b,
+    x: at.x, y: at.y, r: cfg.r,
+    hp: ehp, maxhp: ehp, ang: rnd(0, 6.28), cd: rnd(0.4, 1.3),
+    hitT: 0, walk: rnd(0, 6), strafe: Math.random() < 0.5 ? 1 : -1, lunge: 0,
+    burst: 0, muzzle: 0
+  };
+  b.ref = e;
+  b.alive = true;
+  b.respawnT = 0;
+  enemies.push(e);
+  spark(e.x, e.y, 8, '#8a7a66', 90);
+  return e;
+}
+
+function spawnDmBots() {
+  dmResetRoster();
+  dmRoster.forEach(b => dmSpawnBot(b));
+  syncDmObjectives();
+}
+
+function damageDmBot(o, dmg, ang, sourceBot) {
+  if (sourceBot && sourceBot.roster) dmg *= DM.botFriendly;
+  o.hp -= dmg;
+  o.hitT = 0.12;
+  blood(o.x, o.y, 6, ang);
+  if (o.hp > 0) { noiseHit(0.05, 0.08, 600, 1.5); return; }
+
+  const idx = enemies.indexOf(o);
+  if (idx >= 0) enemies.splice(idx, 1);
+  blood(o.x, o.y, 16);
+  decals.push({ x: o.x, y: o.y, r: rnd(10, 18), rot: rnd(0, 6.28), a: 0.55 });
+  sfx.hit();
+
+  const who = o.roster ? o.roster.name : '';
+  if (o.roster) { o.roster.deaths++; o.roster.alive = false; o.roster.respawnT = DM.respawn; }
+  if (sourceBot && sourceBot.roster) {
+    sourceBot.roster.kills++;
+    toast(sourceBot.roster.name + ' снял ' + who + '.', 1100);
+  } else {
+    state.dmScore.you++;
+    floatText(o.x, o.y - 20, 'ФРАГ', '#8cf0a6');
+    toast('Ты снял ' + who + '.', 1100);
+  }
+  syncDmObjectives();
+  dmCheckFrags();
+}
+
+function dmCheckFrags() {
+  if (state.mode !== 'play' || !state.dm) return;
+  if (state.dmScore.you >= DM.killTarget) { dmFinish(true); return; }
+  let lead = 0;
+  for (const b of dmRoster) if (b.kills > lead) lead = b.kills;
+  if (lead >= DM.killTarget) dmFinish(false);
+}
+
+function dmFinish(win) {
+  if (state.mode !== 'play') return;
+  state.dmResult = {
+    win,
+    you: state.dmScore.you,
+    bots: dmRoster.map(b => ({ name: b.name, kills: b.kills, deaths: b.deaths }))
+  };
+  endGame(win);
+}
+
+function dmBotTarget(e) {
+  const playerLive = !(state.dm && state.dm.deadT > 0);
+  let best = playerLive
+    ? { x: player.x, y: player.y, d: Math.hypot(player.x - e.x, player.y - e.y), isPlayer: true, ref: null }
+    : { x: 0, y: 0, d: 1e9, isPlayer: true, ref: null };
+  for (const o of enemies) {
+    if (o === e || !o.isBot) continue;
+    const d = Math.hypot(o.x - e.x, o.y - e.y);
+    if (d < best.d) best = { x: o.x, y: o.y, d: d, isPlayer: false, ref: o };
+  }
+  return best;
+}
+
+function dmClearShot(e, tx, ty) {
+  for (let s = 1; s < 6; s++) {
+    const k = s / 6;
+    if (pointInSolid(e.x + (tx - e.x) * k, e.y + (ty - e.y) * k)) return false;
+  }
+  return true;
+}
+
+function updateDmBots(dt) {
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    if (!e.isBot) continue;
+    const cfg = ENEMY[e.type];
+    const tgt = dmBotTarget(e);
+    const aim = Math.atan2(tgt.y - e.y, tgt.x - e.x);
+    const d = tgt.d;
+
+    if (e.hitT <= 0) e.ang = aim;
+    e.hitT = Math.max(0, e.hitT - dt);
+    e.lunge = Math.max(0, e.lunge - dt);
+    e.cd -= dt;
+
+    let mx = 0, my = 0;
+    const ranged = dmIsRanged(e.type);
+    if (ranged) {
+      const ideal = e.type === 'at' ? 300 : (e.type === 'elite' ? 280 : (e.type === 'trooper' ? 200 : (e.type === 'smg' ? 215 : 250)));
+      if (d > ideal + 90) { mx = Math.cos(aim); my = Math.sin(aim); }
+      else if (d < ideal - 70) { mx = -Math.cos(aim); my = -Math.sin(aim); }
+      else { mx = Math.cos(aim + Math.PI / 2) * e.strafe; my = Math.sin(aim + Math.PI / 2) * e.strafe; }
+    } else if (d > e.r + player.r + 10) {
+      mx = Math.cos(aim); my = Math.sin(aim);
+    }
+    /* не сбиваться в кучу */
+    for (let j = 0; j < enemies.length; j++) {
+      if (j === i) continue;
+      const o = enemies[j];
+      const dx = e.x - o.x, dy = e.y - o.y;
+      const dd = Math.hypot(dx, dy) || 1;
+      if (dd < e.r + o.r + 2) { mx += dx / dd * 0.9; my += dy / dd * 0.9; }
+    }
+    const len = Math.hypot(mx, my);
+    if (len > 0.01) {
+      const spd = cfg.speed * (e.hitT > 0 ? 0.5 : 1) * (e.lunge > 0 ? 0.3 : 1);
+      const nx = e.x + mx / len * spd * dt;
+      const ny = e.y + my / len * spd * dt;
+      if (!hits(nx, e.y, e.r)) e.x = nx;
+      if (!hits(e.x, ny, e.r)) e.y = ny;
+      e.walk += dt * 7;
+    }
+    e.x = clamp(e.x, WALL + e.r, W - WALL - e.r);
+    e.y = clamp(e.y, WALL + e.r, H - WALL - e.r);
+
+    if (ranged) {
+      const range = e.type === 'elite' ? 640 : 540;
+      if (d < range && e.cd <= 0 && e.hitT <= 0 && dmClearShot(e, tgt.x, tgt.y)) {
+        enemyShoot(e, tgt.x, tgt.y);
+        if (cfg.burst && e.burst <= 0) { e.burst = cfg.burst - 1; e.cd = 0.14; }
+        else if (e.burst > 0) { e.burst--; e.cd = e.burst > 0 ? 0.14 : cfg.cd * rnd(0.85, 1.2); }
+        else { e.cd = cfg.cd * rnd(0.85, 1.2); }
+      }
+    } else if (tgt.isPlayer) {
+      if (d < e.r + player.r + 10 && e.cd <= 0) {
+        player.lastHitBy = e;
+        hurtPlayer(cfg.dmg);
+        e.cd = cfg.cd;
+        e.lunge = 0.18;
+        spark(player.x, player.y, 4, '#c2a67a', 90);
+      }
+    } else if (tgt.ref && d < e.r + tgt.ref.r + 10 && e.cd <= 0) {
+      damageDmBot(tgt.ref, cfg.dmg, aim, e);
+      e.cd = cfg.cd;
+      e.lunge = 0.18;
+    }
+
+    e.muzzle = Math.max(0, e.muzzle - dt);
+  }
+}
+
+function dmPlayerDown() {
+  if (state.mode !== 'play' || !state.dm) return;
+  state.dmScore.losses++;
+  const killer = player.lastHitBy;
+  if (killer && killer.roster) killer.roster.kills++;
+  state.dm.killedBy = killer && killer.roster ? killer.roster.name : null;
+  state.dm.deadT = DM.playerRespawn;
+  player.invuln = DM.playerRespawn + 1.6;
+  blood(player.x, player.y, 22);
+  decals.push({ x: player.x, y: player.y, r: 16, rot: rnd(0, 6.28), a: 0.5 });
+  state.shake = Math.max(state.shake, 10);
+  toast(state.dm.killedBy
+    ? state.dm.killedBy + ' снял тебя. Возвращаешься в бой.'
+    : 'Тебя сняли. Возвращаешься в бой.', 2200);
+  syncDmObjectives();
+  dmCheckFrags();
+}
+
+function dmRespawnPlayer() {
+  const at = dmSpawnPoint();
+  player.x = at.x;
+  player.y = at.y;
+  player.hp = player.maxhp;
+  player.hurt = 0;
+  player.reloading = 0;
+  player.invuln = 2.6;
+  player.lastHitBy = null;
+  state.dm.deadT = 0;
+  state.dm.killedBy = null;
+  floatText(player.x, player.y - 24, 'В БОЙ', '#8cf0a6');
+  tone(720, 0.08, 'triangle', 0.05);
+  updateHud();
+}
+
+/* ---------- «каждую минуту всё обновляется» ---------- */
+function dmRefreshArena() {
+  state.dmRefreshT = DM.refresh;
+  pickups = dmPickups(level.id);
+  for (const b of dmRoster) if (!b.alive) { b.respawnT = 0; dmSpawnBot(b); }
+  if (player && player.binocs) player.binocs.charges = DM.supply;
+  state.shake = Math.max(state.shake, 5);
+  toast('Карта обновлена: патроны, аптечки и бойцы — заново. В бинокле снова ' + DM.supply + ' зарядов.', 2800);
+  sfx.wave();
+  syncDmObjectives();
+}
+
+function updateDm(dt) {
+  if (!state.dm) state.dm = { deadT: 0, killedBy: null, uiT: 0 };
+  if (state.dm.deadT > 0) {
+    state.dm.deadT -= dt;
+    if (state.dm.deadT <= 0) dmRespawnPlayer();
+  }
+  for (const b of dmRoster) {
+    if (b.alive) continue;
+    b.respawnT -= dt;
+    if (b.respawnT <= 0) dmSpawnBot(b);
+  }
+  state.dmRefreshT -= dt;
+  if (state.dmRefreshT <= 0) dmRefreshArena();
+
+  state.dm.uiT -= dt;
+  if (state.dm.uiT <= 0) { state.dm.uiT = 0.25; syncDmObjectives(); }
+}
+
+/* ---------- табло ---------- */
+function dmObjectives() {
+  return [{ id: 'you', text: 'ТЫ · 0 фрагов', done: false, active: true }];
+}
+
+function syncDmObjectives() {
+  if (!state.dmScore) state.dmScore = { you: 0, losses: 0 };
+  const rows = [{
+    id: 'you',
+    text: 'ТЫ · ' + state.dmScore.you + ' фрагов · ' + state.dmScore.losses + ' смертей',
+    done: false, active: true
+  }];
+  dmRoster.slice().sort((a, b) => b.kills - a.kills || a.deaths - b.deaths).forEach(b => {
+    rows.push({
+      id: 'bot_' + b.name,
+      text: b.name + ' · ' + b.kills + (b.alive ? '' : ' · вне боя'),
+      done: false, active: false
+    });
+  });
+  rows.push({
+    id: 'goal',
+    text: 'ДО ' + DM.killTarget + ' ФРАГОВ · ОБНОВЛЕНИЕ ' + Math.ceil(Math.max(0, state.dmRefreshT)) + ' С',
+    done: false, active: false
+  });
+  state.objectives = rows;
+  updateObjectives();
+}
+
+/* ---------- бинокль: заряды и сброс снабжения ---------- */
+function supplyCharges() {
+  if (!player || !player.binocs || !player.binocs.owned) return 0;
+  return player.binocs.charges;
+}
+
+function dropSupply(kind) {
+  if (state.mode !== 'play' || !player) return false;
+  if (!player.binocs || !player.binocs.owned || !player.binocs.on) return false;
+  const ch = player.binocs.charges;
+  if (!(ch > 0)) {
+    toast('Заряды снабжения кончились — жди обновления карты.', 1800);
+    return true;
+  }
+  const tx = clamp(mouse.x, WALL + 24, W - WALL - 24);
+  const ty = clamp(mouse.y, WALL + 24, H - WALL - 24);
+  const at = freeSpot(tx, ty, 18);
+  const med = kind === 'medkit';
+  pickups.push({
+    type: med ? 'drop_medkit' : 'drop_ammo',
+    x: at.x, y: at.y, taken: false, t: 0,
+    hidden: true, air: 0.85, maxAir: 0.85, amount: med ? 45 : 20
+  });
+  if (isFinite(ch)) player.binocs.charges = ch - 1;
+  tone(680, 0.06, 'triangle', 0.04);
+  tone(940, 0.09, 'triangle', 0.03);
+  toast(med ? 'Сброс: аптечка пошла вниз.' : 'Сброс: боеприпасы пошли вниз.', 1500);
+  updateHud();
+  return true;
+}
+
+function drawSupplyScopeInfo(x, y) {
+  if (!player || !player.binocs || !player.binocs.owned) return;
+  const ch = supplyCharges();
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 9px Consolas, monospace';
+  if (ch <= 0) {
+    ctx.fillStyle = 'rgba(230,120,90,.65)';
+    ctx.fillText('СНАБЖЕНИЕ · ПУСТО', x, y);
+  } else if (isFinite(ch)) {
+    ctx.fillStyle = 'rgba(150,225,255,.78)';
+    ctx.fillText('ЗАРЯДЫ СНАБЖЕНИЯ · ' + ch, x, y);
+    ctx.fillStyle = 'rgba(210,235,240,.34)';
+    ctx.fillText(level.id === 'farm' ? 'ПКМ — АПТЕЧКА' : 'ЛКМ — ПАТРОНЫ · ПКМ — АПТЕЧКА', x, y + 11);
+  } else {
+    ctx.fillStyle = 'rgba(150,225,255,.6)';
+    ctx.fillText('СНАБЖЕНИЕ · БЕЗ ОГРАНИЧЕНИЙ', x, y);
+  }
+}
+
+/* ---------- отрисовка арены ---------- */
+function drawDmSupply() {
+  for (const p of pickups) {
+    if (!p.hidden) continue;
+    const total = p.maxAir || 0.85;
+    const k = clamp(1 - p.air / total, 0, 1);
+    const x = p.x, y = p.y - (1 - k) * 300;
+
+    ctx.fillStyle = 'rgba(0,0,0,.25)';
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, 12 * k + 4, 5, 0, 0, 6.28);
+    ctx.fill();
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(214,206,190,.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - 15, y - 26); ctx.lineTo(x, y - 11); ctx.lineTo(x + 15, y - 26);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y - 30, 16, Math.PI, 0);
+    ctx.fillStyle = 'rgba(214,206,190,.45)';
+    ctx.fill();
+
+    ctx.fillStyle = '#5a4526';
+    roundRect(ctx, x - 12, y - 8, 24, 16, 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x - 11.5, y - 7.5, 23, 15);
+    ctx.fillStyle = p.type === 'drop_medkit' ? 'rgba(180,40,34,.9)' : 'rgba(240,200,110,.9)';
+    ctx.fillRect(x - 6, y - 2, 12, 4);
+    ctx.restore();
+  }
+}
+
+function drawDmTags() {
+  ctx.save();
+  ctx.textAlign = 'center';
+  for (const e of enemies) {
+    if (!e.isBot) continue;
+    const k = clamp(Math.max(0, e.hp) / e.maxhp, 0, 1);
+    const y = e.y - e.r - 18;
+    ctx.fillStyle = 'rgba(10,12,14,.6)';
+    ctx.fillRect(e.x - 22, y - 6, 44, 4);
+    ctx.fillStyle = k > 0.5 ? 'rgba(120,240,150,.85)' : (k > 0.22 ? 'rgba(240,210,110,.9)' : 'rgba(230,90,60,.9)');
+    ctx.fillRect(e.x - 21, y - 5, 42 * k, 2);
+    ctx.font = 'bold 10px Consolas, monospace';
+    ctx.fillStyle = 'rgba(236,229,215,.85)';
+    ctx.fillText(e.name, e.x, y - 10);
+    if (e.roster) {
+      ctx.font = '9px Consolas, monospace';
+      ctx.fillStyle = 'rgba(210,235,240,.55)';
+      ctx.fillText(String(e.roster.kills) + ' ◆', e.x, y - 22);
+    }
+  }
+  ctx.restore();
+}
+
+function drawDmGlow() {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const p of pickups) {
+    if (p.taken || p.hidden) continue;
+    const a = 0.05 + 0.04 * Math.sin(p.t * 3 + p.x);
+    const col = (p.type === 'medkit' || p.type === 'drop_medkit') ? '143,191,122'
+      : (p.type === 'cell' ? '120,235,255' : '217,162,74');
+    ctx.fillStyle = 'rgba(' + col + ',' + a.toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 20, 0, 6.28);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawDmOptics() {
+  if (!player || !player.binocs || !player.binocs.on) return;
+  ctx.save();
+  const g = ctx.createRadialGradient(player.x, player.y, 120, player.x, player.y, 300);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(0.7, 'rgba(0,0,0,.34)');
+  g.addColorStop(1, 'rgba(0,0,0,.66)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(player.x, player.y, 300, 0, 6.28); ctx.fill();
+
+  const mx = mouse.x, my = mouse.y;
+  ctx.strokeStyle = 'rgba(210,235,240,.55)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(mx, my, 44, 0, 6.28); ctx.stroke();
+  ctx.strokeStyle = 'rgba(210,235,240,.35)';
+  ctx.beginPath();
+  ctx.moveTo(mx - 66, my); ctx.lineTo(mx - 16, my);
+  ctx.moveTo(mx + 16, my); ctx.lineTo(mx + 66, my);
+  ctx.moveTo(mx, my - 66); ctx.lineTo(mx, my - 16);
+  ctx.moveTo(mx, my + 16); ctx.lineTo(mx, my + 66);
+  ctx.stroke();
+
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 9px Consolas, monospace';
+  ctx.fillStyle = 'rgba(160,240,200,.8)';
+  ctx.fillText('DEATHMATCH · ОПТИКА ×8', mx + 50, my + 58);
+  ctx.fillStyle = 'rgba(210,235,240,.35)';
+  ctx.fillText('0 — СНЯТЬ', mx + 50, my + 70);
+  drawSupplyScopeInfo(mx + 50, my + 82);
+
+  enemies.forEach(e => {
+    if (!e.isBot) return;
+    const d = Math.hypot(e.x - player.x, e.y - player.y);
+    if (d > 900) return;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(240,140,90,' + (0.75 * (1 - d / 1100)).toFixed(2) + ')';
+    ctx.beginPath();
+    ctx.moveTo(e.x, e.y - 9);
+    ctx.lineTo(e.x + 6, e.y + 5);
+    ctx.lineTo(e.x - 6, e.y + 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.fillText(e.name + ' · ' + Math.round(d / 3) + ' М', e.x, e.y - 14);
+  });
+  ctx.restore();
+}
+
+/* ---------- арена: запуск, лобби, финал ---------- */
+function enterDm(id) {
+  ac();
+  ensureDmLevels();
+  if (!LEVELS[id]) return;
+  closeDeathmatch();
+  enterLevel(id, {
+    hp: 100, bottles: 2, weapon: 'smg',
+    weapons: {
+      pistol: { owned: true, mag: 8, reserve: 60 },
+      plasma: { owned: true, mag: 20, reserve: 60 },
+      shotgun: { owned: true, mag: 6, reserve: 30 },
+      smg: { owned: true, mag: 32, reserve: 160 }
+    },
+    binocs: true
+  });
+  state.dm = { deadT: 0, killedBy: null, uiT: 0 };
+  state.dmScore = { you: 0, losses: 0 };
+  state.dmRefreshT = DM.refresh;
+  state.dmResult = null;
+  player.binocs.owned = true;
+  player.binocs.charges = DM.supply;
+  player.lastHitBy = null;
+  spawnDmBots();
+  syncDmObjectives();
+  updateHud();
+  updateWaveHud();
+  toast('Deathmatch · ' + level.name + '. Боты и игроки. В бинокле ' + DM.supply +
+    ' зарядов снабжения, карта обновляется каждую минуту.', 4200);
+}
+
+function dmEndScreen(win) {
+  const r = state.dmResult || { you: state.dmScore.you, bots: [] };
+  const acc = state.shots ? Math.round(state.hits / state.shots * 100) : 0;
+  els.endKicker.textContent = 'DEATHMATCH · ' + level.name;
+  els.endTitle.textContent = win ? 'Арена твоя' : 'Арена не твоя';
+  els.endText.innerHTML = win
+    ? 'Ты добрал ' + DM.killTarget + '-й фраг первым. Дым расходится над бетоном, бойцы расходятся по укрытиям.'
+    : 'Кто-то из бойцов добрал ' + DM.killTarget + '-й фраг раньше тебя. Арена остаётся за ним.';
+  let stats = '<li>ТВОИ ФРАГИ <b>' + r.you + '</b></li>' +
+    '<li>ТВОИ СМЕРТИ <b>' + state.dmScore.losses + '</b></li>' +
+    '<li>ВЫСТРЕЛОВ <b>' + state.shots + '</b></li>' +
+    '<li>ТОЧНОСТЬ <b>' + acc + '%</b></li>';
+  r.bots.slice().sort((a, b) => b.kills - a.kills).slice(0, 5).forEach(b => {
+    stats += '<li>' + b.name + ' <b>' + b.kills + '</b></li>';
+  });
+  els.endStats.innerHTML = stats;
+  $('againBtn').textContent = 'Ещё матч';
+}
+
+function renderDeathmatch() {
+  if (!els.dmGrid) return;
+  els.dmGrid.innerHTML = DM_ARENAS.map(a =>
+    '<button class="mission-card' + (a.note === 'DEATHMATCH' ? ' dm-arena' : '') + '" data-dm="' + a.id + '">' +
+    '<span class="m-num">' + a.note + '</span>' +
+    '<span class="m-name">' + a.title + '</span>' +
+    '<span class="m-state">' + (a.note === 'DEATHMATCH' ? 'АРЕНА · БОТЫ И ИГРОКИ' : 'АРЕНА ИЗ КАМПАНИИ') + '</span>' +
+    '</button>').join('');
+  if (els.dmLead) {
+    els.dmLead.textContent = 'Боты и игроки: против тебя ' + DM.bots + ' бойцов, матч — до ' +
+      DM.killTarget + ' фрагов. Каждую минуту карта обновляется, а в бинокле ' + DM.supply + ' зарядов снабжения.';
+  }
+}
+
+function openDeathmatch() {
+  if (state.mode !== 'menu' || !els.deathmatch) return;
+  renderDeathmatch();
+  els.menu.classList.add('hidden');
+  if (els.select) els.select.classList.add('hidden');
+  els.deathmatch.classList.remove('hidden');
+}
+
+function closeDeathmatch() {
+  if (!els.deathmatch) return;
+  if (els.deathmatch.classList.contains('hidden')) return;
+  els.deathmatch.classList.add('hidden');
+  if (state.mode === 'menu') els.menu.classList.remove('hidden');
+  updateSaveMeta();
+}
+
+/* ===========================================================
+   арена «Разбитый мост»: река, рухнувший пролёт, завал
+   =========================================================== */
+function buildBridgeFloor() {
+  reseed(661105);
+  const c = fctx;
+
+  c.fillStyle = '#26251f';
+  c.fillRect(0, 0, W, H);
+  for (let i = 0; i < 1500; i++) {
+    const x = srnd() * W, y = srnd() * H;
+    const g = 38 + srnd() * 26;
+    if (srnd() < 0.62) {
+      c.fillStyle = 'rgba(' + ((g + 12) | 0) + ',' + ((g + 8) | 0) + ',' + ((g - 8) | 0) + ',.45)';
+      c.fillRect(x, y, 1 + srnd() * 3, 1 + srnd() * 2);
+    } else {
+      c.fillStyle = 'rgba(56,54,46,.4)';
+      c.fillRect(x, y, 2 + srnd() * 4, 1 + srnd() * 3);
+    }
+  }
+
+  /* шоссе: подъезд сверху, мост, съезд снизу */
+  c.fillStyle = '#33333a';
+  c.fillRect(BR_SPAN.x - 6, 0, BR_SPAN.w + 12, H);
+  c.fillStyle = 'rgba(18,18,22,.55)';
+  c.fillRect(BR_SPAN.x - 6, 0, 6, H);
+  c.fillRect(BR_SPAN.x + BR_SPAN.w, 0, 6, H);
+  for (let i = 0; i < 700; i++) {
+    c.fillStyle = srnd() < 0.5 ? 'rgba(88,86,80,.18)' : 'rgba(20,20,24,.3)';
+    c.fillRect(BR_SPAN.x - 4 + srnd() * (BR_SPAN.w + 8), srnd() * H, 2 + srnd() * 6, 1 + srnd() * 2);
+  }
+  c.strokeStyle = 'rgba(214,206,180,.16)';
+  c.lineWidth = 3;
+  c.setLineDash([26, 26]);
+  c.beginPath();
+  c.moveTo(BR_SPAN.x + BR_SPAN.w / 2, 0);
+  c.lineTo(BR_SPAN.x + BR_SPAN.w / 2, H);
+  c.stroke();
+  c.setLineDash([]);
+
+  /* река */
+  const wy = 288, wh = 118;
+  const wg = c.createLinearGradient(0, wy, 0, wy + wh);
+  wg.addColorStop(0, '#1c2b34');
+  wg.addColorStop(0.5, '#15222a');
+  wg.addColorStop(1, '#1a2830');
+  c.fillStyle = wg;
+  c.fillRect(WALL, wy, W - WALL * 2, wh);
+  for (let i = 0; i < 520; i++) {
+    const x = WALL + srnd() * (W - WALL * 2);
+    const y = wy + 4 + srnd() * (wh - 8);
+    c.fillStyle = srnd() < 0.5 ? 'rgba(120,160,175,.10)' : 'rgba(8,14,18,.3)';
+    c.fillRect(x, y, 6 + srnd() * 26, 1);
+  }
+  /* откосы */
+  c.fillStyle = 'rgba(30,28,22,.9)';
+  c.fillRect(WALL, wy - 7, W - WALL * 2, 9);
+  c.fillRect(WALL, wy + wh - 2, W - WALL * 2, 9);
+  /* рухнувший пролёт в воде справа от моста */
+  c.save();
+  c.translate(560, 352);
+  c.rotate(-0.34);
+  c.fillStyle = 'rgba(44,44,50,.9)';
+  c.fillRect(-92, -16, 184, 32);
+  c.fillStyle = 'rgba(12,12,16,.6)';
+  c.fillRect(-92, -16, 184, 5);
+  for (let i = 0; i < 14; i++) {
+    c.fillStyle = 'rgba(70,70,78,.6)';
+    c.fillRect(-88 + i * 13, -14 + srnd() * 26, 3 + srnd() * 8, 2);
+  }
+  c.restore();
+  for (let i = 0; i < 260; i++) {
+    c.fillStyle = 'rgba(58,56,50,.5)';
+    c.fillRect(480 + srnd() * 260, 300 + srnd() * 96, 2 + srnd() * 5, 1 + srnd() * 3);
+  }
+
+  /* настил моста поверх воды */
+  const s = BR_SPAN;
+  c.fillStyle = '#3d3d44';
+  c.fillRect(s.x, s.y, s.w, s.h);
+  for (let i = 0; i < 620; i++) {
+    const x = s.x + srnd() * s.w, y = s.y + srnd() * s.h;
+    c.fillStyle = srnd() < 0.5 ? 'rgba(96,94,90,.2)' : 'rgba(18,18,22,.32)';
+    c.fillRect(x, y, 2 + srnd() * 7, 1 + srnd() * 2);
+  }
+  for (let y = s.y; y < s.y + s.h; y += 46) {
+    c.fillStyle = 'rgba(12,12,16,.6)';
+    c.fillRect(s.x, y, s.w, 3);
+  }
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.fillRect(s.x, s.y, s.w, 6);
+  c.fillRect(s.x, s.y + s.h - 6, s.w, 6);
+
+  /* пролом посередине: тёмная вода, зубчатые кромки, арматура, доска */
+  const gapY = 320, gapH = 76;
+  c.fillStyle = 'rgba(4,6,9,.94)';
+  c.fillRect(s.x, gapY, s.w, gapH);
+  const teeth = 8, tw = s.w / teeth;
+  for (let i = 0; i < teeth; i++) {
+    const x0 = s.x + i * tw;
+    c.fillStyle = '#46464e';
+    c.beginPath();
+    c.moveTo(x0, gapY);
+    c.lineTo(x0 + tw, gapY);
+    c.lineTo(x0 + tw * (0.4 + srnd() * 0.3), gapY + 10 + srnd() * 16);
+    c.closePath();
+    c.fill();
+    c.beginPath();
+    c.moveTo(x0, gapY + gapH);
+    c.lineTo(x0 + tw, gapY + gapH);
+    c.lineTo(x0 + tw * (0.4 + srnd() * 0.3), gapY + gapH - 10 - srnd() * 16);
+    c.closePath();
+    c.fill();
+  }
+  c.strokeStyle = 'rgba(122,96,70,.85)';
+  c.lineWidth = 2;
+  for (let i = 0; i < 9; i++) {
+    const x0 = s.x + 8 + srnd() * (s.w - 16);
+    c.beginPath();
+    c.moveTo(x0, gapY + 4);
+    c.lineTo(x0 + rnd(-10, 10), gapY + gapH - 4);
+    c.stroke();
+  }
+  /* доска-переход через пролом */
+  c.fillStyle = '#4a3a26';
+  c.fillRect(s.x + 52, gapY - 6, 34, gapH + 12);
+  c.fillStyle = 'rgba(0,0,0,.3)';
+  c.fillRect(s.x + 52, gapY - 6, 34, 3);
+  c.fillRect(s.x + 52, gapY + gapH + 3, 34, 3);
+
+  /* завал-переход через воду справа */
+  c.fillStyle = 'rgba(52,50,46,.92)';
+  c.fillRect(BR_CAUSE.x, BR_CAUSE.y, BR_CAUSE.w, BR_CAUSE.h);
+  for (let i = 0; i < 420; i++) {
+    const x = BR_CAUSE.x + srnd() * BR_CAUSE.w, y = BR_CAUSE.y + srnd() * BR_CAUSE.h;
+    const v = 60 + srnd() * 40;
+    c.fillStyle = 'rgba(' + (v | 0) + ',' + ((v - 6) | 0) + ',' + ((v - 16) | 0) + ',.55)';
+    c.fillRect(x, y, 2 + srnd() * 8, 2 + srnd() * 5);
+  }
+  for (let i = 0; i < 6; i++) {
+    c.save();
+    c.translate(BR_CAUSE.x + 10 + i * 20, BR_CAUSE.y + 20 + srnd() * 80);
+    c.rotate(rnd(-0.7, 0.7));
+    c.fillStyle = 'rgba(70,56,40,.85)';
+    c.fillRect(-24, -4, 48, 8);
+    c.restore();
+  }
+
+  /* гарь у сгоревших машин */
+  [[628, 150], [148, 470]].forEach(p => {
+    for (let i = 0; i < 160; i++) {
+      const a = srnd() * 6.28, r = srnd() * 74;
+      c.fillStyle = 'rgba(14,12,10,.42)';
+      c.fillRect(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r, 1 + srnd() * 4, 1 + srnd() * 3);
+    }
+  });
+}
+
+function bridgeRail(c, x, y, w, h) {
+  c.fillStyle = '#3a3a40';
+  c.fillRect(x, y, w, h);
+  c.fillStyle = 'rgba(255,255,255,.05)';
+  c.fillRect(x, y, w, 2);
+  c.fillStyle = 'rgba(0,0,0,.4)';
+  c.fillRect(x, y + h - 2, w, 2);
+}
+
+function bridgeCar(c, p) {
+  const hz = p.dir !== 'v';
+  const x = p.x, y = p.y, w = p.w, h = p.h;
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  roundRect(c, x + 3, y + 4, w, h, 6); c.fill();
+  c.fillStyle = p.burnt ? '#2b2724' : p.tone;
+  roundRect(c, x, y, w, h, 6); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.05)';
+  roundRect(c, x + 2, y + 2, w - 4, h * 0.35, 4); c.fill();
+  c.fillStyle = 'rgba(16,18,22,.85)';
+  if (hz) {
+    c.fillRect(x + w * 0.30, y + 3, w * 0.34, h - 6);
+  } else {
+    c.fillRect(x + 3, y + h * 0.30, w - 6, h * 0.34);
+  }
+  c.strokeStyle = 'rgba(0,0,0,.5)';
+  c.lineWidth = 1.5;
+  roundRect(c, x, y, w, h, 6); c.stroke();
+  if (p.burnt) {
+    c.fillStyle = 'rgba(10,8,6,.5)';
+    roundRect(c, x + w * 0.1, y + h * 0.1, w * 0.8, h * 0.8, 5); c.fill();
+    c.fillStyle = 'rgba(60,52,44,.5)';
+    c.fillRect(x + w * 0.2, y + h * 0.2, w * 0.6, h * 0.6);
+  }
+}
+
+function buildBridgeRoom() {
+  const c = rctx;
+  c.clearRect(0, 0, W, H);
+
+  /* внешние стены */
+  c.fillStyle = '#2b2721';
+  c.fillRect(0, 0, W, WALL);
+  c.fillRect(0, H - WALL, W, WALL);
+  c.fillRect(0, 0, WALL, H);
+  c.fillRect(W - WALL, 0, WALL, H);
+  c.fillStyle = 'rgba(255,255,255,.04)';
+  c.fillRect(0, WALL - 3, W, 3);
+  c.fillRect(0, H - WALL, W, 3);
+
+  /* перила вдоль настила */
+  const s = BR_SPAN;
+  c.fillStyle = '#2f2f36';
+  c.fillRect(s.x - 5, 214, 6, 288);
+  c.fillRect(s.x + s.w - 1, 214, 6, 288);
+  for (let y = 226; y < 500; y += 26) {
+    c.fillStyle = '#3d3d45';
+    c.fillRect(s.x - 6, y, 9, 4);
+    c.fillRect(s.x + s.w - 3, y, 9, 4);
+  }
+  c.strokeStyle = 'rgba(180,176,166,.22)';
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(s.x - 2, 222); c.lineTo(s.x - 2, 496);
+  c.moveTo(s.x + s.w + 2, 222); c.lineTo(s.x + s.w + 2, 496);
+  c.stroke();
+
+  /* опоры моста */
+  [214, 470].forEach(y => {
+    c.fillStyle = '#33333a';
+    c.fillRect(s.x - 22, y, 22, 34);
+    c.fillRect(s.x + s.w, y, 22, 34);
+    c.fillStyle = 'rgba(0,0,0,.4)';
+    c.fillRect(s.x - 22, y + 30, 22, 4);
+    c.fillRect(s.x + s.w, y + 30, 22, 4);
+  });
+
+  /* упавшая опора — наклонная колонна у берега */
+  c.save();
+  c.translate(700, 262);
+  c.rotate(0.6);
+  c.fillStyle = '#34343b';
+  c.fillRect(-14, -66, 28, 132);
+  c.fillStyle = 'rgba(255,255,255,.05)';
+  c.fillRect(-14, -66, 28, 4);
+  c.fillStyle = 'rgba(0,0,0,.35)';
+  c.fillRect(-14, 60, 28, 6);
+  for (let i = 0; i < 5; i++) {
+    c.strokeStyle = 'rgba(122,96,70,.6)';
+    c.lineWidth = 1.6;
+    c.beginPath(); c.moveTo(-10, -50 + i * 22); c.lineTo(10, -44 + i * 22); c.stroke();
+  }
+  c.restore();
+
+  /* дорожный знак у моста */
+  c.fillStyle = '#4a4a52';
+  c.fillRect(268, 150, 4, 42);
+  c.fillStyle = '#7a2a24';
+  c.fillRect(248, 128, 44, 26);
+  c.fillStyle = 'rgba(236,229,215,.75)';
+  c.font = 'bold 9px Consolas, monospace';
+  c.textAlign = 'center';
+  c.fillText('МОСТ', 270, 145);
+
+  /* пропсы */
+  for (const p of BRIDGE_PROPS) {
+    if (p.type === 'water') continue;
+    if (p.type === 'car') bridgeCar(c, p);
+    else if (p.type === 'block') {
+      c.fillStyle = 'rgba(0,0,0,.4)';
+      roundRect(c, p.x + 2, p.y + 3, p.w, p.h, 2); c.fill();
+      c.fillStyle = '#4a4a50';
+      roundRect(c, p.x, p.y, p.w, p.h, 2); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.06)';
+      c.fillRect(p.x + 2, p.y + 2, p.w - 4, 4);
+      c.strokeStyle = 'rgba(0,0,0,.45)';
+      c.lineWidth = 1;
+      roundRect(c, p.x, p.y, p.w, p.h, 2); c.stroke();
+      c.fillStyle = 'rgba(20,20,24,.35)';
+      c.fillRect(p.x + p.w * 0.45, p.y + 3, 2, p.h - 6);
+    } else if (p.type === 'sandbag') {
+      c.fillStyle = 'rgba(0,0,0,.4)';
+      c.fillRect(p.x + 2, p.y + 3, p.w, p.h);
+      for (let i = 0; i < Math.ceil(p.w / 26); i++) {
+        for (let r = 0; r < 2; r++) {
+          c.fillStyle = r === 0 ? '#6b6046' : '#5e543d';
+          roundRect(c, p.x + i * 26 + (r ? 12 : 0), p.y + r * (p.h / 2), 24, p.h / 2 - 1, 7);
+          c.fill();
+        }
+      }
+    } else if (p.type === 'crate') {
+      c.fillStyle = 'rgba(0,0,0,.4)';
+      c.fillRect(p.x + 2, p.y + 3, p.w, p.h);
+      c.fillStyle = '#5a4526';
+      roundRect(c, p.x, p.y, p.w, p.h, 2); c.fill();
+      c.strokeStyle = 'rgba(0,0,0,.5)';
+      c.lineWidth = 1;
+      c.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
+      c.fillStyle = '#7a5c30';
+      c.fillRect(p.x, p.y + p.h / 2 - 2, p.w, 4);
+    }
+  }
+
+  c.textAlign = 'left';
+}
+
+/* ===========================================================
    СОХРАНЕНИЕ, МЕНЮ, ЦИКЛ
    =========================================================== */
 
@@ -13234,6 +14372,10 @@ function collectSave() {
 }
 
 function saveGame(silent) {
+  if (level && level.dm) {
+    if (!silent) toast('Deathmatch не сохраняется — прогресс кампании не тронут.', 2200);
+    return false;
+  }
   if (!player || (state.mode !== 'play' && state.mode !== 'paused')) {
     if (!silent) toast('Сейчас сохранять нечего.', 1400);
     return false;
@@ -13586,6 +14728,8 @@ function endGame(win) {
   els.end.classList.toggle('win', win);
   els.end.classList.toggle('lose', !win);
 
+  if (level.dm) { dmEndScreen(win); return; }
+
   const t = Math.floor(state.time);
   const mmss = Math.floor(t / 60) + ':' + pad2(t % 60);
   const acc = state.shots ? Math.round(state.hits / state.shots * 100) : 0;
@@ -13788,6 +14932,15 @@ requestAnimationFrame(frame);
 $('startBtn').addEventListener('click', newGame);
 $('selectBtn').addEventListener('click', openMissionSelect);
 $('selectBackBtn').addEventListener('click', closeMissionSelect);
+if ($('dmBtn')) $('dmBtn').addEventListener('click', openDeathmatch);
+if ($('dmBackBtn')) $('dmBackBtn').addEventListener('click', closeDeathmatch);
+if (els.dmGrid) {
+  els.dmGrid.addEventListener('click', e => {
+    const card = e.target.closest('[data-dm]');
+    if (!card) return;
+    enterDm(card.getAttribute('data-dm'));
+  });
+}
 $('settingsBtn').addEventListener('click', () => openSettings('menu'));
 $('settingsBtn2').addEventListener('click', () => openSettings('pause'));
 $('settingsBackBtn').addEventListener('click', closeSettings);
@@ -13821,6 +14974,7 @@ $('briefBtn').addEventListener('click', () => {
   updateSaveMeta();
 });
 $('againBtn').addEventListener('click', () => {
+  if (level.dm) { enterDm(level.id); return; }
   if (state.mode === 'win' && level.id !== 'mayor') newGame(); else restartLevel();
 });
 $('endMenuBtn').addEventListener('click', goMenu);
@@ -13879,7 +15033,17 @@ window.LO = {
   get MAYOR_SERVER() { return MAYOR_SERVER; },
   get secretSpot() { return state.secret; },
   killAll() { enemies.slice().forEach(e => damageEnemy(e, 9999, 0)); },
-  hurt(n) { hurtPlayer(n); }
+  hurt(n) { hurtPlayer(n); },
+  /* Deathmatch */
+  enterDm, openDeathmatch, closeDeathmatch, renderDeathmatch, dropSupply, dmPickups,
+  dmRefreshArena, syncDmObjectives, ensureDmLevels, updateDm, updateDmBots, spawnDmBots,
+  get DM() { return DM; },
+  get DM_ARENAS() { return DM_ARENAS; },
+  get DM_LEVELS() { return ensureDmLevels(); },
+  get dmRoster() { return dmRoster; },
+  get dmScore() { return state.dmScore; },
+  get dmState() { return state.dm; },
+  get supplyCharges() { return supplyCharges(); }
 };
 </script>
 </body>
