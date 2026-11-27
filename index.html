@@ -284,6 +284,104 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
   *{transition:none !important; animation:none !important}
 }
 
+/* ---------- Deathmatch: карты мастерской в списке арен ---------- */
+.dm-custom{margin:.9cqw 0 0; max-width:64cqw}
+.dm-custom .set-kicker{margin:0 0 .4cqw}
+.dm-custom-grid{display:flex; gap:.5cqw; overflow-x:auto; padding-bottom:.3cqw}
+.dm-custom-grid .mission-card{flex:0 0 auto; padding:.45cqw .7cqw;
+  border-color:rgba(120,235,255,.32); background:rgba(120,235,255,.05)}
+.dm-custom-grid .mission-card:hover{background:rgba(120,235,255,.11); border-color:rgba(120,235,255,.55)}
+.dm-custom-grid .mission-card .m-num{font-size:max(8px,.8cqw); letter-spacing:.16em; color:#7fd8ea}
+.dm-custom-grid .mission-card .m-name{font-size:max(10px,.98cqw)}
+.dm-custom-grid .mission-card .m-state{font-size:max(8px,.78cqw)}
+.dm-custom .set-hint{margin:.45cqw 0 0}
+
+/* ---------- Мастерская ---------- */
+#workshop{place-items:center; grid-template-columns:1fr; text-align:left; z-index:6}
+.shop-card{max-width:78cqw; border:1px solid var(--line); padding:2cqw 2.2cqw; background:var(--panel)}
+.shop-card h2{font-size:3.6cqw; margin:0 0 .6cqw}
+.shop-card .lead{font-size:max(11px,1.1cqw); line-height:1.5; margin-bottom:1cqw; max-width:64cqw}
+.shop-tabs{display:flex; gap:.45cqw; flex-wrap:wrap; margin-bottom:.8cqw}
+.shop-tab{font-family:var(--mono); font-size:max(9px,.9cqw); letter-spacing:.16em; color:var(--dim);
+  background:transparent; border:1px solid var(--line); padding:.45cqw .9cqw; cursor:pointer;
+  transition:background .15s ease, color .15s ease, border-color .15s ease}
+.shop-tab:hover{color:var(--ink); border-color:rgba(236,229,215,.4)}
+.shop-tab.on{color:#0b0c0e; background:var(--amber); border-color:transparent}
+.shop-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.55cqw;
+  max-width:none; margin:0; max-height:30cqw; overflow-y:auto; padding-right:.3cqw}
+.shop-grid .mission-card{cursor:pointer; padding:.6cqw .8cqw;
+  border-color:rgba(120,235,255,.3); background:rgba(120,235,255,.05)}
+.shop-grid .mission-card:hover{background:rgba(120,235,255,.1); border-color:rgba(120,235,255,.55)}
+.shop-grid .mission-card .m-name{font-size:max(10px,1cqw)}
+.shop-acts{display:flex; gap:.3cqw; flex-wrap:wrap; margin-top:.35cqw}
+.shop-act{font-family:var(--mono); font-size:max(8px,.76cqw); letter-spacing:.1em; color:var(--dim);
+  background:rgba(9,10,12,.6); border:1px solid var(--line); padding:.22cqw .5cqw; cursor:pointer;
+  transition:background .15s ease, color .15s ease, border-color .15s ease}
+.shop-act:hover{color:var(--ink); border-color:rgba(217,162,74,.5); background:rgba(217,162,74,.1)}
+.shop-empty{font-family:var(--mono); font-size:max(9px,.92cqw); line-height:1.7; color:var(--dim);
+  grid-column:1/-1; margin:0; padding:.8cqw 0; max-width:60cqw}
+.shop-panel{margin:.9cqw 0 0; max-width:64cqw}
+.shop-panel-kicker{font-family:var(--mono); font-size:max(9px,.9cqw); letter-spacing:.24em; color:var(--rust); margin:0 0 .5cqw}
+.shop-panel textarea{width:100%; height:5.4cqw; min-height:42px; resize:vertical; background:rgba(9,10,12,.75);
+  color:#cfe3e6; border:1px solid var(--line); font-family:var(--mono); font-size:max(9px,.86cqw);
+  padding:.5cqw; margin-bottom:.6cqw}
+.shop-panel textarea::placeholder{color:rgba(155,147,132,.7)}
+
+/* ---------- Редактор карт ---------- */
+#editor{position:absolute; inset:0; display:block; padding:0; background:none; pointer-events:none; z-index:7}
+#editor.hidden{display:none !important}
+.ed-bar{position:absolute; pointer-events:auto; left:0; right:0; font-family:var(--mono); color:var(--ink);
+  background:linear-gradient(180deg, rgba(6,7,9,.95), rgba(6,7,9,.72))}
+.ed-top{top:0; display:flex; align-items:center; gap:.9cqw; flex-wrap:wrap; padding:.7cqw 1.2cqw;
+  border-bottom:1px solid var(--line)}
+.ed-title{font-size:max(8px,.86cqw); letter-spacing:.22em; color:var(--rust)}
+.ed-fields{display:flex; gap:.9cqw; align-items:center; flex-wrap:wrap}
+.ed-fields label{display:flex; align-items:center; gap:.35cqw; font-size:max(8px,.78cqw); letter-spacing:.14em; color:var(--dim)}
+.ed-fields input,.ed-fields select{font-family:var(--mono); font-size:max(9px,.88cqw); color:var(--ink);
+  background:rgba(9,10,12,.85); border:1px solid var(--line); padding:.28cqw .5cqw}
+.ed-fields input{width:13cqw}
+.ed-fields select{cursor:pointer}
+.ed-dirty{font-size:max(8px,.78cqw); letter-spacing:.16em; color:#8fbf7a}
+.ed-dirty.on{color:var(--amber)}
+.ed-actions{display:flex; gap:.45cqw; margin-left:auto; flex-wrap:wrap}
+.ed-actions .btn{padding:.45cqw 1cqw; font-size:max(9px,.88cqw); letter-spacing:.12em}
+.ed-bottom{bottom:0; padding:.6cqw 1.2cqw .9cqw; border-top:1px solid var(--line)}
+#edHint{margin:0 0 .55cqw; font-size:max(8px,.84cqw); letter-spacing:.05em; line-height:1.6; color:var(--dim)}
+#edHint b{color:var(--ink); font-weight:400}
+.ed-notes{color:var(--amber)}
+.ed-palette{display:flex; gap:.5cqw .9cqw; flex-wrap:wrap; align-items:center}
+.ed-group{display:flex; gap:.3cqw; align-items:center; flex-wrap:wrap}
+.ed-group + .ed-group{padding-left:.7cqw; border-left:1px solid rgba(236,229,215,.12)}
+.ed-group-label{font-family:var(--mono); font-size:max(7px,.72cqw); letter-spacing:.18em; color:rgba(184,73,47,.9)}
+.ed-tool{font-family:var(--mono); font-size:max(8px,.82cqw); letter-spacing:.1em; color:var(--dim);
+  background:rgba(9,10,12,.75); border:1px solid var(--line); padding:.4cqw .7cqw; cursor:pointer;
+  transition:background .15s ease, color .15s ease, border-color .15s ease}
+.ed-tool:hover{color:var(--ink); border-color:rgba(217,162,74,.45)}
+.ed-tool.on{color:#0b0c0e; background:var(--amber); border-color:transparent}
+.ed-mode{gap:.25cqw}
+.ed-mode-btn{font-family:var(--mono); font-size:max(8px,.78cqw); letter-spacing:.1em; color:var(--dim);
+  background:rgba(9,10,12,.75); border:1px solid var(--line); padding:.4cqw .6cqw; cursor:pointer}
+.ed-mode-btn:hover{color:var(--ink); border-color:rgba(120,235,255,.4)}
+.ed-mode-btn.on{color:#0b0c0e; background:#7fd8ea; border-color:transparent}
+.ed-rot{font-family:var(--mono); font-size:max(8px,.78cqw); letter-spacing:.1em; color:var(--amber); padding:0 .25cqw}
+
+/* невысокие окна: мастерская и редактор поджимаются, кнопки остаются видны */
+@container (max-height: 620px){
+  .dm-custom-grid .mission-card .m-name{font-size:max(9px,.9cqw)}
+  .shop-card{max-width:88cqw; padding:1.4cqw 1.6cqw}
+  .shop-card .lead{display:none}
+  .shop-card h2{font-size:2.8cqw; margin-bottom:.4cqw}
+  .shop-grid{max-height:34cqw; gap:.45cqw}
+  .shop-panel textarea{height:4.4cqw}
+  .ed-title{display:none}
+  .ed-fields label{font-size:max(8px,.72cqw)}
+  .ed-fields input{width:10cqw}
+  .ed-actions .btn{padding:.35cqw .7cqw; letter-spacing:.08em}
+  #edHint{font-size:max(8px,.78cqw); margin-bottom:.4cqw}
+  .ed-tool{padding:.3cqw .55cqw}
+  .ed-palette{max-height:34cqw; overflow-y:auto}
+}
+
 </style>
 </head>
 <body>
@@ -359,6 +457,7 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
         <button id="startBtn" class="btn">Новая игра</button>
         <button id="selectBtn" class="btn secondary">Выбор миссии</button>
         <button id="dmBtn" class="btn secondary">Deathmatch</button>
+        <button id="shopBtn" class="btn secondary">Мастерская</button>
         <button id="loadBtn" class="btn secondary">Загрузить</button>
         <button id="settingsBtn" class="btn secondary">Настройки</button>
         <button id="quitBtn" class="btn ghost">Выход</button>
@@ -399,10 +498,89 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
         а в бинокле ровно 12 зарядов снабжения.
       </p>
       <div id="dmGrid" class="mission-grid dm-grid"></div>
+      <div id="dmCustomWrap" class="dm-custom">
+        <p class="set-kicker">КАРТЫ МАСТЕРСКОЙ</p>
+        <div id="dmCustomGrid" class="dm-custom-grid"></div>
+        <p id="dmCustomHint" class="set-hint"></p>
+      </div>
       <p id="dmHint" class="select-hint">На арене бинокль всегда с собой: 0 — оптика, ЛКМ — сброс боеприпасов, ПКМ — сброс аптечки. В миссиях то же самое, как только найдёшь бинокль. Второй игрок садится за этот же экран: подключи геймпад (левый стик — ходьба, правый — прицел, RT/A — огонь, X — ствол, Y — перезарядка) или играй с клавиатуры — IJKL, ПРОБЕЛ, U, P.</p>
       <div class="menu-actions">
-        <button id="dmBackBtn" class="btn secondary">Назад</button>
+        <button id="dmEditBtn" class="btn" type="button">Редактор карт</button>
+        <button id="dmShopBtn" class="btn secondary" type="button">Мастерская</button>
+        <button id="dmBackBtn" class="btn secondary" type="button">Назад</button>
       </div>
+    </div>
+  </div>
+
+  <div id="workshop" class="screen hidden">
+    <div class="card select-card shop-card">
+      <p class="kicker">МАСТЕРСКАЯ · КАРТЫ ДЛЯ DEATHMATCH</p>
+      <h2>Мастерская</h2>
+      <p class="lead" id="shopLead">
+        Карты, собранные здесь, лежат в браузере и играются как арены Deathmatch:
+        боты, 12 зарядов снабжения, обновление каждую минуту.
+      </p>
+      <div class="shop-tabs" id="shopTabs"></div>
+      <div id="shopGrid" class="mission-grid shop-grid"></div>
+      <div id="shopShare" class="shop-panel hidden">
+        <p class="shop-panel-kicker" id="shopShareTitle">ПОДЕЛИТЬСЯ КАРТОЙ</p>
+        <textarea id="shopCode" readonly spellcheck="false"></textarea>
+        <div class="menu-actions">
+          <button id="shopLinkBtn" class="btn secondary" type="button">Скопировать ссылку</button>
+          <button id="shopFileBtn" class="btn secondary" type="button">Скачать .json</button>
+          <button id="shopGhBtn" class="btn secondary" type="button">Отправить в GitHub</button>
+          <button id="shopShareCloseBtn" class="btn ghost" type="button">Закрыть</button>
+        </div>
+        <p id="shopShareHint" class="set-hint"></p>
+      </div>
+      <div id="shopImportBox" class="shop-panel hidden">
+        <p class="shop-panel-kicker">ИМПОРТ КАРТЫ</p>
+        <textarea id="shopImportCode" spellcheck="false" placeholder="Вставь код карты или ссылку вида …/#map=…"></textarea>
+        <div class="menu-actions">
+          <button id="shopImportDoBtn" class="btn" type="button">Добавить</button>
+          <button id="shopImportFileBtn" class="btn secondary" type="button">Открыть файл .json</button>
+          <button id="shopImportCloseBtn" class="btn ghost" type="button">Закрыть</button>
+        </div>
+        <input id="shopImportFile" type="file" accept=".json,application/json" class="hidden" />
+        <p id="shopImportHint" class="set-hint"></p>
+      </div>
+      <p id="shopHint" class="select-hint"></p>
+      <div class="menu-actions">
+        <button id="shopNewBtn" class="btn" type="button">Создать карту</button>
+        <button id="shopImportBtn" class="btn secondary" type="button">Импорт кода</button>
+        <button id="shopRefreshBtn" class="btn secondary" type="button">Обновить</button>
+        <button id="shopHowBtn" class="btn ghost hidden" type="button">Как публиковать</button>
+        <button id="shopBackBtn" class="btn secondary" type="button">Назад</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="editor" class="hidden">
+    <div class="ed-bar ed-top">
+      <span class="ed-title">РЕДАКТОР КАРТ · DEATHMATCH</span>
+      <div class="ed-fields">
+        <label>НАЗВАНИЕ<input id="edTitle" type="text" maxlength="40" value="Новая арена" /></label>
+        <label>АВТОР<input id="edAuthor" type="text" maxlength="24" /></label>
+        <label>ПОЛ<select id="edTheme">
+          <option value="asphalt">АСФАЛЬТ</option>
+          <option value="concrete">БЕТОН</option>
+          <option value="dirt">ЗЕМЛЯ</option>
+          <option value="grass">ТРАВА</option>
+          <option value="sand">ПЕСОК</option>
+        </select></label>
+      </div>
+      <span id="edDirty" class="ed-dirty">СОХРАНЕНО</span>
+      <div class="ed-actions">
+        <button id="edTestBtn" class="btn" type="button">Тест · играть</button>
+        <button id="edSaveBtn" class="btn secondary" type="button">Сохранить</button>
+        <button id="edUndoBtn" class="btn secondary" type="button">Отмена</button>
+        <button id="edClearBtn" class="btn ghost" type="button">Очистить</button>
+        <button id="edBackBtn" class="btn ghost" type="button">В мастерскую</button>
+      </div>
+    </div>
+    <div class="ed-bar ed-bottom">
+      <p id="edHint"></p>
+      <div class="ed-palette" id="edPalette"></div>
     </div>
   </div>
 
@@ -534,7 +712,15 @@ const els = {
   againBtn: $('againBtn'),
   settings: $('settings'), diffGrid: $('diffGrid'), diffHint: $('diffHint'),
   soundToggle: $('soundToggle'), shakeToggle: $('shakeToggle'), diffTag: $('diffTag'),
-  deathmatch: $('deathmatch'), dmGrid: $('dmGrid'), dmLead: $('dmLead'), dmHint: $('dmHint')
+  deathmatch: $('deathmatch'), dmGrid: $('dmGrid'), dmLead: $('dmLead'), dmHint: $('dmHint'),
+  dmCustomGrid: $('dmCustomGrid'), dmCustomHint: $('dmCustomHint'),
+  workshop: $('workshop'), shopGrid: $('shopGrid'), shopLead: $('shopLead'), shopHint: $('shopHint'),
+  shopTabs: $('shopTabs'), shopShare: $('shopShare'), shopShareTitle: $('shopShareTitle'),
+  shopCode: $('shopCode'), shopShareHint: $('shopShareHint'), shopHowBtn: $('shopHowBtn'),
+  shopImportBox: $('shopImportBox'), shopImportCode: $('shopImportCode'), shopImportHint: $('shopImportHint'),
+  shopImportFile: $('shopImportFile'),
+  editor: $('editor'), edTitle: $('edTitle'), edAuthor: $('edAuthor'), edTheme: $('edTheme'),
+  edPalette: $('edPalette'), edHint: $('edHint'), edDirty: $('edDirty')
 };
 
 let dpr = 1;
@@ -554,6 +740,8 @@ const mouse = { x: W * 0.5, y: H * 0.5, down: false, right: false };
 window.addEventListener('keydown', e => {
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
   keys.add(e.code);
+  /* в редакторе клавиши принадлежат редактору: инструменты, отмена, проба */
+  if (state.mode === 'editor') { editorKey(e); return; }
   if (e.code === 'KeyR') tryReload();
   if (e.code === 'Escape') {
     if (els.settings && !els.settings.classList.contains('hidden')) { closeSettings(); return; }
@@ -582,8 +770,17 @@ window.addEventListener('blur', () => { keys.clear(); mouse.down = false; mouse.
 
 function toWorld(e) {
   const r = cv.getBoundingClientRect();
-  mouse.x = Math.max(0, Math.min(W, (e.clientX - r.left) / r.width * W));
-  mouse.y = Math.max(0, Math.min(H, (e.clientY - r.top) / r.height * H));
+  const vx = Math.max(0, Math.min(W, (e.clientX - r.left) / r.width * W));
+  const vy = Math.max(0, Math.min(H, (e.clientY - r.top) / r.height * H));
+  if (state.mode === 'editor' && ed) {
+    /* в редакторе карта может быть приближена: переводим экранные координаты в мировые */
+    const w = editorViewToWorld(vx, vy);
+    mouse.x = clamp(w.x, -240, W + 240);
+    mouse.y = clamp(w.y, -240, H + 240);
+  } else {
+    mouse.x = vx;
+    mouse.y = vy;
+  }
   els.crosshair.style.left = (mouse.x / W * 100) + '%';
   els.crosshair.style.top = (mouse.y / H * 100) + '%';
 }
@@ -591,6 +788,7 @@ cv.addEventListener('mousemove', toWorld);
 cv.addEventListener('mousedown', e => {
   e.preventDefault();
   toWorld(e);
+  if (state.mode === 'editor') { editorDown(e); return; }
   if (state.mode !== 'play') return;
   if (e.button === 0) {
     if (player && player.binocs && player.binocs.on) {
@@ -606,10 +804,22 @@ cv.addEventListener('mousedown', e => {
   }
 });
 window.addEventListener('mouseup', e => {
+  if (state.mode === 'editor') { editorUp(); return; }
   if (e.button === 0) mouse.down = false;
   if (e.button === 2) mouse.right = false;
 });
 cv.addEventListener('contextmenu', e => e.preventDefault());
+/* колесо мыши: приближение и отдаление карты в редакторе — к курсору */
+cv.addEventListener('wheel', e => {
+  if (state.mode !== 'editor' || !ed) return;
+  e.preventDefault();
+  const r = cv.getBoundingClientRect();
+  const vx = (e.clientX - r.left) / r.width * W;
+  const vy = (e.clientY - r.top) / r.height * H;
+  const step = e.deltaMode === 1 ? e.deltaY * 0.12 : e.deltaY * 0.0016;
+  editorZoomBy(Math.exp(-step), vx, vy);
+  editorHint();
+}, { passive: false });
 
 /* ---------------- настройки ---------------- */
 const SETTINGS_KEY = 'lastorder.settings.v1';
@@ -4794,10 +5004,11 @@ function drawFortGlow() {
 
 /* ---------------- МИССИЯ 08: динамика ---------------- */
 
-function drawTank() {
-  if (!tank) return;
-  const t = tank;
+function drawTank(which) {
+  const t = which || tank;
+  if (!t) return;
   const dead = t.dead;
+  const driven = (t === tank) && state.riding;
 
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,.5)';
@@ -4886,7 +5097,7 @@ function drawTank() {
   ctx.fillRect(12, 6, 16, 3);
 
   /* люк */
-  if (state.riding && !dead) {
+  if (driven && !dead) {
     ctx.fillStyle = 'rgba(12,12,10,.9)';
     ctx.beginPath(); ctx.arc(-4, -2, 8, 0, 6.28); ctx.fill();
     /* командир в люке */
@@ -7724,6 +7935,7 @@ function enterLevel(id, carry) {
   player.x = level.start.x;
   player.y = level.start.y;
   pickups = level.pickups();
+  if (level.wk) wkSpawnUnits(); else { wkUnits.length = 0; wkShells.length = 0; }
   if (level.id === 'school') spawnPrisoners();
   if (level.id === 'village') spawnAA();
   if (level.id === 'farm' && !player.binocs.owned) player.binocs.owned = true;
@@ -7766,6 +7978,8 @@ function showPlay() {
   els.end.classList.add('hidden');
   els.quit.classList.add('hidden');
   if (els.settings) els.settings.classList.add('hidden');
+  if (els.workshop) els.workshop.classList.add('hidden');
+  if (els.editor) els.editor.classList.add('hidden');
   els.hud.classList.remove('hidden');
   els.hud.classList.toggle('armed', weaponOwned());
   keys.clear();
@@ -10663,6 +10877,23 @@ function updateBullets(dt) {
         dead = true;
         break;
       }
+      if (b.from === 'player' || b.from === 'player2') {
+        if (level.wk && wkUnits.length) {
+          let hitUnit = false;
+          for (const u of wkUnits) {
+            if (u.dead || b.hitList.indexOf(u) >= 0) continue;
+            const rect = wkObjectRect(u);
+            if (wkCircleRect(b.x, b.y, b.r, rect)) {
+              if (!b.p2) state.hits++;
+              wkDamageUnit(u, b.dmg);
+              b.hitList.push(u);
+              if (b.pierce > 0) b.pierce--; else hitUnit = true;
+              break;
+            }
+          }
+          if (hitUnit) { impact(b); dead = true; break; }
+        }
+      }
       if (pointInSolid(b.x, b.y)) { impact(b); dead = true; break; }
 
       if (b.from === 'player' || b.from === 'player2') {
@@ -13007,6 +13238,7 @@ function render() {
   if (level.id === 'fort') { drawFortGate(); drawFortMortar(); }
   drawPickups();
   if (level.dm) drawDmSupply();
+  if (level.wk) { wkDrawPads(); wkDrawUnits(); wkDrawShells(); }
   if (level.id === 'res') resDrawScene();
   if (level.id === 'mayor') mayorGuards.forEach(drawMayorGuard);
   if (level.id === 'village') aas.forEach(drawVillageAA);
@@ -13035,6 +13267,7 @@ function render() {
     drawFireGlow();
     if (level.id === 'village') { drawVillageGlow(); drawOpticsOverlay(); }
     if (level.dm) { drawDmGlow(); drawDmOptics(); }
+    if (level.wk) wkDrawGlow();
     if (level.id === 'farm') { drawFarmGlow(); drawFarmOptics(); }
     if (level.id === 'factory') drawFactoryGlow();
     if (level.id === 'roof') drawRoofGlow();
@@ -13322,7 +13555,7 @@ function spawnDmBots() {
   syncDmObjectives();
 }
 
-function damageDmBot(o, dmg, ang, sourceBot, viaP2) {
+function damageDmBot(o, dmg, ang, sourceBot, viaP2, hazard) {
   if (sourceBot && sourceBot.roster) dmg *= DM.botFriendly;
   o.hp -= dmg;
   o.hitT = 0.12;
@@ -13344,6 +13577,10 @@ function damageDmBot(o, dmg, ang, sourceBot, viaP2) {
     state.dmScore.p2 = (state.dmScore.p2 || 0) + 1;
     floatText(o.x, o.y - 20, 'ФРАГ 2', '#8fc7ff');
     toast('Второй игрок снял ' + who + '.', 1100);
+  } else if (hazard) {
+    /* мина или снаряд техники: фраг никому не пишется */
+    floatText(o.x, o.y - 20, 'НАКРЫЛО', '#e0a06a');
+    toast(who + ' снят техникой.', 1100);
   } else {
     state.dmScore.you++;
     floatText(o.x, o.y - 20, 'ФРАГ', '#8cf0a6');
@@ -13507,8 +13744,11 @@ function dmRefreshArena() {
   pickups = dmPickups(level.id);
   for (const b of dmRoster) if (!b.alive) { b.respawnT = 0; dmSpawnBot(b); }
   if (player && player.binocs) player.binocs.charges = DM.supply;
+  const revived = level.wk ? wkUnits.filter(u => u.dead).length : 0;
+  if (level.wk) wkSpawnUnits();
   state.shake = Math.max(state.shake, 5);
-  toast('Карта обновлена: патроны, аптечки и бойцы — заново. В бинокле снова ' + DM.supply + ' зарядов.', 2800);
+  toast('Карта обновлена: патроны, аптечки и бойцы — заново. В бинокле снова ' + DM.supply + ' зарядов.' +
+    (revived ? ' Разбитая техника вернулась в строй: ' + revived + '. Доставай снова.' : ''), 2800);
   sfx.wave();
   syncDmObjectives();
 }
@@ -13529,6 +13769,8 @@ function updateDm(dt) {
   }
   state.dmRefreshT -= dt;
   if (state.dmRefreshT <= 0) dmRefreshArena();
+  /* техника карты мастерской: миномёты, танк, переходы */
+  if (level.wk) wkUpdateUnits(dt);
 
   state.dm.uiT -= dt;
   if (state.dm.uiT <= 0) { state.dm.uiT = 0.25; syncDmObjectives(); }
@@ -14028,6 +14270,7 @@ function enterDm(id) {
   ensureDmLevels();
   if (!LEVELS[id]) return;
   closeDeathmatch();
+  closeWorkshop();
   enterLevel(id, {
     hp: 100, bottles: 2, weapon: 'smg',
     weapons: {
@@ -14087,15 +14330,15 @@ function renderDeathmatch() {
     '</button>').join('');
   if (els.dmLead) {
     els.dmLead.textContent = 'Боты и игроки: против вас ' + DM.bots + ' бойцов, матч — до ' +
-      DM.killTarget + ' фрагов. Каждую минуту карта обновляется, а в бинокле ' + DM.supply +
-      ' зарядов снабжения. Вдвоём за одним экраном: подключи геймпад — второму игроку отведут фигуру, ' +
-      'табло и своё место в счёте.';
+      DM.killTarget + ' фрагов, карта обновляется каждую минуту, в бинокле ' + DM.supply +
+      ' зарядов снабжения. Второй игрок садится за этот же экран — с геймпадом или с клавиатуры (IJKL).';
   }
 }
 
 function openDeathmatch() {
   if (state.mode !== 'menu' || !els.deathmatch) return;
   renderDeathmatch();
+  renderDmCustom();
   els.menu.classList.add('hidden');
   if (els.select) els.select.classList.add('hidden');
   els.deathmatch.classList.remove('hidden');
@@ -14894,6 +15137,10 @@ function goMenu() {
   els.quit.classList.add('hidden');
   if (els.select) els.select.classList.add('hidden');
   if (els.settings) els.settings.classList.add('hidden');
+  if (els.deathmatch) els.deathmatch.classList.add('hidden');
+  if (els.workshop) els.workshop.classList.add('hidden');
+  if (els.editor) els.editor.classList.add('hidden');
+  ed = null;
   els.menu.classList.remove('hidden');
   els.toast.classList.remove('show');
   renderSettings();
@@ -15214,9 +15461,11 @@ function frame(now) {
   } else if (state.mode === 'quit') {
     state.time += dt * 0.4;
     updateParts(dt * 0.4);
+  } else if (state.mode === 'editor') {
+    editorUpdate(dt);
   }
 
-  render();
+  if (state.mode === 'editor') editorRender(); else render();
   requestAnimationFrame(frame);
 }
 
@@ -15227,6 +15476,2280 @@ function updateRainOnly(dt) {
     d.x += d.drift * dt * 0.35;
     if (d.y > H + 20) { d.y = -20; d.x = Math.random() * W * 1.2; }
     if (d.x > W + 20) d.x = -20;
+  }
+}
+
+/* ===========================================================
+   МАСТЕРСКАЯ И РЕДАКТОР КАРТ ДЛЯ DEATHMATCH
+   -----------------------------------------------------------
+   У GitHub-версии нет сервера, поэтому мастерская устроена
+   честно и без бэкенда:
+     · свои карты игрок собирает в редакторе (канвас) и хранит
+       в localStorage;
+     · карту можно передать ссылкой/кодом или файлом .json;
+     · общая мастерская — папка workshop/ в репозитории:
+       workshop/maps/*.json + собранный workshop/index.json,
+       который игра подтягивает по https (Pages или raw).
+   Карта из мастерской играется как обычная арена Deathmatch:
+   enterDm регистрирует её в LEVELS рядом с официальными.
+   =========================================================== */
+
+const SHOP_KEY = 'lastorder.workshop.v1';
+const SHOP_FEED = {
+  pages: 'https://egorbondarev.github.io/last-order/workshop/',
+  raw: 'https://raw.githubusercontent.com/egorbondarev/last-order/master/workshop/',
+  repo: 'egorbondarev/last-order',
+  branch: 'master'
+};
+const SHOP_TABS = [
+  { id: 'mine',     label: 'МОИ КАРТЫ' },
+  { id: 'feed',     label: 'МАСТЕРСКАЯ · GITHUB' },
+  { id: 'official', label: 'ОФИЦИАЛЬНЫЕ АРЕНЫ' }
+];
+const WK_LIMIT = { spawns: 16, ammo: 14, props: 90, objects: 8, pads: 8 };
+const WK_RING = [
+  { x: 170, y: 150 }, { x: 500, y: 120 }, { x: 830, y: 150 },
+  { x: 160, y: 530 }, { x: 500, y: 560 }, { x: 840, y: 530 },
+  { x: 220, y: 340 }, { x: 780, y: 340 }, { x: 500, y: 320 },
+  { x: 320, y: 500 }, { x: 700, y: 190 }, { x: 120, y: 120 },
+  { x: 880, y: 640 }, { x: 120, y: 640 }, { x: 880, y: 120 }
+];
+
+/* ---------------- темы пола ---------------- */
+const WK_THEMES = {
+  asphalt:  { label: 'АСФАЛЬТ', base: '#26261f', g0: 40, g1: 60, line: 'rgba(190,175,120,.09)', spot: '#39382e' },
+  concrete: { label: 'БЕТОН',   base: '#2c2c2c', g0: 52, g1: 76, line: 'rgba(200,200,200,.06)', spot: '#3a3a3a' },
+  dirt:     { label: 'ЗЕМЛЯ',   base: '#2a2219', g0: 44, g1: 68, line: 'rgba(160,120,70,.09)', spot: '#3b3021' },
+  grass:    { label: 'ТРАВА',   base: '#1f291d', g0: 36, g1: 60, line: 'rgba(120,170,90,.09)', spot: '#2b3a26' },
+  sand:     { label: 'ПЕСОК',   base: '#332c1f', g0: 58, g1: 84, line: 'rgba(210,180,120,.09)', spot: '#453a26' }
+};
+const WK_THEME_ORDER = ['asphalt', 'concrete', 'dirt', 'grass', 'sand'];
+
+/* ---------------- инструменты редактора ----------------
+   Кисти делятся на три семьи:
+     · точки и переходы — старт, точка боя, склад, площадка-переход;
+     · техника — танк, миномёт, лестница (они всегда физические);
+     · укрытия и текстуры — их можно класть «физически» (мешают
+       пройти, как доски у моста) или «текстурой» (только вид).
+   ---------------------------------------------------------- */
+const WK_TOOLS = [
+  { id: 'start',       label: 'СТАРТ',      kind: 'start' },
+  { id: 'spawn',       label: 'ТОЧКА БОЯ',  kind: 'spawn' },
+  { id: 'ammo',        label: 'СКЛАД',      kind: 'ammo' },
+  { id: 'pad',         label: 'ПЕРЕХОД',    kind: 'pad' },
+  { id: 'tank',        label: 'ТАНК',       kind: 'object', obj: 'tank',   w: 92,  h: 68 },
+  { id: 'mortar',      label: 'МИНОМЁТ',    kind: 'object', obj: 'mortar', w: 46,  h: 46 },
+  { id: 'stair',       label: 'ЛЕСТНИЦА',   kind: 'stair',  w: 132, h: 94 },
+  { id: 'crate',       label: 'ЯЩИК',       kind: 'prop',   w: 42,  h: 42 },
+  { id: 'sandbag',     label: 'МЕШКИ',      kind: 'prop',   w: 96,  h: 28 },
+  { id: 'block',       label: 'БЕТОН',      kind: 'prop',   w: 46,  h: 46 },
+  { id: 'barrier',     label: 'БАРЬЕР',     kind: 'prop',   w: 24,  h: 86 },
+  { id: 'car',         label: 'МАШИНА',     kind: 'prop',   w: 104, h: 48 },
+  { id: 'wall',        label: 'ПЛИТА',      kind: 'prop',   w: 130, h: 26 },
+  { id: 'water',       label: 'ВОДА',       kind: 'prop',   w: 150, h: 96 },
+  { id: 'tex_boards',  label: 'ДОСКИ',      kind: 'tex',    w: 130, h: 62 },
+  { id: 'tex_rubble',  label: 'ОБЛОМКИ',    kind: 'tex',    w: 124, h: 84 },
+  { id: 'tex_grass',   label: 'ТРАВА',      kind: 'tex',    w: 150, h: 100 },
+  { id: 'tex_puddle',  label: 'ЛУЖА',       kind: 'tex',    w: 120, h: 78 },
+  { id: 'tex_tiles',   label: 'ПЛИТКА',     kind: 'tex',    w: 150, h: 100 },
+  { id: 'tex_stain',   label: 'ПЯТНО',      kind: 'tex',    w: 96,  h: 68 },
+  { id: 'erase',       label: 'СТЕРЕТЬ',    kind: 'erase' }
+];
+const WK_TOOL_GROUPS = [
+  { label: 'ТОЧКИ', ids: ['start', 'spawn', 'ammo', 'pad'] },
+  { label: 'ТЕХНИКА И ЛЕСТНИЦА', ids: ['tank', 'mortar', 'stair'] },
+  { label: 'УКРЫТИЯ', ids: ['crate', 'sandbag', 'block', 'barrier', 'car', 'wall', 'water'] },
+  { label: 'ТЕКСТУРЫ', ids: ['tex_boards', 'tex_rubble', 'tex_grass', 'tex_puddle', 'tex_tiles', 'tex_stain'] },
+  { label: '', ids: ['erase'] }
+];
+
+function wkTool(id) {
+  for (let i = 0; i < WK_TOOLS.length; i++) if (WK_TOOLS[i].id === id) return WK_TOOLS[i];
+  return WK_TOOLS[0];
+}
+/* то, что кладётся в props карты: укрытие, текстура или лестница */
+function wkShapeTool(type) {
+  const t = wkTool(type);
+  return (t.kind === 'prop' || t.kind === 'tex' || t.kind === 'stair') ? t : null;
+}
+function wkPropTool(type) { return wkShapeTool(type); }
+function wkRectTool(id) {
+  const t = wkTool(id);
+  return t.kind === 'prop' || t.kind === 'tex' || t.kind === 'stair';
+}
+function wkTheme(id) { return WK_THEMES[id] || WK_THEMES.asphalt; }
+function wkEsc(s) {
+  return String(s === undefined || s === null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/* ---------------- код карты, слаги, даты ---------------- */
+function wkTranslit(s) {
+  const map = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e', 'ж': 'zh', 'з': 'z',
+    'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r',
+    'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+    'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+  };
+  let out = '';
+  const src = String(s || '').toLowerCase();
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (map[ch] !== undefined) out += map[ch];
+    else if (/[a-z0-9]/.test(ch)) out += ch;
+    else out += '-';
+  }
+  out = out.replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+  return out.slice(0, 28) || 'arena';
+}
+function wkNewId(slug) { return (slug || 'arena') + '-' + Math.random().toString(36).slice(2, 6); }
+function wkToday() {
+  const d = new Date();
+  const p = n => (n < 10 ? '0' + n : '' + n);
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function wkB64Enc(text) {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function wkB64Dec(code) {
+  let s = String(code || '').trim().replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function wkMapCode(map) {
+  const m = wkNormalize(map);
+  return wkB64Enc(JSON.stringify({
+    v: 1, kind: 'dm-map', id: m.id, slug: m.slug, title: m.title, author: m.author,
+    theme: m.theme, created: m.created, start: m.start, spawns: m.spawns,
+    ammoSpots: m.ammoSpots, props: m.props, objects: m.objects, pads: m.pads
+  }));
+}
+function wkShareLink(map) {
+  return 'https://egorbondarev.github.io/last-order/#map=' + wkMapCode(map);
+}
+
+/* ---------------- формат карты ---------------- */
+function wkNewMap(author) {
+  const map = {
+    v: 1, kind: 'dm-map', id: '', slug: '', title: 'Новая арена', author: author || '',
+    theme: 'asphalt', created: wkToday(), plays: 0, source: 'editor',
+    start: { x: W * 0.5, y: H * 0.5 }, spawns: [], ammoSpots: [], props: [],
+    objects: [], pads: []
+  };
+  return wkFixIdentity(map);
+}
+function wkFixIdentity(m) {
+  if (!m.slug) m.slug = wkTranslit(m.title);
+  if (!m.id) m.id = wkNewId(m.slug);
+  if (!m.created) m.created = wkToday();
+  if (!WK_THEMES[m.theme]) m.theme = 'asphalt';
+  if (!Array.isArray(m.objects)) m.objects = [];
+  if (!Array.isArray(m.pads)) m.pads = [];
+  return m;
+}
+function wkValidMap(m) {
+  return !!(m && typeof m === 'object' && m.title && (m.props || m.spawns || m.start || m.objects));
+}
+/* габарит техники на карте: миномёт — окоп, танк — корпус */
+function wkObjectSize(kind) { return kind === 'tank' ? { w: 92, h: 68 } : { w: 46, h: 46 }; }
+function wkObjectRect(o) {
+  const s = wkObjectSize(o.kind);
+  return { x: Math.round(o.x - s.w / 2), y: Math.round(o.y - s.h / 2), w: s.w, h: s.h };
+}
+function wkNormalize(m) {
+  const src = m || {};
+  const start = src.start || {};
+  const props = Array.isArray(src.props) ? src.props : [];
+  const spawns = Array.isArray(src.spawns) ? src.spawns : [];
+  const ammo = Array.isArray(src.ammoSpots) ? src.ammoSpots : [];
+  const objs = Array.isArray(src.objects) ? src.objects : [];
+  const pads = Array.isArray(src.pads) ? src.pads : [];
+  const out = {
+    v: 1, kind: 'dm-map',
+    id: String(src.id || ''), slug: String(src.slug || ''),
+    title: String(src.title || 'Арена').slice(0, 40),
+    author: String(src.author || '').slice(0, 24),
+    theme: String(src.theme || 'asphalt'),
+    created: String(src.created || wkToday()),
+    plays: Math.max(0, src.plays | 0),
+    source: String(src.source || 'import'),
+    start: { x: Math.round(+start.x || W * 0.5), y: Math.round(+start.y || H * 0.5) },
+    spawns: spawns.slice(0, WK_LIMIT.spawns).map(p => ({ x: Math.round(+p.x || 0), y: Math.round(+p.y || 0) })),
+    ammoSpots: ammo.slice(0, WK_LIMIT.ammo).map(p => ({ x: Math.round(+p.x || 0), y: Math.round(+p.y || 0) })),
+    props: props.slice(0, WK_LIMIT.props).map(p => {
+      const tool = wkShapeTool(p && p.type);
+      const kind = tool ? tool.kind : 'prop';
+      const solid = (p && p.solid !== undefined) ? !!p.solid : (kind !== 'tex');
+      return {
+        type: tool ? tool.id : 'crate',
+        x: Math.round(+(p && p.x) || 0), y: Math.round(+(p && p.y) || 0),
+        w: Math.max(18, Math.min(W - WALL * 2, Math.round(+(p && p.w) || 42))),
+        h: Math.max(18, Math.min(H - WALL * 2, Math.round(+(p && p.h) || 42))),
+        rot: (((+(p && p.rot) || 0) % 4) + 4) % 4,
+        solid: solid
+      };
+    }),
+    objects: objs.slice(0, WK_LIMIT.objects).map(o => {
+      const kind = (o && o.kind === 'tank') ? 'tank' : 'mortar';
+      const s = wkObjectSize(kind);
+      return {
+        kind: kind,
+        x: Math.round(clamp(+(o && o.x) || W * 0.5, WALL + s.w / 2, W - WALL - s.w / 2)),
+        y: Math.round(clamp(+(o && o.y) || H * 0.5, WALL + s.h / 2, H - WALL - s.h / 2)),
+        rot: (((+(o && o.rot) || 0) % 4) + 4) % 4
+      };
+    }),
+    pads: pads.slice(0, WK_LIMIT.pads).map(p => ({
+      x: Math.round(clamp(+(p && p.x) || W * 0.5, WALL + 14, W - WALL - 14)),
+      y: Math.round(clamp(+(p && p.y) || H * 0.5, WALL + 14, H - WALL - 14))
+    }))
+  };
+  if (!out.title) out.title = 'Арена';
+  return wkFixIdentity(out);
+}
+
+/* ---------------- геометрия редактора ---------------- */
+function wkCircleRect(x, y, r, s) {
+  const nx = Math.max(s.x, Math.min(x, s.x + s.w));
+  const ny = Math.max(s.y, Math.min(y, s.y + s.h));
+  const dx = x - nx, dy = y - ny;
+  return dx * dx + dy * dy < r * r;
+}
+function wkHits(map, x, y, r) {
+  for (let i = 0; i < walls.length; i++) if (wkCircleRect(x, y, r, walls[i])) return true;
+  const rects = wkSolidRects(map);
+  for (let i = 0; i < rects.length; i++) if (wkCircleRect(x, y, r, rects[i])) return true;
+  return false;
+}
+/* физический слой карты: укрытия (solid), вода и техника; текстуры не мешают */
+function wkSolidRects(map) {
+  const out = [];
+  for (let i = 0; i < map.props.length; i++) if (map.props[i].solid !== false) out.push(map.props[i]);
+  for (let i = 0; i < map.objects.length; i++) out.push(wkObjectRect(map.objects[i]));
+  return out;
+}
+function wkFreeSpot(map, x, y, r) {
+  if (!wkHits(map, x, y, r)) return { x: x, y: y };
+  for (let ring = 1; ring <= 18; ring++) {
+    const step = ring * 14;
+    for (let a = 0; a < 16; a++) {
+      const ang = (a / 16) * Math.PI * 2;
+      const nx = x + Math.cos(ang) * step;
+      const ny = y + Math.sin(ang) * step;
+      if (nx < WALL + r || nx > W - WALL - r || ny < WALL + r || ny > H - WALL - r) continue;
+      if (!wkHits(map, nx, ny, r)) return { x: nx, y: ny };
+    }
+  }
+  return { x: W * 0.5, y: H * 0.5 };
+}
+function wkRectOverlap(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+function wkPointIn(p, r) { return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h; }
+
+/* проверка и автопочинка карты: играть должно быть можно всегда */
+function wkValidate(map) {
+  const notes = [];
+  const m = wkNormalize(map);
+  m.props.forEach(p => {
+    p.w = Math.max(18, Math.min(p.w, W - WALL * 2));
+    p.h = Math.max(18, Math.min(p.h, H - WALL * 2));
+    p.x = clamp(p.x, WALL, W - WALL - p.w);
+    p.y = clamp(p.y, WALL, H - WALL - p.h);
+  });
+  if (!m.props.length) {
+    [{ x: 430, y: 250 }, { x: 530, y: 250 }, { x: 430, y: 390 }, { x: 530, y: 390 }].forEach(sp => {
+      m.props.push({ type: 'crate', x: sp.x, y: sp.y, w: 42, h: 42 });
+    });
+    notes.push('укрытий не было — поставил четыре ящика в центре');
+  }
+  const st = wkFreeSpot(m, m.start.x, m.start.y, 17);
+  if (Math.hypot(st.x - m.start.x, st.y - m.start.y) > 2) {
+    m.start = { x: Math.round(st.x), y: Math.round(st.y) };
+    notes.push('старт вышел из укрытия — сдвинул в свободное место');
+  }
+  /* техника: держим в поле и не даём ей стоять на старте */
+  m.objects.forEach(o => {
+    const s = wkObjectSize(o.kind);
+    o.x = Math.round(clamp(o.x, WALL + s.w / 2, W - WALL - s.w / 2));
+    o.y = Math.round(clamp(o.y, WALL + s.h / 2, H - WALL - s.h / 2));
+  });
+  /* площадки перехода: связываются попарно, поэтому их должно быть чётное число */
+  if (m.pads.length % 2) {
+    const last = m.pads[m.pads.length - 1];
+    const f = wkFreeSpot(m, last.x + 30, last.y - 170, 15);
+    m.pads.push({ x: Math.round(f.x), y: Math.round(f.y) });
+    notes.push('у лестничной площадки не было пары — поставил вторую');
+  }
+  m.pads = m.pads.map(p => {
+    const f = wkFreeSpot(m, p.x, p.y, 15);
+    return { x: Math.round(f.x), y: Math.round(f.y) };
+  });
+  const needSpawn = Math.max(0, 4 - m.spawns.length);
+  if (needSpawn) {
+    let added = 0;
+    for (let i = 0; i < WK_RING.length && added < needSpawn; i++) {
+      const f = wkFreeSpot(m, WK_RING[i].x, WK_RING[i].y, 15);
+      if (m.spawns.some(q => Math.hypot(q.x - f.x, q.y - f.y) < 46)) continue;
+      m.spawns.push({ x: Math.round(f.x), y: Math.round(f.y) });
+      added++;
+    }
+    if (added) notes.push('точек боя было мало — добавил ' + added);
+  }
+  const needAmmo = Math.max(0, 6 - m.ammoSpots.length);
+  if (needAmmo) {
+    let added = 0;
+    for (let i = 0; i < WK_RING.length && added < needAmmo; i++) {
+      const f = wkFreeSpot(m, WK_RING[i].x + 30, WK_RING[i].y + 30, 16);
+      if (m.ammoSpots.some(q => Math.hypot(q.x - f.x, q.y - f.y) < 46)) continue;
+      m.ammoSpots.push({ x: Math.round(f.x), y: Math.round(f.y) });
+      added++;
+    }
+    if (added) notes.push('складов под снабжение добавил: ' + added);
+  }
+  m.spawns = m.spawns.map(p => {
+    const f = wkFreeSpot(m, p.x, p.y, 15);
+    return { x: Math.round(f.x), y: Math.round(f.y) };
+  });
+  m.ammoSpots = m.ammoSpots.map(p => {
+    const f = wkFreeSpot(m, p.x, p.y, 16);
+    return { x: Math.round(f.x), y: Math.round(f.y) };
+  });
+  return { map: m, notes: notes };
+}
+
+/* ---------------- отрисовка пола и укрытий ---------------- */
+function wkBakeFloor(theme) {
+  const t = wkTheme(theme);
+  reseed(707000 + Math.round(theme.length * 911 + t.g0 * 13));
+  const c = fctx;
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.clearRect(0, 0, W, H);
+  c.fillStyle = t.base;
+  c.fillRect(0, 0, W, H);
+  for (let i = 0; i < 2600; i++) {
+    const x = srnd() * W, y = srnd() * H;
+    const v = t.g0 + srnd() * (t.g1 - t.g0);
+    c.fillStyle = 'rgba(' + ((v + 12) | 0) + ',' + ((v + 7) | 0) + ',' + ((v - 6) | 0) + ',' +
+      (0.16 + srnd() * 0.34).toFixed(2) + ')';
+    c.fillRect(x, y, 1 + srnd() * 3, 1 + srnd() * 2);
+  }
+  for (let i = 0; i < 26; i++) {
+    const x = srnd() * W, y = srnd() * H, r = 60 + srnd() * 140;
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(0,0,0,' + (0.06 + srnd() * 0.12).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g;
+    c.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  /* пятна темы: лужи, проплешины, следы шин */
+  c.fillStyle = t.spot;
+  for (let i = 0; i < 16; i++) {
+    const x = srnd() * W, y = srnd() * H;
+    c.globalAlpha = 0.12 + srnd() * 0.16;
+    c.beginPath();
+    c.ellipse(x, y, 22 + srnd() * 70, 12 + srnd() * 34, srnd() * 3.1, 0, 6.28);
+    c.fill();
+  }
+  c.globalAlpha = 1;
+  /* разметка сетки: помогает считать шаги при расстановке */
+  c.strokeStyle = t.line;
+  c.lineWidth = 1;
+  for (let x = 100; x < W; x += 100) { c.beginPath(); c.moveTo(x + 0.5, 0); c.lineTo(x + 0.5, H); c.stroke(); }
+  for (let y = 100; y < H; y += 100) { c.beginPath(); c.moveTo(0, y + 0.5); c.lineTo(W, y + 0.5); c.stroke(); }
+}
+
+function wkBlockProp(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.fillRect(p.x + 3, p.y + p.h - 2, p.w, 6);
+  c.fillStyle = '#4a4a46';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.fillStyle = 'rgba(255,255,255,.07)';
+  c.fillRect(p.x + 2, p.y + 2, p.w - 4, 3);
+  c.strokeStyle = 'rgba(18,18,16,.6)';
+  c.lineWidth = 2;
+  c.strokeRect(p.x + 1, p.y + 1, p.w - 2, p.h - 2);
+  c.strokeStyle = 'rgba(20,18,14,.45)';
+  c.lineWidth = 1;
+  c.beginPath();
+  c.moveTo(p.x + p.w * 0.32, p.y + 3);
+  c.lineTo(p.x + p.w * 0.44, p.y + p.h * 0.55);
+  c.lineTo(p.x + p.w * 0.26, p.y + p.h - 3);
+  c.stroke();
+}
+function wkSteelProp(c, p) {
+  c.fillStyle = 'rgba(0,0,0,.4)';
+  c.fillRect(p.x + 2, p.y + p.h - 2, p.w, 5);
+  c.fillStyle = '#4d5358';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.fillStyle = 'rgba(255,255,255,.08)';
+  c.fillRect(p.x, p.y, p.w, 4);
+  c.strokeStyle = 'rgba(16,18,20,.7)';
+  c.lineWidth = 1;
+  c.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
+  c.fillStyle = 'rgba(210,220,225,.35)';
+  for (let x = 9; x < p.w - 6; x += 16) {
+    c.beginPath(); c.arc(p.x + x, p.y + 7, 1.6, 0, 6.28); c.fill();
+    c.beginPath(); c.arc(p.x + x, p.y + p.h - 7, 1.6, 0, 6.28); c.fill();
+  }
+}
+function wkCarProp(c, p) {
+  const horiz = p.w >= p.h;
+  c.fillStyle = 'rgba(0,0,0,.45)';
+  c.fillRect(p.x + 4, p.y + p.h - 3, p.w, 8);
+  c.fillStyle = '#4b4a4f';
+  roundRect(c, p.x, p.y, p.w, p.h, 6);
+  c.fill();
+  c.fillStyle = 'rgba(10,12,16,.85)';
+  if (horiz) {
+    c.fillRect(p.x + p.w * 0.24, p.y + 5, p.w * 0.4, p.h - 10);
+    c.fillRect(p.x + p.w * 0.74, p.y + 8, p.w * 0.14, p.h - 16);
+  } else {
+    c.fillRect(p.x + 5, p.y + p.h * 0.24, p.w - 10, p.h * 0.4);
+  }
+  c.fillStyle = 'rgba(255,255,255,.08)';
+  c.fillRect(p.x + 3, p.y + 3, p.w - 6, 3);
+  c.strokeStyle = 'rgba(14,14,16,.7)';
+  c.lineWidth = 1;
+  roundRect(c, p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1, 6);
+  c.stroke();
+  c.fillStyle = 'rgba(190,80,60,.5)';
+  if (horiz) c.fillRect(p.x + 2, p.y + p.h - 9, 6, 4);
+  else c.fillRect(p.x + p.w - 7, p.y + 2, 4, 6);
+}
+function wkWaterProp(c, p) {
+  const g = c.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
+  g.addColorStop(0, 'rgba(24,42,50,.94)');
+  g.addColorStop(1, 'rgba(11,21,28,.96)');
+  c.fillStyle = g;
+  c.fillRect(p.x, p.y, p.w, p.h);
+  c.strokeStyle = 'rgba(160,220,235,.13)';
+  c.lineWidth = 1;
+  for (let y = 8; y < p.h - 4; y += 16) {
+    c.beginPath();
+    c.moveTo(p.x + 4, p.y + y);
+    for (let x = 0; x + 26 <= p.w - 8; x += 26) {
+      c.quadraticCurveTo(p.x + 4 + x + 13, p.y + y + ((x / 26) % 2 ? 4 : -4), p.x + 4 + x + 26, p.y + y);
+    }
+    c.stroke();
+  }
+  c.strokeStyle = 'rgba(0,0,0,.35)';
+  c.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
+}
+/* ---------------- текстуры: вид без физики (или с ней) ---------------- */
+function wkTexSeed(p) { reseed(Math.round(p.x * 7 + p.y * 13 + p.w * 3 + p.h * 5) + 991); }
+function wkBoardsTex(c, p) {
+  wkTexSeed(p);
+  c.save();
+  c.beginPath(); c.rect(p.x, p.y, p.w, p.h); c.clip();
+  c.fillStyle = 'rgba(24,20,15,.5)';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  const vertical = p.h > p.w;
+  const span = vertical ? p.h : p.w;
+  for (let i = 0; i < span; i += 17) {
+    const off = srnd() * 5;
+    if (vertical) {
+      c.fillStyle = '#54452f';
+      c.fillRect(p.x + 2 + off, p.y + i, p.w - 6 - off, 13);
+      c.fillStyle = 'rgba(255,240,210,.07)';
+      c.fillRect(p.x + 2 + off, p.y + i, p.w - 6 - off, 2);
+    } else {
+      c.fillStyle = '#54452f';
+      c.fillRect(p.x + i, p.y + 2 + off, 13, p.h - 6 - off);
+      c.fillStyle = 'rgba(255,240,210,.07)';
+      c.fillRect(p.x + i, p.y + 2 + off, 2, p.h - 6 - off);
+    }
+    c.fillStyle = 'rgba(210,200,170,.35)';
+    if (vertical) { c.fillRect(p.x + 5, p.y + i + 5, 2, 2); c.fillRect(p.x + p.w - 8, p.y + i + 5, 2, 2); }
+    else { c.fillRect(p.x + i + 5, p.y + 5, 2, 2); c.fillRect(p.x + i + 5, p.y + p.h - 8, 2, 2); }
+  }
+  c.restore();
+}
+function wkGrassTex(c, p) {
+  wkTexSeed(p);
+  c.save();
+  c.beginPath(); c.rect(p.x, p.y, p.w, p.h); c.clip();
+  c.fillStyle = 'rgba(36,54,32,.75)';
+  c.beginPath(); c.ellipse(p.x + p.w / 2, p.y + p.h / 2, p.w / 2, p.h / 2, 0, 0, 6.28); c.fill();
+  for (let i = 0; i < 130; i++) {
+    const x = p.x + 6 + srnd() * (p.w - 12), y = p.y + 6 + srnd() * (p.h - 12);
+    const h = 4 + srnd() * 8;
+    c.strokeStyle = 'rgba(' + (70 + srnd() * 60 | 0) + ',' + (120 + srnd() * 70 | 0) + ',' + (60 + srnd() * 40 | 0) + ',.75)';
+    c.lineWidth = 1;
+    c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + srnd() * 3 - 1.5, y - h * 0.6, x + srnd() * 5 - 2.5, y - h); c.stroke();
+  }
+  c.restore();
+}
+function wkRubbleTex(c, p) {
+  wkTexSeed(p);
+  c.save();
+  c.beginPath(); c.rect(p.x, p.y, p.w, p.h); c.clip();
+  c.fillStyle = 'rgba(30,29,26,.7)';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  for (let i = 0; i < 46; i++) {
+    const x = p.x + srnd() * p.w, y = p.y + srnd() * p.h;
+    const w = 6 + srnd() * 20, h = 5 + srnd() * 14;
+    const v = 54 + srnd() * 34;
+    c.save();
+    c.translate(x, y);
+    c.rotate(srnd() * 6.28);
+    c.fillStyle = 'rgba(' + ((v + 6) | 0) + ',' + (v | 0) + ',' + ((v - 8) | 0) + ',.9)';
+    c.fillRect(-w / 2, -h / 2, w, h);
+    c.strokeStyle = 'rgba(14,14,12,.6)';
+    c.lineWidth = 1;
+    c.strokeRect(-w / 2, -h / 2, w, h);
+    c.fillStyle = 'rgba(255,255,255,.06)';
+    c.fillRect(-w / 2 + 1, -h / 2 + 1, w - 2, 2);
+    c.restore();
+  }
+  for (let i = 0; i < 26; i++) {
+    c.fillStyle = 'rgba(120,112,98,.35)';
+    c.fillRect(p.x + srnd() * p.w, p.y + srnd() * p.h, 1.5, 1.5);
+  }
+  c.restore();
+}
+function wkPuddleTex(c, p) {
+  wkTexSeed(p);
+  c.save();
+  c.beginPath(); c.rect(p.x, p.y, p.w, p.h); c.clip();
+  const g = c.createRadialGradient(p.x + p.w * 0.45, p.y + p.h * 0.45, 4, p.x + p.w / 2, p.y + p.h / 2, Math.max(p.w, p.h) * 0.62);
+  g.addColorStop(0, 'rgba(38,62,72,.95)');
+  g.addColorStop(0.8, 'rgba(18,30,38,.9)');
+  g.addColorStop(1, 'rgba(12,20,26,0)');
+  c.fillStyle = g;
+  c.beginPath();
+  c.ellipse(p.x + p.w / 2, p.y + p.h / 2, p.w * 0.46, p.h * 0.44, 0, 0, 6.28);
+  c.fill();
+  c.strokeStyle = 'rgba(180,225,240,.16)';
+  c.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
+    c.beginPath();
+    c.ellipse(p.x + p.w / 2 + (srnd() - 0.5) * p.w * 0.2, p.y + p.h / 2 + (srnd() - 0.5) * p.h * 0.2,
+      p.w * (0.12 + i * 0.09), p.h * (0.1 + i * 0.08), 0, 0, 6.28);
+    c.stroke();
+  }
+  c.restore();
+}
+function wkTilesTex(c, p) {
+  wkTexSeed(p);
+  c.save();
+  c.beginPath(); c.rect(p.x, p.y, p.w, p.h); c.clip();
+  c.fillStyle = 'rgba(58,58,54,.85)';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  const tw = 34, th = 34;
+  for (let x = 0; x < p.w; x += tw) {
+    for (let y = 0; y < p.h; y += th) {
+      const v = 66 + srnd() * 26;
+      c.fillStyle = 'rgb(' + ((v + 4) | 0) + ',' + (v | 0) + ',' + ((v - 4) | 0) + ')';
+      c.fillRect(p.x + x + 1, p.y + y + 1, Math.min(tw, p.w - x) - 2, Math.min(th, p.h - y) - 2);
+      if (srnd() < 0.14) {
+        c.strokeStyle = 'rgba(20,20,18,.6)';
+        c.lineWidth = 1;
+        c.beginPath();
+        c.moveTo(p.x + x + 4, p.y + y + 4);
+        c.lineTo(p.x + x + tw * 0.6, p.y + y + th - 6);
+        c.lineTo(p.x + x + 8, p.y + y + th - 3);
+        c.stroke();
+      }
+    }
+  }
+  c.strokeStyle = 'rgba(16,16,15,.45)';
+  c.lineWidth = 1;
+  c.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1);
+  c.restore();
+}
+function wkStainTex(c, p) {
+  wkTexSeed(p);
+  c.save();
+  c.beginPath(); c.rect(p.x, p.y, p.w, p.h); c.clip();
+  for (let i = 0; i < 5; i++) {
+    const x = p.x + p.w * (0.2 + srnd() * 0.6), y = p.y + p.h * (0.2 + srnd() * 0.6);
+    const r = Math.min(p.w, p.h) * (0.15 + srnd() * 0.25);
+    const g = c.createRadialGradient(x, y, 1, x, y, r);
+    const tone = srnd() < 0.5 ? '58,18,14' : '32,26,22';
+    g.addColorStop(0, 'rgba(' + tone + ',.72)');
+    g.addColorStop(1, 'rgba(' + tone + ',0)');
+    c.fillStyle = g;
+    c.beginPath(); c.ellipse(x, y, r, r * 0.7, srnd() * 3, 0, 6.28); c.fill();
+  }
+  c.restore();
+}
+/* лестница: ступени внутри прямоугольника; поворот на 90° разворачивает подъём */
+function wkStairProp(c, p) {
+  const rot = ((p.rot | 0) & 3);
+  c.fillStyle = 'rgba(0,0,0,.5)';
+  c.fillRect(p.x + 3, p.y + p.h - 2, p.w, 7);
+  c.fillStyle = '#43413a';
+  c.fillRect(p.x, p.y, p.w, p.h);
+  const steps = 6;
+  if (rot % 2 === 0) {
+    const sh = p.h / steps;
+    for (let i = 0; i < steps; i++) {
+      const y = p.y + i * sh;
+      const shade = 62 - i * 5;
+      c.fillStyle = 'rgb(' + shade + ',' + (shade - 2) + ',' + (shade - 8) + ')';
+      c.fillRect(p.x + 3, y + 2, p.w - 6, sh - 4);
+      c.fillStyle = 'rgba(255,255,255,.06)';
+      c.fillRect(p.x + 3, y + 2, p.w - 6, 2);
+      c.fillStyle = 'rgba(0,0,0,.35)';
+      c.fillRect(p.x + 3, y + sh - 4, p.w - 6, 2);
+    }
+    c.strokeStyle = 'rgba(190,180,158,.35)';
+    c.lineWidth = 2;
+    c.beginPath(); c.moveTo(p.x + 4, p.y + 4); c.lineTo(p.x + 4, p.y + p.h - 4); c.stroke();
+    c.beginPath(); c.moveTo(p.x + p.w - 4, p.y + 4); c.lineTo(p.x + p.w - 4, p.y + p.h - 4); c.stroke();
+  } else {
+    const sw = p.w / steps;
+    for (let i = 0; i < steps; i++) {
+      const x = p.x + i * sw;
+      const shade = 62 - i * 5;
+      c.fillStyle = 'rgb(' + shade + ',' + (shade - 2) + ',' + (shade - 8) + ')';
+      c.fillRect(x + 2, p.y + 3, sw - 4, p.h - 6);
+      c.fillStyle = 'rgba(255,255,255,.06)';
+      c.fillRect(x + 2, p.y + 3, 2, p.h - 6);
+      c.fillStyle = 'rgba(0,0,0,.35)';
+      c.fillRect(x + sw - 4, p.y + 3, 2, p.h - 6);
+    }
+    c.strokeStyle = 'rgba(190,180,158,.35)';
+    c.lineWidth = 2;
+    c.beginPath(); c.moveTo(p.x + 4, p.y + 4); c.lineTo(p.x + p.w - 4, p.y + 4); c.stroke();
+    c.beginPath(); c.moveTo(p.x + 4, p.y + p.h - 4); c.lineTo(p.x + p.w - 4, p.y + p.h - 4); c.stroke();
+  }
+  c.strokeStyle = 'rgba(16,15,13,.7)';
+  c.lineWidth = 2;
+  c.strokeRect(p.x + 1, p.y + 1, p.w - 2, p.h - 2);
+  c.fillStyle = 'rgba(220,210,190,.5)';
+  c.font = 'bold 9px Consolas, monospace';
+  c.textAlign = 'center';
+  c.fillText('ЛЕСТНИЦА', p.x + p.w / 2, p.y + p.h / 2 + 3);
+  c.textAlign = 'left';
+}
+
+function wkPaintProp(c, p) {
+  if (p.type === 'stair') wkStairProp(c, p);
+  else if (p.type === 'tex_boards') wkBoardsTex(c, p);
+  else if (p.type === 'tex_rubble') wkRubbleTex(c, p);
+  else if (p.type === 'tex_grass') wkGrassTex(c, p);
+  else if (p.type === 'tex_puddle') wkPuddleTex(c, p);
+  else if (p.type === 'tex_tiles') wkTilesTex(c, p);
+  else if (p.type === 'tex_stain') wkStainTex(c, p);
+  else if (p.type === 'crate') fortCrateProp(c, p);
+  else if (p.type === 'sandbag') fortSandbag(c, p);
+  else if (p.type === 'barrier') fortBarrier(c, p);
+  else if (p.type === 'car') wkCarProp(c, p);
+  else if (p.type === 'wall') wkSteelProp(c, p);
+  else if (p.type === 'water') wkWaterProp(c, p);
+  else wkBlockProp(c, p);
+}
+function wkIsFlatTex(p) {
+  const t = wkShapeTool(p.type);
+  return !!t && t.kind === 'tex';
+}
+function wkBakeRoom(map) {
+  reseed(331100 + map.props.length * 17);
+  const c = rctx;
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.clearRect(0, 0, W, H);
+  /* периметр: та же стена, что в кампании */
+  c.fillStyle = '#2b2a27';
+  c.fillRect(0, 0, W, WALL);
+  c.fillRect(0, H - WALL, W, WALL);
+  c.fillRect(0, 0, WALL, H);
+  c.fillRect(W - WALL, 0, WALL, H);
+  c.fillStyle = 'rgba(255,255,255,.05)';
+  c.fillRect(0, WALL - 4, W, 4);
+  c.fillRect(0, H - WALL, W, 3);
+  c.strokeStyle = 'rgba(0,0,0,.3)';
+  c.lineWidth = 1;
+  for (let i = 0; i < 80; i++) {
+    const x = srnd() * W, y = srnd() * WALL;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x + 10 + srnd() * 26, y + srnd() * 4); c.stroke();
+  }
+  for (let i = 0; i < 60; i++) {
+    const y = srnd() * H, x = srnd() * WALL;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x + srnd() * 3, y + 8 + srnd() * 20); c.stroke();
+  }
+  /* три слоя: текстуры-вид → вода → укрытия, лестницы и «физические» текстуры */
+  for (let i = 0; i < map.props.length; i++) {
+    const p = map.props[i];
+    if (wkIsFlatTex(p) && p.solid === false) wkPaintProp(c, p);
+  }
+  for (let i = 0; i < map.props.length; i++) if (map.props[i].type === 'water') wkWaterProp(c, map.props[i]);
+  for (let i = 0; i < map.props.length; i++) {
+    const p = map.props[i];
+    if (p.type === 'water') continue;
+    if (wkIsFlatTex(p) && p.solid === false) continue;
+    wkPaintProp(c, p);
+  }
+}
+
+/* ---------------- карта → уровень Deathmatch ---------------- */
+function wkMakeLevel(map) {
+  ensureDmLevels();
+  const mp = wkNormalize(map);
+  const id = 'wk_' + mp.id;
+  const lv = dmMakeLevel({ id: id, title: mp.title },
+    { floor: function () { wkBakeFloor(mp.theme); }, room: function () { wkBakeRoom(mp); } });
+  lv.tag = 'МАСТЕРСКАЯ';
+  lv.wk = mp;
+  /* в столкновения идут только физические укрытия: текстуры-вид пропускаем */
+  lv.props = mp.props
+    .filter(p => p.solid !== false)
+    .map(p => ({ type: p.type, x: p.x, y: p.y, w: p.w, h: p.h }));
+  mp.objects.forEach(o => {
+    const r = wkObjectRect(o);
+    lv.props.push({ type: 'obj', x: r.x, y: r.y, w: r.w, h: r.h, obj: o.kind });
+  });
+  lv.spawns = mp.spawns.map(p => ({ x: p.x, y: p.y }));
+  lv.start = { x: mp.start.x, y: mp.start.y };
+  lv.ammoSpots = mp.ammoSpots.map(p => ({ x: p.x, y: p.y }));
+  lv.fallback = wkFreeSpot(mp, W * 0.5, H * 0.5, 16);
+  lv.wkPads = mp.pads.map(p => ({ x: p.x, y: p.y }));
+  const tanks = mp.objects.filter(o => o.kind === 'tank').length;
+  const mortars = mp.objects.filter(o => o.kind === 'mortar').length;
+  const tech = [];
+  if (tanks) tech.push('танк' + (tanks > 1 ? 'и (' + tanks + ')' : ''));
+  if (mortars) tech.push('миномёт' + (mortars > 1 ? 'ы (' + mortars + ')' : ''));
+  lv.intro = 'Мастерская · ' + mp.title + (mp.author ? ' · автор: ' + mp.author : '') + '. ' +
+    (tech.length ? 'На карте ' + tech.join(' и ') + ' — они бьют по бойцам, их можно разбить огнём. ' : '') +
+    (mp.pads.length ? 'Есть лестничный переход: встал на площадку — перешёл. ' : '') +
+    'Каждую минуту карта обновляется.';
+  return lv;
+}
+function wkRegister(map) {
+  ensureDmLevels();
+  const lv = wkMakeLevel(map);
+  DM_LEVELS[lv.id] = lv;
+  LEVELS[lv.id] = lv;
+  return lv;
+}
+function wkPlay(map) {
+  const mp = wkNormalize(map);
+  const stored = shopFind(mp.id);
+  if (stored) { stored.plays = (stored.plays || 0) + 1; shopSave(); }
+  const lv = wkRegister(mp);
+  if (!lv) { toast('Карта не собралась — проверь точки и укрытия.', 2600); return false; }
+  enterDm(lv.id);
+  return true;
+}
+/* основа из официальной арены: геометрия и точки переносятся, оформление — своё */
+function wkRemix(arenaId) {
+  const src = dmLevel(arenaId);
+  if (!src || !src.props) { toast('Арена не найдена.', 2000); return false; }
+  const map = wkNewMap(shopAuthor());
+  map.title = (src.name || 'Арена') + ' · своя';
+  map.slug = wkTranslit(map.title);
+  map.id = wkNewId(map.slug);
+  map.source = 'remix';
+  map.props = src.props.slice(0, WK_LIMIT.props).map(p => ({
+    type: wkPropTool(p.type) ? p.type : 'block',
+    x: p.x, y: p.y, w: Math.max(18, p.w), h: Math.max(18, p.h)
+  }));
+  map.spawns = (src.spawns || []).slice(0, WK_LIMIT.spawns).map(p => ({ x: p.x, y: p.y }));
+  map.ammoSpots = (src.ammoSpots || []).slice(0, WK_LIMIT.ammo).map(p => ({ x: p.x, y: p.y }));
+  map.start = { x: src.start.x, y: src.start.y };
+  editorOpen(map);
+  toast('Основа взята с арены: укрытия и точки. Оформление своё — пол и декор.', 3400);
+  return true;
+}
+
+/* ---------------- хранилище мастерской ---------------- */
+let shopMaps = [];
+let shopAuthorName = '';
+let shopFeed = { state: 'idle', maps: [], error: '', at: 0 };
+let shopTab = 'mine';
+let shopShareId = null;
+
+function shopLoad() {
+  try {
+    const raw = localStorage.getItem(SHOP_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (!d) return;
+    if (typeof d.author === 'string') shopAuthorName = d.author.slice(0, 24);
+    const list = Array.isArray(d.maps) ? d.maps : [];
+    shopMaps = list.filter(wkValidMap).map(wkNormalize);
+  } catch (e) { shopMaps = []; }
+}
+function shopSave() {
+  try {
+    localStorage.setItem(SHOP_KEY, JSON.stringify({ v: 1, author: shopAuthorName, maps: shopMaps }));
+  } catch (e) { /* приватный режим: карты живут до перезагрузки */ }
+}
+function shopAuthor() { return shopAuthorName; }
+function shopSaveAuthor(name) {
+  const n = String(name || '').trim().slice(0, 24);
+  if (!n || n === shopAuthorName) return;
+  shopAuthorName = n;
+  shopSave();
+}
+function shopFind(id) {
+  for (let i = 0; i < shopMaps.length; i++) if (shopMaps[i].id === id) return shopMaps[i];
+  return null;
+}
+function shopUpsert(map) {
+  const m = wkNormalize(map);
+  const i = shopMaps.findIndex(x => x.id === m.id);
+  if (i >= 0) shopMaps[i] = m; else shopMaps.unshift(m);
+  shopSave();
+  return m;
+}
+function shopRemove(id) {
+  const i = shopMaps.findIndex(x => x.id === id);
+  if (i < 0) return;
+  shopMaps.splice(i, 1);
+  shopSave();
+  if (shopShareId === id) shopShareId = null;
+}
+
+/* ---------------- карта в мастерскую (GitHub) ---------------- */
+function shopFetchJson(url) {
+  return fetch(url, { cache: 'no-store' }).then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+}
+function shopRefreshFeed(force) {
+  if (shopFeed.state === 'loading') return;
+  if (!force && shopFeed.state === 'ready' && Date.now() - shopFeed.at < 600000) return;
+  if (typeof fetch !== 'function') { shopFeed.state = 'error'; shopFeed.error = 'нет сети'; return; }
+  shopFeed.state = 'loading';
+  shopFeed.error = '';
+  if (shopTab === 'feed') renderWorkshop();
+  const bust = '?t=' + Date.now();
+  const urls = [SHOP_FEED.pages + 'index.json' + bust, SHOP_FEED.raw + 'index.json' + bust];
+  (async () => {
+    let data = null, err = '';
+    for (let i = 0; i < urls.length && !data; i++) {
+      try { data = await shopFetchJson(urls[i]); } catch (e) { err = String((e && e.message) || e); }
+    }
+    if (data) {
+      const list = Array.isArray(data) ? data : (Array.isArray(data.maps) ? data.maps : []);
+      shopFeed.maps = list.filter(wkValidMap).map(wkNormalize);
+      shopFeed.state = 'ready';
+      shopFeed.at = Date.now();
+      if (shopFeed.maps.length) {
+        /* карты сообщества сразу доступны офлайн: держим их в своём хранилище */
+        shopFeed.maps.forEach(m => { m.source = 'github'; });
+      }
+    } else {
+      shopFeed.state = 'error';
+      shopFeed.error = err || 'нет ответа';
+      shopFeed.maps = [];
+    }
+    if (state.mode === 'menu' && els.workshop && !els.workshop.classList.contains('hidden')) renderWorkshop();
+    if (shopTab === 'feed') renderWorkshop();
+  })();
+}
+function shopInstall(entry) {
+  const m = wkNormalize(entry);
+  m.source = m.source || 'github';
+  return shopUpsert(m);
+}
+function shopPublishUrl(map) {
+  const m = wkNormalize(map);
+  const json = JSON.stringify(shopMapFile(m), null, 2);
+  const file = m.slug + '.json';
+  const base = 'https://github.com/' + SHOP_FEED.repo + '/new/' + SHOP_FEED.branch + '/workshop/maps';
+  if (json.length > 5200) return null;   /* длинная ссылка обрезается — тогда файл руками */
+  return base + '?filename=' + encodeURIComponent(file) + '&value=' + encodeURIComponent(json);
+}
+/* то, что лежит в репозитории рядом с другими картами */
+function shopMapFile(map) {
+  const m = wkNormalize(map);
+  return {
+    v: 1, kind: 'dm-map', id: m.id, slug: m.slug, title: m.title, author: m.author,
+    theme: m.theme, created: m.created, start: m.start, spawns: m.spawns,
+    ammoSpots: m.ammoSpots, props: m.props, objects: m.objects, pads: m.pads
+  };
+}
+function shopDownloadFile(map) {
+  const m = wkNormalize(map);
+  const text = JSON.stringify(shopMapFile(m), null, 2);
+  try {
+    const blob = new Blob([text], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = m.slug + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    return true;
+  } catch (e) { toast('Не вышло скачать файл — скопируй код карты.', 2800); return false; }
+}
+function shopCopy(text, okText) {
+  const done = () => toast(okText || 'Скопировано.', 2200);
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, () => { shopClipFallback(text, done); });
+      return;
+    }
+  } catch (e) { /* ниже — запасной путь */ }
+  shopClipFallback(text, done);
+}
+function shopClipFallback(text, done) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-2000px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    done();
+  } catch (e) { toast('Скопируй код вручную из поля.', 2600); }
+}
+
+/* ссылка вида index.html#map=<код> — так картой делятся без репозитория */
+function shopReadLocation() {
+  const m = /[#&?]map=([A-Za-z0-9_\-]+)/.exec(String(location.hash || '')) ||
+    /[?&]map=([A-Za-z0-9_\-]+)/.exec(String(location.search || ''));
+  if (!m) return null;
+  try {
+    const map = wkNormalize(JSON.parse(wkB64Dec(m[1])));
+    map.source = 'link';
+    const had = !!shopFind(map.id);
+    shopUpsert(map);
+    try { history.replaceState(null, '', location.pathname + location.search.replace(/[?&]map=[A-Za-z0-9_\-]+/, '')); } catch (e) { /* не критично */ }
+    return { map: map, fresh: !had };
+  } catch (e) {
+    toast('Ссылка на карту повреждена.', 2600);
+    return null;
+  }
+}
+function shopImportText(text) {
+  const raw = String(text || '').trim();
+  if (!raw) { toast('Пусто: вставь код карты или ссылку.', 2400); return null; }
+  let code = raw;
+  const m = /[#&?]map=([A-Za-z0-9_\-]+)/.exec(raw);
+  if (m) code = m[1];
+  else if (raw[0] === '{') {
+    try {
+      const map = wkNormalize(JSON.parse(raw));
+      map.source = 'import';
+      shopUpsert(map);
+      return map;
+    } catch (e) { toast('Это не карта: JSON не читается.', 2600); return null; }
+  }
+  try {
+    const map = wkNormalize(JSON.parse(wkB64Dec(code)));
+    map.source = 'import';
+    shopUpsert(map);
+    return map;
+  } catch (e) {
+    toast('Код не читается — проверь, что скопирован целиком.', 3000);
+    return null;
+  }
+}
+
+/* ---------------- экран мастерской ---------------- */
+function shopEntries() {
+  if (shopTab === 'mine') return shopMaps.map(m => ({ m: m, kind: 'mine' }));
+  if (shopTab === 'feed') return shopFeed.maps.map(m => ({ m: m, kind: 'feed' }));
+  return DM_ARENAS.map(a => ({ m: { id: a.id, title: a.title, note: a.note, theme: '' }, kind: 'official' }));
+}
+function shopCardHtml(entry) {
+  const m = entry.m;
+  const acts = [];
+  if (entry.kind === 'mine') {
+    acts.push(['edit', 'ИЗМЕНИТЬ'], ['share', 'ПОДЕЛИТЬСЯ'], ['del', 'УДАЛИТЬ']);
+  } else if (entry.kind === 'feed') {
+    acts.push(['play', shopFind(m.id) ? 'ИГРАТЬ' : 'СКАЧАТЬ И ИГРАТЬ'], ['get', 'В МОИ КАРТЫ']);
+  } else {
+    acts.push(['remix', 'В РЕДАКТОР']);
+  }
+  const num = entry.kind === 'official' ? m.note
+    : (entry.kind === 'feed' ? 'СООБЩЕСТВО · ' + wkTheme(m.theme).label
+      : 'МОЯ КАРТА · ' + wkTheme(m.theme).label);
+  const meta = [];
+  if (m.author) meta.push(wkEsc(m.author));
+  if (entry.kind !== 'official') {
+    meta.push(m.created || '');
+    if (m.plays) meta.push('игр: ' + m.plays);
+    if (shopFind(m.id) && entry.kind === 'feed') meta.push('установлена');
+  } else {
+    meta.push('кампания и арены игры');
+  }
+  return '<div class="mission-card shop-card" data-shop="' + wkEsc(m.id) + '" data-kind="' + entry.kind + '" role="button" tabindex="0">' +
+    '<span class="m-num">' + wkEsc(num) + '</span>' +
+    '<span class="m-name">' + wkEsc(m.title) + '</span>' +
+    '<span class="m-state">' + meta.join(' · ') + '</span>' +
+    '<span class="shop-acts">' + acts.map(a =>
+      '<button class="shop-act" type="button" data-act="' + a[0] + '">' + a[1] + '</button>').join('') +
+    '</span></div>';
+}
+function renderWorkshop() {
+  if (!els.workshop) return;
+  if (els.shopTabs) {
+    els.shopTabs.innerHTML = SHOP_TABS.map(t =>
+      '<button class="shop-tab' + (shopTab === t.id ? ' on' : '') + '" type="button" data-tab="' + t.id + '">' +
+      t.label + '</button>').join('');
+  }
+  const entries = shopEntries();
+  let html = entries.map(shopCardHtml).join('');
+  if (!entries.length) {
+    if (shopTab === 'mine') {
+      html = '<p class="shop-empty">Пока пусто. «Создать карту» открывает редактор: расставь укрытия, точки боя ' +
+        'и склады — карта сразу появится здесь и в списке арен Deathmatch.</p>';
+    } else if (shopTab === 'feed') {
+      if (shopFeed.state === 'loading') html = '<p class="shop-empty">Спрашиваю GitHub…</p>';
+      else if (shopFeed.state === 'error') {
+        html = '<p class="shop-empty">Мастерская GitHub сейчас недоступна (' + wkEsc(shopFeed.error || 'нет сети') +
+          '). Свои карты и код работают без сети.</p>';
+      } else html = '<p class="shop-empty">В общей мастерской пока ни одной карты. Первую можно отправить прямо из редактора.</p>';
+    }
+  }
+  els.shopGrid.innerHTML = html;
+  if (els.shopLead) {
+    els.shopLead.textContent = shopTab === 'mine'
+      ? 'Карты, собранные здесь, лежат в браузере и играются как арены Deathmatch: боты, 12 зарядов снабжения, обновление каждую минуту.'
+      : (shopTab === 'feed'
+        ? 'Общая мастерская — это папка workshop/ в репозитории игры. Карты сообщества подтягиваются по сети, а скачанные играются офлайн.'
+        : 'Любую арену можно взять за основу: укрытия и точки перенесутся в редактор.');
+  }
+  if (els.shopHint) {
+    const ownCount = shopMaps.length;
+    const feedCount = shopFeed.state === 'ready' ? shopFeed.maps.length : 0;
+    const feedText = shopFeed.state === 'ready' ? String(feedCount)
+      : (shopFeed.state === 'loading' ? 'спрашиваю…' : (shopFeed.state === 'error' ? 'нет связи' : 'не спрашивал'));
+    els.shopHint.textContent = 'Своих карт: ' + ownCount + ' · в мастерской GitHub: ' + feedText +
+      (shopShareId ? ' · карта открыта в «Поделиться»' : '');
+  }
+  if (els.shopHowBtn) els.shopHowBtn.classList.toggle('hidden', shopTab === 'mine');
+  shopRenderShare();
+  shopRenderImport();
+}
+function shopRenderShare() {
+  if (!els.shopShare) return;
+  const m = shopShareId ? shopFind(shopShareId) : null;
+  if (!m) { els.shopShare.classList.add('hidden'); return; }
+  els.shopShare.classList.remove('hidden');
+  if (els.shopShareTitle) els.shopShareTitle.textContent = 'ПОДЕЛИТЬСЯ · ' + m.title;
+  if (els.shopCode) els.shopCode.value = wkShareLink(m);
+  if (els.shopShareHint) {
+    const big = shopPublishUrl(m) === null;
+    els.shopShareHint.textContent = 'Ссылка открывает карту сразу, без репозитория. «Скачать .json» — файл для папки ' +
+      'workshop/maps/ в репозитории: оттуда карту видят все.' +
+      (big ? ' Карта большая, поэтому в GitHub её надёжнее положить файлом.' : '');
+  }
+}
+function shopRenderImport() {
+  if (!els.shopImportBox) return;
+  if (els.shopImportHint) {
+    els.shopImportHint.textContent = 'Код карты — из «Поделиться», файл — из папки workshop/maps/. ' +
+      'Карта появится в «Моих картах» и её можно будет играть.';
+  }
+}
+function openWorkshop(tab) {
+  if (!els.workshop || state.mode !== 'menu') return;
+  if (tab) shopTab = tab;
+  if (els.select) els.select.classList.add('hidden');
+  if (els.deathmatch) els.deathmatch.classList.add('hidden');
+  if (els.settings) els.settings.classList.add('hidden');
+  els.menu.classList.add('hidden');
+  els.workshop.classList.remove('hidden');
+  renderWorkshop();
+  shopRefreshFeed(false);
+}
+function closeWorkshop() {
+  if (!els.workshop) return;
+  if (els.workshop.classList.contains('hidden')) return;
+  els.workshop.classList.add('hidden');
+  if (state.mode === 'menu') els.menu.classList.remove('hidden');
+  shopShareId = null;
+  if (els.shopShare) els.shopShare.classList.add('hidden');
+  if (els.shopImportBox) els.shopImportBox.classList.add('hidden');
+  updateSaveMeta();
+}
+function shopSelectTab(id) {
+  shopTab = id;
+  shopShareId = null;
+  renderWorkshop();
+  if (id === 'feed') shopRefreshFeed(false);
+}
+async function shopPlayEntry(entry) {
+  if (!entry) return;
+  if (entry.kind === 'mine') { wkPlay(entry.m); return; }
+  if (entry.kind === 'official') { enterDm(entry.m.id); return; }
+  const m = entry.m;
+  let map = shopFind(m.id);
+  if (!map && m.file) {
+    const urls = [SHOP_FEED.pages + 'maps/' + m.file, SHOP_FEED.raw + 'maps/' + m.file];
+    for (let i = 0; i < urls.length && !map; i++) {
+      try { map = wkNormalize(await shopFetchJson(urls[i] + '?t=' + Date.now())); } catch (e) { /* пробуем следующий адрес */ }
+    }
+  }
+  if (!map) map = m;
+  map.source = map.source || 'github';
+  const saved = shopUpsert(map);
+  wkPlay(saved);
+}
+function shopEntryActions(entry, act) {
+  const m = entry.m;
+  if (act === 'edit') { editorOpen(shopFind(m.id) || m); return; }
+  if (act === 'share') { shopShareId = m.id; renderWorkshop(); return; }
+  if (act === 'del') {
+    if (!window.confirm('Удалить карту «' + m.title + '»? Ссылка на неё перестанет открываться из мастерской.')) return;
+    shopRemove(m.id);
+    wkUnregister('wk_' + m.id);
+    renderWorkshop();
+    renderDmCustom();
+    toast('Карта удалена.', 2000);
+    return;
+  }
+  if (act === 'get') {
+    const saved = shopInstall(m);
+    renderWorkshop();
+    renderDmCustom();
+    toast('«' + saved.title + '» в моих картах.', 2400);
+    return;
+  }
+  if (act === 'remix') { wkRemix(m.id); return; }
+  shopPlayEntry(entry);
+}
+function wkUnregister(id) {
+  delete LEVELS[id];
+  if (DM_LEVELS) delete DM_LEVELS[id];
+}
+function renderDmCustom() {
+  if (!els.dmCustomGrid) return;
+  els.dmCustomGrid.innerHTML = shopMaps.slice(0, 9).map(m =>
+    '<button class="mission-card" type="button" data-wk="' + wkEsc(m.id) + '">' +
+    '<span class="m-num">МАСТЕРСКАЯ · ' + wkTheme(m.theme).label + '</span>' +
+    '<span class="m-name">' + wkEsc(m.title) + '</span>' +
+    '<span class="m-state">' + (m.author ? wkEsc(m.author) + ' · ' : '') + (m.plays ? 'игр: ' + m.plays : 'своя карта') +
+    '</span></button>').join('');
+  if (els.dmCustomHint) {
+    els.dmCustomHint.textContent = shopMaps.length
+      ? 'Карт мастерской: ' + shopMaps.length + '. Нажми — и сразу бой; «Все карты» открывает мастерскую.'
+      : 'Своих карт пока нет: «Редактор карт» собирает арену за пару минут, а «Все карты» показывают чужое.';
+  }
+}
+
+/* ===========================================================
+   РЕДАКТОР КАРТ
+   =========================================================== */
+let ed = null;
+
+/* ---------------- масштаб редактора: колесо мыши ----------------
+   Рисуем карту через камеру: ed.zoom — увеличение, ed.cam — точка мира,
+   которая висит в центре экрана. Колесо приближает к курсору, поэтому
+   приближать можно в любой угол карты, не теряя то место, где работаешь. */
+function editorZoom() { return ed && ed.zoom ? ed.zoom : 1; }
+function editorViewToWorld(px, py) {
+  const z = editorZoom();
+  const cam = (ed && ed.cam) ? ed.cam : { x: W / 2, y: H / 2 };
+  return { x: cam.x + (px - W / 2) / z, y: cam.y + (py - H / 2) / z };
+}
+function editorSetZoom(z, px, py) {
+  if (!ed) return;
+  const ax = (px === undefined) ? W / 2 : px;
+  const ay = (py === undefined) ? H / 2 : py;
+  const before = editorViewToWorld(ax, ay);
+  ed.zoom = clamp(z, 0.5, 3);
+  const zz = ed.zoom;
+  if (!ed.cam) ed.cam = { x: W / 2, y: H / 2 };
+  ed.cam.x = before.x - (ax - W / 2) / zz;
+  ed.cam.y = before.y - (ay - H / 2) / zz;
+  /* за края карты камера не уезжает */
+  const vw = W / zz, vh = H / zz;
+  ed.cam.x = (vw >= W) ? W / 2 : clamp(ed.cam.x, vw / 2, W - vw / 2);
+  ed.cam.y = (vh >= H) ? H / 2 : clamp(ed.cam.y, vh / 2, H - vh / 2);
+}
+function editorZoomBy(k, px, py) { editorSetZoom(editorZoom() * k, px, py); }
+function editorZoomReset() {
+  if (!ed) return;
+  ed.zoom = 1;
+  ed.cam = { x: W / 2, y: H / 2 };
+  renderEditorPalette();
+  editorHint();
+}
+function editorZoomLabel() { return Math.round(editorZoom() * 100) + '%'; }
+
+function editorFieldsSync() {
+  if (!ed) return;
+  if (els.edTitle) els.edTitle.value = ed.map.title;
+  if (els.edAuthor) els.edAuthor.value = ed.map.author || '';
+  if (els.edTheme) els.edTheme.value = ed.map.theme;
+  ed.fieldsSig = ed.map.title + '|' + (ed.map.author || '') + '|' + ed.map.theme;
+}
+function editorReadMap() {
+  if (!ed) return null;
+  const m = ed.map;
+  const t = els.edTitle ? String(els.edTitle.value).trim() : '';
+  m.title = (t || 'Арена без названия').slice(0, 40);
+  if (els.edAuthor) m.author = String(els.edAuthor.value).trim().slice(0, 24);
+  if (els.edTheme && WK_THEMES[els.edTheme.value]) m.theme = els.edTheme.value;
+  m.slug = wkTranslit(m.title);
+  return m;
+}
+function editorBake() {
+  if (!ed) return;
+  wkBakeFloor(ed.map.theme);
+  wkBakeRoom(ed.map);
+}
+function editorPush() {
+  if (!ed) return;
+  ed.hist.push(JSON.stringify(ed.map));
+  if (ed.hist.length > 40) ed.hist.shift();
+}
+function editorHint() {
+  if (!ed || !els.edHint) return;
+  const m = ed.map;
+  const tool = wkTool(ed.tool);
+  const solidShapes = m.props.filter(p => p.solid !== false).length;
+  const decoShapes = m.props.length - solidShapes;
+  const tanks = m.objects.filter(o => o.kind === 'tank').length;
+  const mortars = m.objects.filter(o => o.kind === 'mortar').length;
+  let how;
+  if (tool.kind === 'prop' || tool.kind === 'tex' || tool.kind === 'stair') {
+    how = 'ЛКМ — растяни прямоугольник (щелчок ставит «' + tool.label.toLowerCase() + '» обычного размера)';
+  } else if (tool.kind === 'erase') {
+    how = 'ЛКМ — растяни область: укрытия, текстуры, техника и площадки в ней сотрутся';
+  } else if (tool.kind === 'object') {
+    how = 'ЛКМ — поставить ' + (tool.obj === 'tank' ? 'танк' : 'миномёт') + ' (' + tool.w + '×' + tool.h + '), ЛКМ по нему же — убрать';
+  } else if (tool.kind === 'pad') {
+    how = 'ЛКМ — площадка перехода; связываются попарно: первая со второй, третья с четвёртой';
+  } else if (tool.kind === 'start') {
+    how = 'ЛКМ — поставить старт игрока';
+  } else {
+    how = 'ЛКМ — поставить точку, ЛКМ по ней же — убрать';
+  }
+  const always = (tool.kind === 'object' || tool.kind === 'stair' || tool.kind === 'start' ||
+    tool.kind === 'spawn' || tool.kind === 'ammo' || tool.kind === 'pad' || tool.kind === 'erase');
+  const mode = always ? 'кисть всегда физическая' : (ed.solid ? 'кисть: МЕШАЕТ ПРОЙТИ' : 'кисть: ТОЛЬКО ТЕКСТУРА');
+  els.edHint.innerHTML = 'ФИЗИЧЕСКИХ: <b>' + solidShapes + '</b> · ТЕКСТУР: <b>' + decoShapes + '</b> · ТОЧЕК БОЯ: <b>' +
+    m.spawns.length + '</b> · СКЛАДОВ: <b>' + m.ammoSpots.length + '</b> · ТАНКОВ: <b>' + tanks + '</b> · МИНОМЁТОВ: <b>' +
+    mortars + '</b> · ПЕРЕХОДОВ: <b>' + m.pads.length + '</b>' +
+    '<br />' + how + ' · ' + mode + ' · Ч — разворот вправо, Я — влево (крутится то, что под курсором; пусто — сама кисть: ' +
+    (ed.rot * 90) + '°) · колесо мыши — приблизить и отдалить (' + editorZoomLabel() + '), средняя кнопка — 100%' +
+    ' · ПКМ — стереть под курсором · Ctrl+Z — отмена · 1…9 — инструмент' +
+    (ed.notes.length ? ' <span class="ed-notes">· починка: ' + ed.notes.map(wkEsc).join(' · ') + '</span>' : '');
+  if (els.edDirty) {
+    els.edDirty.textContent = ed.dirty ? 'НЕ СОХРАНЕНО' : 'СОХРАНЕНО';
+    els.edDirty.classList.toggle('on', !!ed.dirty);
+  }
+  const zoomEl = $('edZoom');
+  if (zoomEl) zoomEl.textContent = editorZoomLabel();
+}
+function renderEditorPalette() {
+  if (!els.edPalette) return;
+  let html = '';
+  WK_TOOL_GROUPS.forEach(g => {
+    html += '<span class="ed-group">';
+    if (g.label) html += '<span class="ed-group-label">' + g.label + '</span>';
+    g.ids.forEach(id => {
+      const t = wkTool(id);
+      html += '<button class="ed-tool' + (ed && ed.tool === id ? ' on' : '') + '" type="button" data-tool="' +
+        id + '">' + t.label + '</button>';
+    });
+    html += '</span>';
+  });
+  const solid = !ed || ed.solid;
+  const rotDeg = ed ? ((ed.rot | 0) * 90) : 0;
+  html += '<span class="ed-group ed-mode">' +
+    '<button class="ed-mode-btn' + (solid ? ' on' : '') + '" type="button" data-mode="solid">МЕШАЕТ ПРОЙТИ</button>' +
+    '<button class="ed-mode-btn' + (!solid ? ' on' : '') + '" type="button" data-mode="decor">ТОЛЬКО ТЕКСТУРА</button>' +
+    '</span>' +
+    '<span class="ed-group ed-mode">' +
+    '<button class="ed-mode-btn" type="button" data-rot="-1" title="разворот влево — клавиша Я">↺ Я</button>' +
+    '<button class="ed-mode-btn" type="button" data-rot="1" title="разворот вправо — клавиша Ч">↻ Ч</button>' +
+    '<span class="ed-rot">' + rotDeg + '°</span>' +
+    '</span>' +
+    '<span class="ed-group ed-mode">' +
+    '<button class="ed-mode-btn" type="button" data-zoom="-1" title="отдалить — колесо мыши от себя">−</button>' +
+    '<span class="ed-rot" id="edZoom">' + editorZoomLabel() + '</span>' +
+    '<button class="ed-mode-btn" type="button" data-zoom="1" title="приблизить — колесо мыши на себя">+</button>' +
+    '<button class="ed-mode-btn" type="button" data-zoom="0" title="вернуть 100% — средняя кнопка мыши">100%</button>' +
+    '</span>';
+  els.edPalette.innerHTML = html;
+}
+function editorOpen(map) {
+  if (!els.editor) return;
+  const m = map ? wkNormalize(map) : wkNewMap(shopAuthor());
+  if (!m.start) m.start = { x: W * 0.5, y: H * 0.5 };
+  ed = { map: m, tool: 'crate', solid: true, lastKind: 'prop', rot: 0,
+    zoom: 1, cam: { x: W / 2, y: H / 2 }, drag: null, hist: [], notes: [], dirty: false, fieldsSig: '' };
+  if (els.workshop) els.workshop.classList.add('hidden');
+  if (els.deathmatch) els.deathmatch.classList.add('hidden');
+  if (els.select) els.select.classList.add('hidden');
+  if (els.settings) els.settings.classList.add('hidden');
+  els.menu.classList.add('hidden');
+  els.hud.classList.add('hidden');
+  els.editor.classList.remove('hidden');
+  state.mode = 'editor';
+  keys.clear();
+  mouse.down = false;
+  mouse.right = false;
+  editorFieldsSync();
+  renderEditorPalette();
+  editorBake();
+  editorHint();
+  last = performance.now();
+}
+function editorCloseToWorkshop() {
+  els.editor.classList.add('hidden');
+  ed = null;
+  state.mode = 'menu';
+  els.hud.classList.add('hidden');
+  openWorkshop('mine');
+}
+function editorExit() {
+  if (!ed) return;
+  if (ed.dirty) {
+    const m = editorSave(true);
+    toast('Карта «' + m.title + '» сохранена в мастерскую.', 2800);
+  }
+  editorCloseToWorkshop();
+}
+function editorSave(silent) {
+  if (!ed) return null;
+  const raw = editorReadMap();
+  const res = wkValidate(raw);
+  ed.map = res.map;
+  ed.notes = res.notes;
+  shopSaveAuthor(ed.map.author);
+  shopUpsert(ed.map);
+  ed.dirty = false;
+  editorFieldsSync();
+  editorBake();
+  editorHint();
+  if (!silent) {
+    toast('Карта «' + ed.map.title + '» — в мастерской.' + (res.notes.length ? ' ' + res.notes.join(' · ') : ''), 3400);
+  }
+  return ed.map;
+}
+function editorTest() {
+  const map = editorSave(true);
+  if (!map) return;
+  els.editor.classList.add('hidden');
+  if (wkPlay(map)) toast('Проба карты «' + map.title + '». Матч обычный: боты, фраги, обновление минуты.', 3200);
+  else {
+    els.editor.classList.remove('hidden');
+    state.mode = 'editor';
+  }
+}
+function editorUndo() {
+  if (!ed) return;
+  if (!ed.hist.length) { toast('Отменять нечего.', 1600); return; }
+  ed.map = wkNormalize(JSON.parse(ed.hist.pop()));
+  ed.notes = [];
+  ed.dirty = true;
+  editorFieldsSync();
+  editorBake();
+  editorHint();
+}
+function editorClear() {
+  if (!ed) return;
+  if (!window.confirm('Очистить карту: укрытия, точки боя и склады?')) return;
+  editorPush();
+  ed.map.props = [];
+  ed.map.spawns = [];
+  ed.map.ammoSpots = [];
+  ed.dirty = true;
+  editorBake();
+  editorHint();
+}
+function editorSetTool(id) {
+  if (!ed) return;
+  ed.tool = id;
+  /* смена семьи кистей возвращает её обычный режим, выбор внутри семьи — сохраняется */
+  const t = wkTool(id);
+  if (t.kind === 'prop' || t.kind === 'tex') {
+    if (ed.lastKind !== t.kind) ed.solid = (t.kind === 'prop');
+    ed.lastKind = t.kind;
+  }
+  renderEditorPalette();
+  editorHint();
+}
+function editorToggleSolid(mode) {
+  if (!ed) return;
+  ed.solid = (mode === 'solid') ? true : (mode === 'decor' ? false : !ed.solid);
+  renderEditorPalette();
+  editorHint();
+}
+function editorPlacePoint(tool, x, y) {
+  const m = ed.map;
+  if (tool.kind === 'start') {
+    editorPush();
+    m.start = { x: Math.round(clamp(x, WALL + 18, W - WALL - 18)), y: Math.round(clamp(y, WALL + 18, H - WALL - 18)) };
+  } else {
+    const list = tool.kind === 'spawn' ? m.spawns : m.ammoSpots;
+    const cap = tool.kind === 'spawn' ? WK_LIMIT.spawns : WK_LIMIT.ammo;
+    const i = list.findIndex(p => Math.hypot(p.x - x, p.y - y) < 16);
+    editorPush();
+    if (i >= 0) list.splice(i, 1);
+    else if (list.length >= cap) {
+      ed.hist.pop();
+      toast('Хватит: ' + cap + ' — предел этой карты.', 2000);
+      return;
+    } else {
+      list.push({ x: Math.round(clamp(x, WALL + 14, W - WALL - 14)), y: Math.round(clamp(y, WALL + 14, H - WALL - 14)) });
+    }
+  }
+  ed.dirty = true;
+  editorBake();
+  editorHint();
+}
+/* объект под курсором (техника): возвращает индекс или -1 */
+function editorObjectAt(x, y) {
+  const m = ed.map;
+  for (let i = m.objects.length - 1; i >= 0; i--) {
+    const r = wkObjectRect(m.objects[i]);
+    if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return i;
+  }
+  return -1;
+}
+function editorPadAt(x, y) {
+  const m = ed.map;
+  for (let i = m.pads.length - 1; i >= 0; i--) {
+    if (Math.hypot(m.pads[i].x - x, m.pads[i].y - y) < 15) return i;
+  }
+  return -1;
+}
+function editorPropAt(x, y) {
+  const m = ed.map;
+  for (let i = m.props.length - 1; i >= 0; i--) {
+    const p = m.props[i];
+    if (x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h) return i;
+  }
+  return -1;
+}
+/* разворот: Ч — вправо, Я — влево. Крутится то, что под курсором (техника,
+   укрытие или текстура); если под курсором пусто — поворачивается сама кисть,
+   и следующая поставленная вещь встанет уже повёрнутой. */
+function editorRotate(dir) {
+  if (!ed) return;
+  const step = (dir > 0) ? 1 : 3;
+  const m = ed.map;
+  const oi = editorObjectAt(mouse.x, mouse.y);
+  if (oi >= 0) {
+    const o = m.objects[oi];
+    const before = (o.rot | 0) & 3;
+    editorPush();
+    o.rot = (before + step) & 3;
+    ed.dirty = true;
+    editorBake();
+    editorHint();
+    toast('Разворот: ' + (o.kind === 'tank' ? 'танк' : 'миномёт') + ' — ' + (o.rot * 90) + '° (ствол туда).', 1600);
+    return;
+  }
+  const pi = editorPropAt(mouse.x, mouse.y);
+  if (pi >= 0) {
+    const p = m.props[pi];
+    const before = (p.rot | 0) & 3;
+    const after = (before + step) & 3;
+    editorPush();
+    p.rot = after;
+    if ((before % 2) !== (after % 2)) {
+      /* поворот на 90°: стороны меняются местами вокруг центра */
+      const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+      const w = p.h, h = p.w;
+      p.w = w;
+      p.h = h;
+      p.x = Math.round(clamp(cx - w / 2, WALL, W - WALL - w));
+      p.y = Math.round(clamp(cy - h / 2, WALL, H - WALL - h));
+    }
+    ed.dirty = true;
+    editorBake();
+    editorHint();
+    toast('Разворот: ' + wkTool(p.type).label + ' ' + p.w + '×' + p.h, 1600);
+    return;
+  }
+  ed.rot = ((ed.rot | 0) + step) & 3;
+  renderEditorPalette();
+  editorHint();
+  toast('Кисть повёрнута: ' + (ed.rot * 90) + '°. Ч — вправо, Я — влево.', 2000);
+}
+function editorEraseAt(x, y) {
+  const m = ed.map;
+  for (let i = m.props.length - 1; i >= 0; i--) {
+    const p = m.props[i];
+    if (x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h) {
+      editorPush(); m.props.splice(i, 1); ed.dirty = true; editorBake(); editorHint(); return;
+    }
+  }
+  const oi = editorObjectAt(x, y);
+  if (oi >= 0) {
+    editorPush(); m.objects.splice(oi, 1); ed.dirty = true; editorBake(); editorHint(); return;
+  }
+  const pi = editorPadAt(x, y);
+  if (pi >= 0) {
+    editorPush(); m.pads.splice(pi, 1); ed.dirty = true; editorBake(); editorHint(); return;
+  }
+  const lists = [m.spawns, m.ammoSpots];
+  for (let l = 0; l < lists.length; l++) {
+    for (let i = lists[l].length - 1; i >= 0; i--) {
+      if (Math.hypot(lists[l][i].x - x, lists[l][i].y - y) < 16) {
+        editorPush(); lists[l].splice(i, 1); ed.dirty = true; editorBake(); editorHint(); return;
+      }
+    }
+  }
+  if (Math.hypot(m.start.x - x, m.start.y - y) < 18) {
+    editorPush();
+    m.start = { x: W * 0.5, y: H * 0.5 };
+    ed.dirty = true;
+    editorBake();
+    editorHint();
+  }
+}
+function editorPlaceObject(tool, x, y) {
+  const m = ed.map;
+  const s = wkObjectSize(tool.obj);
+  const cx = Math.round(clamp(x, WALL + s.w / 2, W - WALL - s.w / 2));
+  const cy = Math.round(clamp(y, WALL + s.h / 2, H - WALL - s.h / 2));
+  const i = m.objects.findIndex(o => o.kind === tool.obj && Math.hypot(o.x - cx, o.y - cy) < 26);
+  editorPush();
+  if (i >= 0) {
+    m.objects.splice(i, 1);
+  } else if (m.objects.length >= WK_LIMIT.objects) {
+    ed.hist.pop();
+    toast('Хватит техники: ' + WK_LIMIT.objects + ' — предел.', 2000);
+    return;
+  } else {
+    m.objects.push({ kind: tool.obj, x: cx, y: cy, rot: ed.rot | 0 });
+  }
+  ed.dirty = true;
+  editorBake();
+  editorHint();
+}
+function editorPlacePad(x, y) {
+  const m = ed.map;
+  const px = Math.round(clamp(x, WALL + 15, W - WALL - 15));
+  const py = Math.round(clamp(y, WALL + 15, H - WALL - 15));
+  const i = editorPadAt(px, py);
+  editorPush();
+  if (i >= 0) {
+    m.pads.splice(i, 1);
+  } else if (m.pads.length >= WK_LIMIT.pads) {
+    ed.hist.pop();
+    toast('Хватит переходов: ' + WK_LIMIT.pads + ' — предел.', 2000);
+    return;
+  } else {
+    m.pads.push({ x: px, y: py });
+  }
+  ed.dirty = true;
+  editorBake();
+  editorHint();
+}
+function editorDown(e) {
+  if (state.mode !== 'editor' || !ed) return;
+  e.preventDefault();
+  toWorld(e);
+  const x = mouse.x, y = mouse.y;
+  if (e.button === 2) { editorEraseAt(x, y); return; }
+  /* средняя кнопка — вернуть масштаб к 100% */
+  if (e.button === 1) { editorZoomReset(); toast('Масштаб 100%.', 1400); return; }
+  const tool = wkTool(ed.tool);
+  if (tool.kind === 'object') { editorPlaceObject(tool, x, y); return; }
+  if (tool.kind === 'pad') { editorPlacePad(x, y); return; }
+  if (wkRectTool(tool.id) || tool.kind === 'erase') {
+    ed.drag = { x0: x, y0: y, x1: x, y1: y, tool: tool.id };
+    mouse.down = true;
+  } else {
+    editorPlacePoint(tool, x, y);
+  }
+}
+function editorUp() {
+  if (state.mode !== 'editor' || !ed || !ed.drag) return;
+  const d = ed.drag;
+  ed.drag = null;
+  mouse.down = false;
+  const tool = wkTool(d.tool);
+  let x = Math.min(d.x0, d.x1), y = Math.min(d.y0, d.y1);
+  let w = Math.abs(d.x1 - d.x0), h = Math.abs(d.y1 - d.y0);
+  if (tool.kind === 'erase') {
+    const r = { x: x, y: y, w: Math.max(20, w), h: Math.max(20, h) };
+    const before = ed.map.props.length + ed.map.spawns.length + ed.map.ammoSpots.length +
+      ed.map.objects.length + ed.map.pads.length;
+    editorPush();
+    ed.map.props = ed.map.props.filter(p => !wkRectOverlap(p, r));
+    ed.map.spawns = ed.map.spawns.filter(p => !wkPointIn(p, r));
+    ed.map.ammoSpots = ed.map.ammoSpots.filter(p => !wkPointIn(p, r));
+    ed.map.pads = ed.map.pads.filter(p => !wkPointIn(p, r));
+    ed.map.objects = ed.map.objects.filter(o => {
+      const or = wkObjectRect(o);
+      return !wkRectOverlap(or, r);
+    });
+    const after = ed.map.props.length + ed.map.spawns.length + ed.map.ammoSpots.length +
+      ed.map.objects.length + ed.map.pads.length;
+    if (before === after) ed.hist.pop();
+    else ed.dirty = true;
+  } else {
+    if (w < 14 || h < 14) {
+      const odd = ((ed.rot | 0) % 2) === 1;
+      w = odd ? tool.h : tool.w;
+      h = odd ? tool.w : tool.h;
+      x = clamp(d.x0 - w / 2, WALL, W - WALL - w);
+      y = clamp(d.y0 - h / 2, WALL, H - WALL - h);
+    }
+    w = Math.round(Math.max(18, Math.min(w, W - WALL * 2)));
+    h = Math.round(Math.max(18, Math.min(h, H - WALL * 2)));
+    x = Math.round(clamp(x, WALL, W - WALL - w));
+    y = Math.round(clamp(y, WALL, H - WALL - h));
+    if (ed.map.props.length >= WK_LIMIT.props) {
+      toast('Хватит объектов: ' + WK_LIMIT.props + ' — предел.', 2000);
+    } else {
+      const solid = (tool.kind === 'stair') ? true : !!ed.solid;
+      editorPush();
+      ed.map.props.push({ type: tool.id, x: x, y: y, w: w, h: h, rot: ed.rot | 0, solid: solid });
+      ed.dirty = true;
+    }
+  }
+  editorBake();
+  editorHint();
+}
+function editorKey(e) {
+  if (!ed) return;
+  const tag = e.target && e.target.tagName ? e.target.tagName : '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (e.code === 'Escape') { editorExit(); return; }
+  if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) { editorUndo(); return; }
+  if (e.code === 'KeyS' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); editorSave(false); return; }
+  if (e.code === 'KeyT') { editorTest(); return; }
+  /* Ч (клавиша X) — разворот вправо, Я (клавиша Z) — влево */
+  if (e.code === 'KeyX') { editorRotate(1); return; }
+  if (e.code === 'KeyZ') { editorRotate(-1); return; }
+  if (e.code === 'KeyR') { editorRotate(e.shiftKey ? -1 : 1); return; }
+  /* масштаб: +/− (и 0 — вернуть 100%), то же самое делает колесо мыши */
+  if (e.code === 'Equal' || e.code === 'NumpadAdd') { editorZoomBy(1.25); editorHint(); return; }
+  if (e.code === 'Minus' || e.code === 'NumpadSubtract') { editorZoomBy(1 / 1.25); editorHint(); return; }
+  if (e.code === 'Digit0' || e.code === 'Numpad0') { editorZoomReset(); return; }
+  const d = /^Digit([1-9])$/.exec(e.code);
+  if (d) {
+    const t = WK_TOOLS[+d[1] - 1];
+    if (t) editorSetTool(t.id);
+  }
+}
+function editorUpdate() {
+  if (!ed) return;
+  if (ed.drag) { ed.drag.x1 = mouse.x; ed.drag.y1 = mouse.y; }
+  if (els.edTheme && els.edTitle) {
+    const sig = els.edTitle.value + '|' + els.edAuthor.value + '|' + els.edTheme.value;
+    if (sig !== ed.fieldsSig) {
+      ed.fieldsSig = sig;
+      if (WK_THEMES[els.edTheme.value] && els.edTheme.value !== ed.map.theme) {
+        ed.map.theme = els.edTheme.value;
+        wkBakeFloor(ed.map.theme);
+      }
+      ed.dirty = true;
+    }
+  }
+}
+function edLabel(x, y, text, col) {
+  ctx.font = 'bold 9px Consolas, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,.6)';
+  ctx.fillText(text, x + 1, y + 1);
+  ctx.fillStyle = col;
+  ctx.fillText(text, x, y);
+  ctx.textAlign = 'left';
+}
+function editorRender() {
+  if (!ed) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#07080a';
+  ctx.fillRect(0, 0, W, H);
+  /* камера редактора: масштаб + центр. Всё, что ниже, рисуется в мировых
+     координатах, поэтому колесо мыши просто меняет эту матрицу. */
+  const z = editorZoom();
+  const cam = ed.cam || { x: W / 2, y: H / 2 };
+  ctx.save();
+  ctx.setTransform(dpr * z, 0, 0, dpr * z,
+    dpr * (W / 2 - cam.x * z), dpr * (H / 2 - cam.y * z));
+  ctx.drawImage(floorCv, 0, 0);
+  ctx.drawImage(roomCv, 0, 0);
+
+  const m = ed.map;
+  /* маркеры точек */
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = 'rgba(143,191,122,.9)';
+  ctx.lineWidth = 2;
+  m.ammoSpots.forEach(p => {
+    ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, 6.28); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(143,191,122,.9)';
+  m.ammoSpots.forEach(p => {
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+  });
+  ctx.strokeStyle = 'rgba(240,170,80,.95)';
+  m.spawns.forEach(p => {
+    ctx.beginPath(); ctx.arc(p.x, p.y, 13, 0, 6.28); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y - 7);
+    ctx.lineTo(p.x + 6, p.y + 5);
+    ctx.lineTo(p.x - 6, p.y + 5);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(240,170,80,.55)';
+    ctx.fill();
+  });
+  /* старт */
+  ctx.strokeStyle = 'rgba(120,235,255,.95)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(m.start.x, m.start.y, 16, 0, 6.28); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(m.start.x - 22, m.start.y); ctx.lineTo(m.start.x + 22, m.start.y);
+  ctx.moveTo(m.start.x, m.start.y - 22); ctx.lineTo(m.start.x, m.start.y + 22);
+  ctx.stroke();
+
+  /* подписи: читаемость важнее декора */
+  m.spawns.forEach((p, i) => { if (i < 25) edLabel(p.x, p.y - 18, 'БОЙ', 'rgba(240,200,140,.95)'); });
+  m.ammoSpots.forEach((p, i) => { if (i < 25) edLabel(p.x, p.y - 17, 'СКЛАД', 'rgba(160,220,150,.95)'); });
+  edLabel(m.start.x, m.start.y + 30, 'СТАРТ', 'rgba(150,240,255,.95)');
+
+  /* что не мешает пройти — пунктиром: автор сразу видит, где физика, а где вид */
+  ctx.setLineDash([3, 4]);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(120,235,255,.35)';
+  m.props.forEach(p => { if (p.solid === false) ctx.strokeRect(p.x + 0.5, p.y + 0.5, p.w - 1, p.h - 1); });
+  ctx.setLineDash([]);
+
+  /* техника рисуется как в бою: миномёт с окопом, танк целиком, стволом по развороту */
+  m.objects.forEach(o => {
+    const face = ((o.rot | 0) & 3) * Math.PI / 2;
+    const ghostUnit = {
+      kind: o.kind, x: o.x, y: o.y, hp: 1, maxhp: 1, dead: false,
+      ang: face, aim: face, turret: face, tread: 0, muzzle: 0, hit: 0
+    };
+    if (o.kind === 'tank') wkDrawTankUnit(ghostUnit, true); else wkDrawMortarUnit(ghostUnit, true);
+    const r = wkObjectRect(o);
+    ctx.strokeStyle = 'rgba(255,190,120,.45)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+    /* куда смотрит ствол */
+    ctx.strokeStyle = 'rgba(255,214,150,.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(o.x, o.y);
+    ctx.lineTo(o.x + Math.cos(face) * 46, o.y + Math.sin(face) * 46);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(o.x + Math.cos(face) * 46, o.y + Math.sin(face) * 46, 3, 0, 6.28);
+    ctx.fillStyle = 'rgba(255,214,150,.9)';
+    ctx.fill();
+  });
+
+  /* площадки перехода: пара соединена линией, чтобы видеть, куда ведёт */
+  if (m.pads.length) {
+    ctx.setLineDash([6, 5]);
+    ctx.strokeStyle = 'rgba(120,235,255,.28)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i + 1 < m.pads.length; i += 2) {
+      ctx.beginPath();
+      ctx.moveTo(m.pads[i].x, m.pads[i].y);
+      ctx.lineTo(m.pads[i + 1].x, m.pads[i + 1].y);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    m.pads.forEach((p, i) => {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.fillStyle = 'rgba(120,235,255,.12)';
+      ctx.beginPath(); ctx.arc(0, 0, 15, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = 'rgba(150,240,255,.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, 15, 0, 6.28); ctx.stroke();
+      ctx.fillStyle = 'rgba(200,248,255,.95)';
+      ctx.font = 'bold 13px Consolas, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(i % 2 === 0 ? '▲' : '▼', 0, 5);
+      ctx.font = 'bold 9px Consolas, monospace';
+      ctx.fillStyle = 'rgba(170,240,255,.9)';
+      ctx.fillText('ПЕРЕХОД ' + (Math.floor(i / 2) + 1), 0, -21);
+      ctx.textAlign = 'left';
+      ctx.restore();
+    });
+  }
+
+  /* призрак инструмента и рамка протяжки */
+  const tool = wkTool(ed.tool);
+  if (ed.drag) {
+    const x = Math.min(ed.drag.x0, ed.drag.x1), y = Math.min(ed.drag.y0, ed.drag.y1);
+    const w = Math.abs(ed.drag.x1 - ed.drag.x0), h = Math.abs(ed.drag.y1 - ed.drag.y0);
+    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 2;
+    if (tool.kind === 'erase') {
+      ctx.strokeStyle = 'rgba(200,80,60,.9)';
+      ctx.fillStyle = 'rgba(200,80,60,.14)';
+      ctx.fillRect(x, y, Math.max(20, w), Math.max(20, h));
+      ctx.strokeRect(x, y, Math.max(20, w), Math.max(20, h));
+    } else {
+      const solidBrush = (tool.kind === 'stair') || !!ed.solid;
+      ctx.strokeStyle = solidBrush ? 'rgba(217,162,74,.95)' : 'rgba(120,235,255,.9)';
+      ctx.fillStyle = solidBrush ? 'rgba(217,162,74,.16)' : 'rgba(120,235,255,.12)';
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeRect(x, y, w, h);
+      if (w > 40 && h > 18) {
+        edLabel(x + w / 2, y - 6, Math.round(w) + '×' + Math.round(h) + (solidBrush ? ' · ФИЗИКА' : ' · ТЕКСТУРА'),
+          'rgba(240,224,190,.9)');
+      }
+    }
+    ctx.setLineDash([]);
+  } else if (tool.kind === 'prop' || tool.kind === 'tex' || tool.kind === 'stair') {
+    const odd = ((ed.rot | 0) % 2) === 1;
+    const bw = odd ? tool.h : tool.w, bh = odd ? tool.w : tool.h;
+    const x = mouse.x - bw / 2, y = mouse.y - bh / 2;
+    const solidBrush = (tool.kind === 'stair') || !!ed.solid;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = solidBrush ? 'rgba(217,162,74,.8)' : 'rgba(120,235,255,.75)';
+    ctx.fillStyle = solidBrush ? 'rgba(217,162,74,.12)' : 'rgba(120,235,255,.10)';
+    ctx.fillRect(x, y, bw, bh);
+    ctx.strokeRect(x, y, bw, bh);
+    ctx.setLineDash([]);
+    edLabel(mouse.x, y - 8, tool.label + (solidBrush ? ' · ФИЗИКА' : ' · ТЕКСТУРА') + ' · ' + (ed.rot * 90) + '°',
+      solidBrush ? 'rgba(240,214,170,.9)' : 'rgba(170,240,255,.9)');
+  } else if (tool.kind === 'object') {
+    const face = ((ed.rot | 0) & 3) * Math.PI / 2;
+    const ghostUnit = {
+      kind: tool.obj, x: mouse.x, y: mouse.y, hp: 1, maxhp: 1, dead: false,
+      ang: face, aim: face, turret: face, tread: 0, muzzle: 0, hit: 0
+    };
+    ctx.globalAlpha = 0.62;
+    if (tool.obj === 'tank') wkDrawTankUnit(ghostUnit, true); else wkDrawMortarUnit(ghostUnit, true);
+    ctx.globalAlpha = 1;
+    edLabel(mouse.x, mouse.y - 44, tool.label + ' · ' + (ed.rot * 90) + '°', 'rgba(255,200,140,.9)');
+  } else if (tool.kind === 'pad') {
+    ctx.strokeStyle = 'rgba(150,240,255,.75)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(mouse.x, mouse.y, 15, 0, 6.28); ctx.stroke();
+    edLabel(mouse.x, mouse.y - 22, 'ПЕРЕХОД ' + (m.pads.length + 1), 'rgba(190,246,255,.9)');
+  } else if (tool.kind === 'spawn' || tool.kind === 'ammo' || tool.kind === 'start') {
+    ctx.strokeStyle = tool.kind === 'start' ? 'rgba(120,235,255,.7)'
+      : (tool.kind === 'spawn' ? 'rgba(240,170,80,.7)' : 'rgba(143,191,122,.7)');
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(mouse.x, mouse.y, 15, 0, 6.28); ctx.stroke();
+  }
+  /* курсор */
+  ctx.strokeStyle = 'rgba(236,229,215,.45)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(mouse.x - 9, mouse.y); ctx.lineTo(mouse.x + 9, mouse.y);
+  ctx.moveTo(mouse.x, mouse.y - 9); ctx.lineTo(mouse.x, mouse.y + 9);
+  ctx.stroke();
+
+  /* рамка игрового поля */
+  ctx.strokeStyle = 'rgba(217,162,74,.35)';
+  ctx.strokeRect(WALL + 0.5, WALL + 0.5, W - WALL * 2 - 1, H - WALL * 2 - 1);
+  ctx.restore();
+
+  /* масштаб: рамка и подпись, чтобы не потеряться при приближении */
+  if (z !== 1) {
+    ctx.strokeStyle = 'rgba(217,162,74,.45)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+    ctx.font = 'bold 11px Consolas, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(0,0,0,.6)';
+    ctx.fillText('МАСШТАБ ' + editorZoomLabel() + ' · колесо мыши', W - 7, 19);
+    ctx.fillStyle = 'rgba(240,214,170,.75)';
+    ctx.fillText('МАСШТАБ ' + editorZoomLabel() + ' · колесо мыши', W - 8, 18);
+    ctx.textAlign = 'left';
+  }
+}
+
+/* ===========================================================
+   АРЕНА: МИНОМЁТЫ, ТАНКИ И ЛЕСТНИЧНЫЕ ПЕРЕХОДЫ
+   Техника, поставленная в редакторе, живёт в бою: миномёты
+   кладут мины по бойцам, танк бьёт из пушки по ближнему, оба
+   принимают огонь и разбиваются. Площадки-переходы связывают
+   пары точек: встал на одну — оказался на второй (шаг вверх
+   по лестнице и обратно).
+   =========================================================== */
+const WK_MORTAR_HP = 260;
+const WK_TANK_HP = 900;
+const WK_TP_R = 15;
+
+let wkUnits = [];
+let wkShells = [];
+
+function wkSpawnUnits() {
+  const map = level.wk;
+  wkUnits = [];
+  wkShells = [];
+  if (!map) return;
+  (map.objects || []).forEach((o, i) => {
+    const tank = o.kind === 'tank';
+    const face = ((o.rot | 0) & 3) * Math.PI / 2;
+    wkUnits.push({
+      kind: o.kind, id: o.kind + i, x: o.x, y: o.y,
+      hp: tank ? WK_TANK_HP : WK_MORTAR_HP,
+      maxhp: tank ? WK_TANK_HP : WK_MORTAR_HP,
+      dead: false, hit: 0, muzzle: 0, tread: 0, ang: face,
+      aim: face, turret: face,
+      fireCd: tank ? rnd(2.6, 4.6) : rnd(3.2, 6.0)
+    });
+  });
+}
+function wkUnitsAlive() {
+  let n = 0;
+  for (const u of wkUnits) if (!u.dead) n++;
+  return n;
+}
+/* кто живой на арене: игрок, второй игрок и боты */
+function wkFighters() {
+  const list = [];
+  if (player && !(state.dm && state.dm.deadT > 0)) list.push({ ent: player, side: 'p1' });
+  if (player2 && dmP2On && !(state.dm && state.dm.p2deadT > 0)) list.push({ ent: player2, side: 'p2' });
+  for (const e of enemies) if (e.isBot && e.hp > 0 && !e.away) list.push({ ent: e, side: 'bot' });
+  return list;
+}
+function wkPickTarget(u, maxD) {
+  let best = null, bd = maxD || 100000;
+  for (const f of wkFighters()) {
+    const d = Math.hypot(f.ent.x - u.x, f.ent.y - u.y);
+    if (d < bd) { bd = d; best = f.ent; }
+  }
+  return best;
+}
+function wkFireMortarUnit(u) {
+  const tgt = wkPickTarget(u, 860);
+  if (!tgt) { u.fireCd = 1.2; return; }
+  const tx = clamp(tgt.x + rnd(-54, 54), WALL + 14, W - WALL - 14);
+  const ty = clamp(tgt.y + rnd(-54, 54), WALL + 14, H - WALL - 14);
+  u.aim = Math.atan2(ty - u.y, tx - u.x);
+  u.muzzle = 0.14;
+  u.fireCd = rnd(4.4, 6.4);
+  wkShells.push({
+    kind: 'mortar', sx: u.x, sy: u.y, tx: tx, ty: ty, x: u.x, y: u.y,
+    t: 0, dur: 1.25, h: 0, dmg: 40, r: 72
+  });
+  spark(u.x + Math.cos(u.aim) * 18, u.y + Math.sin(u.aim) * 18, 5, '#e8cf9a', 90);
+  noiseHit(0.22, 0.10, 150, 0.6);
+  tone(74, 0.28, 'sine', 0.045, 42);
+}
+function wkFireTankGun(u) {
+  const tgt = wkPickTarget(u, 1000);
+  if (!tgt) { u.fireCd = 1.4; return; }
+  const a = Math.atan2(tgt.y - u.y, tgt.x - u.x) + rnd(-0.035, 0.035);
+  u.turret = a;
+  u.aim = a;
+  const mx = u.x + Math.cos(a) * 54, my = u.y + Math.sin(a) * 54;
+  u.muzzle = 0.14;
+  u.fireCd = rnd(4.6, 6.8);
+  wkShells.push({
+    kind: 'shell', x: mx, y: my, sx: mx, sy: my,
+    vx: Math.cos(a) * 760, vy: Math.sin(a) * 760,
+    dmg: 72, r: 84, life: 1.5
+  });
+  spark(mx, my, 14, '#ffe0a8', 230);
+  state.shake = Math.max(state.shake, 9);
+  noiseHit(0.42, 0.2, 200, 0.6);
+  tone(62, 0.32, 'sine', 0.07, 34);
+}
+function wkUpdateUnits(dt) {
+  if (!level.wk) return;
+  for (const u of wkUnits) {
+    u.hit = Math.max(0, u.hit - dt);
+    u.muzzle = Math.max(0, u.muzzle - dt);
+    if (u.dead) continue;
+    u.fireCd -= dt;
+    if (u.kind === 'tank') {
+      const tgt = wkPickTarget(u, 1000);
+      if (tgt) {
+        const want = Math.atan2(tgt.y - u.y, tgt.x - u.x);
+        let d = want - u.turret;
+        while (d > Math.PI) d -= Math.PI * 2;
+        while (d < -Math.PI) d += Math.PI * 2;
+        u.turret += clamp(d, -1.2 * dt, 1.2 * dt);
+      }
+      u.tread = (u.tread || 0) + dt * 4;
+    }
+    if (u.fireCd <= 0) {
+      if (u.kind === 'tank') wkFireTankGun(u); else wkFireMortarUnit(u);
+    }
+  }
+  wkUpdateShells(dt);
+  if (player) wkTpCheck(player);
+  if (player2 && dmP2On) wkTpCheck(player2);
+  for (const e of enemies) if (e.isBot && e.hp > 0) wkTpCheck(e);
+}
+function wkUpdateShells(dt) {
+  for (let i = wkShells.length - 1; i >= 0; i--) {
+    const s = wkShells[i];
+    if (s.kind === 'mortar') {
+      s.t += dt;
+      const k = Math.min(1, s.t / s.dur);
+      s.x = s.sx + (s.tx - s.sx) * k;
+      s.y = s.sy + (s.ty - s.sy) * k;
+      s.h = Math.sin(k * Math.PI) * 96;
+      if (k >= 1) { wkShells.splice(i, 1); wkBlast(s.tx, s.ty, s.r, s.dmg); }
+      continue;
+    }
+    s.life -= dt;
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    let stop = s.life <= 0 || s.x < WALL || s.x > W - WALL || s.y < WALL || s.y > H - WALL || pointInSolid(s.x, s.y);
+    if (!stop) {
+      for (const f of wkFighters()) {
+        if (Math.hypot(f.ent.x - s.x, f.ent.y - s.y) < f.ent.r + 6) { stop = true; break; }
+      }
+    }
+    if (stop) { wkShells.splice(i, 1); wkBlast(s.x, s.y, s.r, s.dmg); }
+  }
+}
+function wkBlast(x, y, r, dmg) {
+  state.shake = Math.max(state.shake, 9);
+  state.flash = Math.max(state.flash, 0.3);
+  spark(x, y, 22, '#ffb45a', 240);
+  spark(x, y, 9, '#f2e2c4', 150);
+  smokePuff(x, y, 5);
+  decals.push({ x: x, y: y, r: 24, rot: rnd(0, 6.28), a: 0.42 });
+  noiseHit(0.42, 0.16, 170, 0.5);
+  tone(52, 0.4, 'sine', 0.06, 26);
+  const maxD = r + 30;
+  const scale = d => Math.round(dmg * (1 - 0.55 * d / maxD));
+  if (player && !(state.dm && state.dm.deadT > 0)) {
+    const d = Math.hypot(player.x - x, player.y - y);
+    if (d < maxD) hurtPlayer(scale(d));
+  }
+  if (player2 && dmP2On && !(state.dm && state.dm.p2deadT > 0)) {
+    const d = Math.hypot(player2.x - x, player2.y - y);
+    if (d < maxD) hurtPlayer2(scale(d));
+  }
+  for (const e of enemies.slice()) {
+    if (!e.isBot || e.hp <= 0 || e.away) continue;
+    const d = Math.hypot(e.x - x, e.y - y);
+    if (d < maxD) damageDmBot(e, scale(d), Math.atan2(e.y - y, e.x - x), null, false, true);
+  }
+}
+function wkDamageUnit(u, dmg) {
+  if (!u || u.dead) return;
+  u.hp -= dmg;
+  u.hit = 0.16;
+  spark(u.x + rnd(-14, 14), u.y + rnd(-12, 12), 5, '#d8c9a8', 110);
+  if (u.hp > 0) { noiseHit(0.05, 0.05, 700, 1.4); return; }
+  u.hp = 0;
+  u.dead = true;
+  state.shake = Math.max(state.shake, 13);
+  state.flash = Math.max(state.flash, 0.45);
+  spark(u.x, u.y, 40, '#ffb45a', 280);
+  spark(u.x, u.y, 14, '#f4e6c8', 190);
+  smokePuff(u.x, u.y, 9);
+  decals.push({ x: u.x, y: u.y, r: 34, rot: rnd(0, 6.28), a: 0.45 });
+  noiseHit(0.7, 0.16, 160, 0.5);
+  tone(60, 0.7, 'sine', 0.07, 28);
+  if (player && player.binocs) {
+    player.binocs.charges = Math.min(DM.supply, (player.binocs.charges || 0) + 1);
+  }
+  /* с разбитой техники снимается снабжение: рядом падают патроны и аптечка */
+  const dropA = wkFreeSpot(level.wk, u.x + 34, u.y + 28, 18);
+  pickups.push({
+    type: 'drop_ammo', x: dropA.x, y: dropA.y, taken: false, t: 0,
+    hidden: true, air: 0.85, maxAir: 0.85, amount: 20
+  });
+  const dropM = wkFreeSpot(level.wk, u.x - 36, u.y + 24, 18);
+  pickups.push({
+    type: 'drop_medkit', x: dropM.x, y: dropM.y, taken: false, t: 0,
+    hidden: true, air: 0.85, maxAir: 0.85, amount: 45
+  });
+  floatText(u.x, u.y - 34, 'РАЗБИТ', '#ffcf8a');
+  toast((u.kind === 'tank' ? 'Танк горит: пушка молчит.' : 'Миномёт разбит.') +
+    ' Из обломков выпало снабжение — патроны и аптечка. В бинокле +1 заряд.', 3200);
+}
+/* ---------- лестничные переходы ---------- */
+function wkPadIndexAt(map, x, y) {
+  for (let i = 0; i < map.pads.length; i++) {
+    if (Math.hypot(map.pads[i].x - x, map.pads[i].y - y) < WK_TP_R) return i;
+  }
+  return -1;
+}
+function wkTpCheck(ent) {
+  const map = level.wk;
+  if (!map || !map.pads || map.pads.length < 2) return;
+  const idx = wkPadIndexAt(map, ent.x, ent.y);
+  if (idx < 0) { ent.wkTpFrom = -1; return; }
+  if (ent.wkTpFrom === idx) return;          /* пришли сюда переходом: надо сойти, чтобы он сработал снова */
+  const partner = idx ^ 1;
+  const to = map.pads[partner];
+  if (!to) return;
+  ent.wkTpFrom = partner;
+  ent.x = to.x;
+  ent.y = to.y;
+  if (ent === player || ent === player2) {
+    floatText(to.x, to.y - 26, 'ЛЕСТНИЦА', '#9fe8ff');
+    tone(520, 0.12, 'triangle', 0.05);
+    state.shake = Math.max(state.shake, 4);
+  } else {
+    spark(to.x, to.y, 8, '#9fe8ff', 90);
+  }
+}
+/* ---------- отрисовка ---------- */
+function wkUnitBar(u, label) {
+  const w = 44, x = u.x - w / 2, y = u.y - 40;
+  ctx.fillStyle = 'rgba(6,7,9,.62)';
+  ctx.fillRect(x - 1, y - 1, w + 2, 6);
+  ctx.fillStyle = u.dead ? 'rgba(120,60,50,.9)'
+    : (u.hp / u.maxhp > 0.5 ? 'rgba(143,191,122,.92)' : 'rgba(240,210,110,.92)');
+  ctx.fillRect(x, y, w * clamp(u.hp / u.maxhp, 0, 1), 4);
+  ctx.strokeStyle = 'rgba(0,0,0,.5)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x - 1.5, y - 1.5, w + 3, 7);
+  ctx.font = 'bold 9px Consolas, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,.65)';
+  ctx.fillText(label, u.x + 1, y - 4 + 1);
+  ctx.fillStyle = u.dead ? 'rgba(190,120,100,.85)' : 'rgba(226,214,192,.9)';
+  ctx.fillText(label, u.x, y - 4);
+  ctx.textAlign = 'left';
+}
+function wkDrawMortarUnit(u, ghost) {
+  const dead = !!u.dead;
+  ctx.save();
+  ctx.translate(u.x, u.y);
+  ctx.fillStyle = 'rgba(0,0,0,.42)';
+  ctx.beginPath(); ctx.ellipse(2, 6, 30, 22, 0, 0, 6.28); ctx.fill();
+  const bags = [[-22, 2, -0.5], [-17, -11, 0.4], [22, 0, 0.5], [17, -11, -0.3], [-1, -18, 0.1], [4, 18, -0.2]];
+  for (const b of bags) {
+    ctx.save();
+    ctx.translate(b[0], b[1]);
+    ctx.rotate(b[2]);
+    ctx.fillStyle = dead ? '#3c352c' : (u.hit > 0 ? '#7d7157' : '#5b5240');
+    roundRect(ctx, -11, -6, 22, 12, 4); ctx.fill();
+    ctx.strokeStyle = 'rgba(20,18,14,.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.fillStyle = dead ? '#1d1c19' : '#3a3d35';
+  ctx.beginPath(); ctx.arc(0, 3, 11, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#24261f';
+  ctx.beginPath(); ctx.arc(0, 3, 6.5, 0, 6.28); ctx.fill();
+  ctx.save();
+  ctx.rotate(u.aim || 0);
+  ctx.rotate(dead ? 0.32 : -0.6);
+  ctx.fillStyle = dead ? '#2a2724' : '#4d5348';
+  ctx.fillRect(0, -3.4, 26, 6.8);
+  ctx.fillStyle = '#2b2f27';
+  ctx.fillRect(24, -4.2, 5, 8.4);
+  ctx.restore();
+  if (u.muzzle > 0 && !dead && !ghost) {
+    ctx.fillStyle = 'rgba(255,226,160,' + (Math.min(1, u.muzzle / 0.14) * 0.85).toFixed(2) + ')';
+    ctx.beginPath();
+    ctx.arc(Math.cos(u.aim || 0) * 20, Math.sin(u.aim || 0) * 20, 9, 0, 6.28);
+    ctx.fill();
+  }
+  ctx.restore();
+  if (!ghost) wkUnitBar(u, dead ? 'МИНОМЁТ · РАЗБИТ' : 'МИНОМЁТ ' + Math.max(0, Math.round(u.hp)));
+}
+function wkDrawTankUnit(u, ghost) {
+  drawTank(u);
+  if (!ghost) wkUnitBar(u, u.dead ? 'ТАНК · ГОРИТ' : 'ТАНК ' + Math.max(0, Math.round(u.hp)));
+}
+function wkDrawUnits() {
+  for (const u of wkUnits) {
+    if (u.kind === 'tank') wkDrawTankUnit(u, false); else wkDrawMortarUnit(u, false);
+  }
+}
+function wkDrawShells() {
+  for (const s of wkShells) {
+    if (s.kind === 'mortar') {
+      ctx.strokeStyle = 'rgba(220,120,90,.32)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(s.tx, s.ty, 20, 0, 6.28); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(s.tx - 26, s.ty); ctx.lineTo(s.tx + 26, s.ty);
+      ctx.moveTo(s.tx, s.ty - 26); ctx.lineTo(s.tx, s.ty + 26);
+      ctx.stroke();
+      const y = s.y - s.h;
+      ctx.fillStyle = 'rgba(0,0,0,.35)';
+      ctx.beginPath(); ctx.ellipse(s.x, s.y, 5, 2.5, 0, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,240,200,.28)';
+      ctx.beginPath(); ctx.moveTo(s.sx, s.sy - 14); ctx.lineTo(s.x, y); ctx.stroke();
+      ctx.fillStyle = '#d8c9a8';
+      ctx.beginPath(); ctx.arc(s.x, y, 3.4, 0, 6.28); ctx.fill();
+    } else {
+      const a = Math.atan2(s.vy, s.vx);
+      const len = Math.hypot(s.vx, s.vy) * 0.03;
+      ctx.strokeStyle = 'rgba(255,214,150,.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(s.x - Math.cos(a) * len, s.y - Math.sin(a) * len);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,190,120,.95)';
+      ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, 6.28); ctx.fill();
+    }
+  }
+}
+function wkDrawPads() {
+  const map = level.wk;
+  if (!map || !map.pads || !map.pads.length) return;
+  for (let i = 0; i < map.pads.length; i++) {
+    const p = map.pads[i];
+    const up = i % 2 === 0;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.fillStyle = 'rgba(120,235,255,.10)';
+    ctx.beginPath(); ctx.arc(0, 0, 15, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = up ? 'rgba(120,235,255,.6)' : 'rgba(120,235,255,.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, 15, 0, 6.28); ctx.stroke();
+    ctx.fillStyle = 'rgba(190,246,255,.9)';
+    ctx.font = 'bold 13px Consolas, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(up ? '▲' : '▼', 0, 5);
+    ctx.font = 'bold 9px Consolas, monospace';
+    ctx.fillStyle = 'rgba(150,230,245,.7)';
+    ctx.fillText('ПЕРЕХОД ' + (Math.floor(i / 2) + 1), 0, -22);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+}
+/* яркое после затемнения: мины, выстрелы танка и площадки видно в темноте */
+function wkDrawGlow() {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const u of wkUnits) {
+    if (u.muzzle > 0) {
+      ctx.fillStyle = 'rgba(255,210,140,' + (Math.min(1, u.muzzle / 0.14) * 0.42).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.arc(u.x + Math.cos(u.aim || 0) * 22, u.y + Math.sin(u.aim || 0) * 22, 62, 0, 6.28);
+      ctx.fill();
+    }
+    if (u.dead) {
+      ctx.fillStyle = 'rgba(220,110,60,.05)';
+      ctx.beginPath(); ctx.arc(u.x, u.y, 44, 0, 6.28); ctx.fill();
+    }
+  }
+  for (const s of wkShells) {
+    const a = s.kind === 'mortar' ? 0.16 : 0.2;
+    ctx.fillStyle = 'rgba(240,170,110,' + a + ')';
+    ctx.beginPath();
+    ctx.arc(s.x, s.kind === 'mortar' ? s.y - s.h : s.y, 40, 0, 6.28);
+    ctx.fill();
+  }
+  const map = level.wk;
+  if (map && map.pads) {
+    for (const p of map.pads) {
+      const pulse = 0.05 + 0.035 * (0.5 + 0.5 * Math.sin(state.time * 2.4 + p.x * 0.02));
+      ctx.fillStyle = 'rgba(120,235,255,' + pulse.toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 34, 0, 6.28); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+/* ---------------- запуск мастерской ---------------- */
+function shopStart() {
+  shopLoad();
+  const shared = shopReadLocation();
+  if (shared) {
+    openWorkshop('mine');
+    toast('Карта из ссылки: «' + shared.map.title + '» — в «Моих картах». Можно играть.', 4200);
   }
 }
 
@@ -15254,6 +17777,7 @@ updateHud();
 updateObjectives();
 els.hud.classList.add('hidden');
 els.flash.style.opacity = '0';
+shopStart();
 requestAnimationFrame(frame);
 
 /* кнопки */
@@ -15267,6 +17791,133 @@ if (els.dmGrid) {
     const card = e.target.closest('[data-dm]');
     if (!card) return;
     enterDm(card.getAttribute('data-dm'));
+  });
+}
+
+/* ---------- мастерская и редактор карт ---------- */
+function bind(id, event, fn) {
+  const el = $(id);
+  if (el) el.addEventListener(event, fn);
+}
+bind('shopBtn', 'click', () => openWorkshop('mine'));
+bind('dmShopBtn', 'click', () => openWorkshop('mine'));
+bind('dmEditBtn', 'click', () => editorOpen(null));
+bind('shopBackBtn', 'click', closeWorkshop);
+bind('shopNewBtn', 'click', () => editorOpen(null));
+bind('shopRefreshBtn', 'click', () => {
+  shopRefreshFeed(true);
+  toast('Спрашиваю мастерскую GitHub…', 2000);
+});
+bind('shopHowBtn', 'click', () => {
+  try { window.open('https://github.com/' + SHOP_FEED.repo + '/blob/' + SHOP_FEED.branch + '/workshop/README.md', '_blank'); }
+  catch (e) { toast('Адрес: github.com/' + SHOP_FEED.repo + '/tree/' + SHOP_FEED.branch + '/workshop', 5000); }
+});
+if (els.shopTabs) {
+  els.shopTabs.addEventListener('click', e => {
+    const b = e.target.closest('[data-tab]');
+    if (b) shopSelectTab(b.getAttribute('data-tab'));
+  });
+}
+if (els.dmCustomGrid) {
+  els.dmCustomGrid.addEventListener('click', e => {
+    const card = e.target.closest('[data-wk]');
+    if (!card) return;
+    const m = shopFind(card.getAttribute('data-wk'));
+    if (m) wkPlay(m);
+  });
+}
+if (els.shopGrid) {
+  els.shopGrid.addEventListener('click', e => {
+    const card = e.target.closest('[data-shop]');
+    if (!card) return;
+    const entry = shopEntries().find(x => x.m.id === card.getAttribute('data-shop'));
+    if (!entry) return;
+    const actBtn = e.target.closest('[data-act]');
+    if (actBtn) { shopEntryActions(entry, actBtn.getAttribute('data-act')); return; }
+    shopPlayEntry(entry);
+  });
+}
+bind('shopImportBtn', 'click', () => {
+  if (!els.shopImportBox) return;
+  els.shopImportBox.classList.remove('hidden');
+  if (els.shopImportCode) { els.shopImportCode.value = ''; els.shopImportCode.focus(); }
+  shopRenderImport();
+});
+bind('shopImportCloseBtn', 'click', () => { if (els.shopImportBox) els.shopImportBox.classList.add('hidden'); });
+bind('shopImportDoBtn', 'click', () => {
+  const map = shopImportText(els.shopImportCode ? els.shopImportCode.value : '');
+  if (!map) return;
+  if (els.shopImportBox) els.shopImportBox.classList.add('hidden');
+  renderWorkshop();
+  renderDmCustom();
+  toast('Карта «' + map.title + '» добавлена. Можно играть.', 3000);
+});
+bind('shopImportFileBtn', 'click', () => { if (els.shopImportFile) els.shopImportFile.click(); });
+if (els.shopImportFile) {
+  els.shopImportFile.addEventListener('change', () => {
+    const file = els.shopImportFile.files && els.shopImportFile.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const map = shopImportText(String(reader.result || ''));
+      if (!map) return;
+      if (els.shopImportBox) els.shopImportBox.classList.add('hidden');
+      renderWorkshop();
+      renderDmCustom();
+      toast('Карта «' + map.title + '» из файла добавлена.', 3000);
+    };
+    reader.readAsText(file);
+    els.shopImportFile.value = '';
+  });
+}
+bind('shopShareCloseBtn', 'click', () => { shopShareId = null; renderWorkshop(); });
+bind('shopLinkBtn', 'click', () => {
+  const m = shopShareId ? shopFind(shopShareId) : null;
+  if (m) shopCopy(wkShareLink(m), 'Ссылка на карту скопирована — отправляй кому угодно.');
+});
+bind('shopFileBtn', 'click', () => {
+  const m = shopShareId ? shopFind(shopShareId) : null;
+  if (m && shopDownloadFile(m)) toast('Файл ' + m.slug + '.json — в загрузках.', 2400);
+});
+bind('shopGhBtn', 'click', () => {
+  const m = shopShareId ? shopFind(shopShareId) : null;
+  if (!m) return;
+  const url = shopPublishUrl(m);
+  if (!url) {
+    shopDownloadFile(m);
+    toast('Карта большая: файл скачан — положи его в workshop/maps/ репозитория. Там его увидят все.', 5200);
+    return;
+  }
+  try {
+    window.open(url, '_blank');
+    toast('Открылась страница нового файла в GitHub: осталось нажать «Commit changes». Индекс мастерской пересоберётся сам.', 6000);
+  } catch (e) {
+    shopDownloadFile(m);
+    toast('Браузер не дал открыть GitHub — файл скачан, положи его в workshop/maps/.', 4200);
+  }
+});
+
+/* ---------- кнопки редактора ---------- */
+bind('edTestBtn', 'click', editorTest);
+bind('edSaveBtn', 'click', () => editorSave(false));
+bind('edUndoBtn', 'click', editorUndo);
+bind('edClearBtn', 'click', editorClear);
+bind('edBackBtn', 'click', editorExit);
+if (els.edPalette) {
+  els.edPalette.addEventListener('click', e => {
+    const modeBtn = e.target.closest('[data-mode]');
+    if (modeBtn) { editorToggleSolid(modeBtn.getAttribute('data-mode')); return; }
+    const rotBtn = e.target.closest('[data-rot]');
+    if (rotBtn) { editorRotate(+rotBtn.getAttribute('data-rot')); return; }
+    const zoomBtn = e.target.closest('[data-zoom]');
+    if (zoomBtn) {
+      const k = +zoomBtn.getAttribute('data-zoom');
+      if (k === 0) { editorZoomReset(); toast('Масштаб 100%.', 1400); }
+      else { editorZoomBy(k > 0 ? 1.25 : 1 / 1.25); editorHint(); }
+      return;
+    }
+    const b = e.target.closest('[data-tool]');
+    if (b) editorSetTool(b.getAttribute('data-tool'));
   });
 }
 $('settingsBtn').addEventListener('click', () => openSettings('menu'));
@@ -15375,7 +18026,39 @@ window.LO = {
   /* Второй игрок */
   dmSpawnP2, hurtPlayer2, shoot2, dmP2Input, dmP2Wanted, dmP2Down,
   get player2() { return player2; },
-  get dmP2On() { return dmP2On; }
+  get dmP2On() { return dmP2On; },
+  /* Мастерская и редактор карт */
+  openWorkshop, closeWorkshop, renderWorkshop, shopSelectTab, shopEntries, shopCardHtml,
+  shopRefreshFeed, shopImportText, shopPlayEntry, shopEntryActions, shopDownloadFile, shopCopy,
+  shopPublishUrl, shopMapFile, wkMapCode, wkShareLink, wkPlay, wkRemix, wkRegister, wkValidate,
+  shopLoad, shopSave, shopUpsert, shopFind, shopRemove,
+  wkNormalize, wkNewMap, wkTranslit, wkBakeFloor, wkBakeRoom, wkMakeLevel, renderDmCustom,
+  editorOpen, editorExit, editorSave, editorTest, editorUndo, editorClear, editorSetTool,
+  editorPlacePoint, editorDown, editorUp, editorKey, editorRender, editorBake, editorReadMap,
+  get SHOP_FEED() { return SHOP_FEED; },
+  get SHOP_KEY() { return SHOP_KEY; },
+  get WK_TOOLS() { return WK_TOOLS; },
+  get WK_THEMES() { return WK_THEMES; },
+  get shopMaps() { return shopMaps; },
+  get shopFeed() { return shopFeed; },
+  get shopTab() { return shopTab; },
+  set shopTab(v) { shopTab = v; },
+  get shopShareId() { return shopShareId; },
+  get ed() { return ed; },
+  get edMap() { return ed ? ed.map : null; },
+  set edMap(v) { if (ed) ed.map = v; },
+  setShopTab: shopSelectTab,
+  setShareId(id) { shopShareId = id; renderWorkshop(); },
+  /* Техника и переходы карт мастерской */
+  wkSpawnUnits, wkUpdateUnits, wkUpdateShells, wkDamageUnit, wkBlast, wkTpCheck, wkDrawUnits,
+  wkDrawPads, wkDrawGlow, wkDrawShells, wkUnitsAlive, wkObjectRect, wkObjectSize, wkSolidRects,
+  editorToggleSolid, editorPlaceObject, editorPlacePad, editorObjectAt, editorPadAt,
+  editorRotate, editorZoomBy, editorSetZoom, editorZoomReset, editorZoom, editorViewToWorld,
+  get edZoom() { return editorZoom(); },
+  get wkUnits() { return wkUnits; },
+  get wkShells() { return wkShells; },
+  get WK_MORTAR_HP() { return WK_MORTAR_HP; },
+  get WK_TANK_HP() { return WK_TANK_HP; }
 };
 </script>
 </body>
