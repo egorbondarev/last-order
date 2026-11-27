@@ -399,7 +399,7 @@ kbd{font-family:var(--mono); font-size:.95em; color:var(--ink); border:1px solid
         а в бинокле ровно 12 зарядов снабжения.
       </p>
       <div id="dmGrid" class="mission-grid dm-grid"></div>
-      <p id="dmHint" class="select-hint">На арене бинокль всегда с собой: 0 — оптика, ЛКМ — сброс боеприпасов, ПКМ — сброс аптечки. В миссиях то же самое, как только найдёшь бинокль.</p>
+      <p id="dmHint" class="select-hint">На арене бинокль всегда с собой: 0 — оптика, ЛКМ — сброс боеприпасов, ПКМ — сброс аптечки. В миссиях то же самое, как только найдёшь бинокль. Второй игрок садится за этот же экран: подключи геймпад (левый стик — ходьба, правый — прицел, RT/A — огонь, X — ствол, Y — перезарядка) или играй с клавиатуры — IJKL, ПРОБЕЛ, U, P.</p>
       <div class="menu-actions">
         <button id="dmBackBtn" class="btn secondary">Назад</button>
       </div>
@@ -7710,7 +7710,10 @@ function syncDoorSolid() {
 
 function enterLevel(id, carry) {
   level = LEVELS[id];
-  if (!level.dm) { state.dm = null; state.dmScore = { you: 0, losses: 0 }; dmRoster.length = 0; }
+  if (!level.dm) {
+    state.dm = null; state.dmScore = { you: 0, losses: 0 }; dmRoster.length = 0;
+    player2 = null; dmP2On = false;
+  }
   props = level.props;
   solids = walls.concat(props);
   level.floor();
@@ -10549,8 +10552,8 @@ function dropFor(e) {
   }
 }
 
-function damageEnemy(e, dmg, ang) {
-  if (e.isBot) { damageDmBot(e, dmg, ang, null); return; }
+function damageEnemy(e, dmg, ang, viaP2) {
+  if (e.isBot) { damageDmBot(e, dmg, ang, null, viaP2); return; }
   e.hp -= dmg;
   e.hitT = 0.12;
   blood(e.x, e.y, 6, ang);
@@ -10662,13 +10665,13 @@ function updateBullets(dt) {
       }
       if (pointInSolid(b.x, b.y)) { impact(b); dead = true; break; }
 
-      if (b.from === 'player') {
+      if (b.from === 'player' || b.from === 'player2') {
         for (let j = 0; j < enemies.length; j++) {
           const e = enemies[j];
           if (b.hitList.indexOf(e) >= 0) continue;
           if (Math.hypot(b.x - e.x, b.y - e.y) < e.r + b.r) {
-            state.hits++;
-            damageEnemy(e, b.dmg, Math.atan2(b.vy, b.vx));
+            if (!b.p2) state.hits++;
+            damageEnemy(e, b.dmg, Math.atan2(b.vy, b.vx), b.p2);
             b.hitList.push(e);
             if (b.pierce > 0) { b.pierce--; } else { dead = true; }
             break;
@@ -10720,7 +10723,15 @@ function updateBullets(dt) {
           }
         }
         if (!dead && Math.hypot(b.x - player.x, b.y - player.y) < player.r + b.r) {
+          player.lastHitBy = b.shooter || null;
           hurtPlayer(b.dmg);
+          impact(b);
+          dead = true; break;
+        }
+        if (!dead && player2 && dmP2On && state.dm && state.dm.p2deadT <= 0 &&
+            Math.hypot(b.x - player2.x, b.y - player2.y) < player2.r + b.r) {
+          player2.lastHitBy = b.shooter || null;
+          hurtPlayer2(b.dmg);
           impact(b);
           dead = true; break;
         }
@@ -12434,8 +12445,8 @@ function drawExitZone() {
   }
 }
 
-function drawPlayer() {
-  const p = player;
+function drawPlayer(who) {
+  const p = who || player;
   ctx.fillStyle = 'rgba(0,0,0,.5)';
   ctx.beginPath();
   ctx.ellipse(p.x + 2, p.y + 5, p.r + 4, p.r * 0.7, 0, 0, 6.28);
@@ -12479,7 +12490,7 @@ function drawPlayer() {
   ctx.arc(7 - sway * 0.4, -8, 3.6, 0, 6.28);
   ctx.fill();
 
-  if (player.weapon === 'plasma' && player.weapons.plasma.owned) {
+  if (p.weapon === 'plasma' && p.weapons.plasma.owned) {
     ctx.strokeStyle = '#b8895f';
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -12496,7 +12507,7 @@ function drawPlayer() {
     ctx.fillRect(31, 4.5, 5, 2);
     ctx.fillStyle = 'rgba(120,235,255,.16)';
     ctx.beginPath(); ctx.arc(30, 5, 12, 0, 6.28); ctx.fill();
-  } else if (player.weapon === 'shotgun' && player.weapons.shotgun.owned) {
+  } else if (p.weapon === 'shotgun' && p.weapons.shotgun.owned) {
     ctx.strokeStyle = '#b8895f';
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -12510,7 +12521,7 @@ function drawPlayer() {
     ctx.fillRect(16, 8.5, 12, 5);
     ctx.fillStyle = '#3d3f43';
     ctx.fillRect(36, 3, 5, 4);
-  } else if (player.weapon === 'smg' && player.weapons.smg.owned) {
+  } else if (p.weapon === 'smg' && p.weapons.smg.owned) {
     ctx.strokeStyle = '#b8895f';
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -12528,7 +12539,7 @@ function drawPlayer() {
     ctx.fillRect(37, 4, 8, 3);
     ctx.fillStyle = 'rgba(255,200,120,.35)';
     ctx.fillRect(16, 4.6, 13, 2);
-  } else if (player.weapons.pistol.owned) {
+  } else if (p.weapons.pistol.owned) {
     ctx.strokeStyle = '#b8895f';
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -12543,7 +12554,7 @@ function drawPlayer() {
   }
   ctx.restore();
 
-  ctx.strokeStyle = 'rgba(236,229,215,.22)';
+  ctx.strokeStyle = p === player2 ? 'rgba(120,190,255,.5)' : 'rgba(236,229,215,.22)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.arc(p.x, p.y, 15, 0, 6.28);
@@ -12764,10 +12775,11 @@ function radial(c, x, y, r, a) {
   c.fill();
 }
 
-function playerCone(c, reach, width, inner) {
+function playerCone(c, reach, width, inner, who) {
+  const pc = who || player;
   c.save();
-  c.translate(player.x, player.y);
-  c.rotate(player.ang);
+  c.translate(pc.x, pc.y);
+  c.rotate(pc.ang);
   const cone = c.createLinearGradient(0, 0, reach, 0);
   cone.addColorStop(0, 'rgba(0,0,0,' + inner + ')');
   cone.addColorStop(0.55, 'rgba(0,0,0,' + inner * 0.58 + ')');
@@ -13008,6 +13020,7 @@ function render() {
   if (level.dm) drawDmTags();
   if (level.id === 'school') drawPrisoners();
   if (!(level.id === 'fort' && state.riding)) drawPlayer();
+  if (level.dm && dmP2On) drawPlayer2();
   if (level.id === 'fort') drawFortDrop();
   if (level.id === 'farm') drawFarmHeli();
   if (level.id === 'roof') { drawCarriedCrate(); drawRoofHeli(); drawTracers(); }
@@ -13041,6 +13054,7 @@ function render() {
   if (level.id === 'res') resDrawPrompt();
   if (level.id === 'mayor') drawMayorPrompt();
   drawSecretButton();
+  if (level.dm && dmP2On) drawP2Hud();
   drawEdgeVignette();
 
   if (state.lightning > 0) {
@@ -13146,6 +13160,14 @@ function dmLighting() {
         player.weapon === 'plasma' ? 210 : 175, 0.8);
     }
     if (state.dm && state.dm.deadT > 0) radial(lctx, player.x, player.y, 320, 0.6);
+  }
+  if (player2 && dmP2On && !(state.dm && state.dm.p2deadT > 0)) {
+    radial(lctx, player2.x, player2.y, 380, 0.74);
+    playerCone(lctx, 600, 0.5, 0.9, player2);
+    if (player2.muzzle > 0) {
+      radial(lctx, player2.x + Math.cos(player2.ang) * 28, player2.y + Math.sin(player2.ang) * 28,
+        player2.weapon === 'plasma' ? 200 : 165, 0.7);
+    }
   }
   for (const f of fires) {
     const k = Math.min(1, f.life / 1.2);
@@ -13300,7 +13322,7 @@ function spawnDmBots() {
   syncDmObjectives();
 }
 
-function damageDmBot(o, dmg, ang, sourceBot) {
+function damageDmBot(o, dmg, ang, sourceBot, viaP2) {
   if (sourceBot && sourceBot.roster) dmg *= DM.botFriendly;
   o.hp -= dmg;
   o.hitT = 0.12;
@@ -13318,6 +13340,10 @@ function damageDmBot(o, dmg, ang, sourceBot) {
   if (sourceBot && sourceBot.roster) {
     sourceBot.roster.kills++;
     toast(sourceBot.roster.name + ' снял ' + who + '.', 1100);
+  } else if (viaP2) {
+    state.dmScore.p2 = (state.dmScore.p2 || 0) + 1;
+    floatText(o.x, o.y - 20, 'ФРАГ 2', '#8fc7ff');
+    toast('Второй игрок снял ' + who + '.', 1100);
   } else {
     state.dmScore.you++;
     floatText(o.x, o.y - 20, 'ФРАГ', '#8cf0a6');
@@ -13329,7 +13355,7 @@ function damageDmBot(o, dmg, ang, sourceBot) {
 
 function dmCheckFrags() {
   if (state.mode !== 'play' || !state.dm) return;
-  if (state.dmScore.you >= DM.killTarget) { dmFinish(true); return; }
+  if (state.dmScore.you >= DM.killTarget || (state.dmScore.p2 || 0) >= DM.killTarget) { dmFinish(true); return; }
   let lead = 0;
   for (const b of dmRoster) if (b.kills > lead) lead = b.kills;
   if (lead >= DM.killTarget) dmFinish(false);
@@ -13346,10 +13372,14 @@ function dmFinish(win) {
 }
 
 function dmBotTarget(e) {
-  const playerLive = !(state.dm && state.dm.deadT > 0);
-  let best = playerLive
-    ? { x: player.x, y: player.y, d: Math.hypot(player.x - e.x, player.y - e.y), isPlayer: true, ref: null }
-    : { x: 0, y: 0, d: 1e9, isPlayer: true, ref: null };
+  let best = { x: 0, y: 0, d: 1e9, isPlayer: true, ref: null };
+  if (!(state.dm && state.dm.deadT > 0)) {
+    best = { x: player.x, y: player.y, d: Math.hypot(player.x - e.x, player.y - e.y), isPlayer: true, ref: null };
+  }
+  if (player2 && dmP2On && !(state.dm && state.dm.p2deadT > 0)) {
+    const d2 = Math.hypot(player2.x - e.x, player2.y - e.y);
+    if (d2 < best.d) best = { x: player2.x, y: player2.y, d: d2, isPlayer: true, ref: player2, isP2: true };
+  }
   for (const o of enemies) {
     if (o === e || !o.isBot) continue;
     const d = Math.hypot(o.x - e.x, o.y - e.y);
@@ -13387,7 +13417,7 @@ function updateDmBots(dt) {
       if (d > ideal + 90) { mx = Math.cos(aim); my = Math.sin(aim); }
       else if (d < ideal - 70) { mx = -Math.cos(aim); my = -Math.sin(aim); }
       else { mx = Math.cos(aim + Math.PI / 2) * e.strafe; my = Math.sin(aim + Math.PI / 2) * e.strafe; }
-    } else if (d > e.r + player.r + 10) {
+    } else if (d > e.r + (tgt.ref || player).r + 10) {
       mx = Math.cos(aim); my = Math.sin(aim);
     }
     /* не сбиваться в кучу */
@@ -13419,12 +13449,13 @@ function updateDmBots(dt) {
         else { e.cd = cfg.cd * rnd(0.85, 1.2); }
       }
     } else if (tgt.isPlayer) {
-      if (d < e.r + player.r + 10 && e.cd <= 0) {
-        player.lastHitBy = e;
-        hurtPlayer(cfg.dmg);
+      const tgtEnt = tgt.ref || player;
+      if (d < e.r + tgtEnt.r + 10 && e.cd <= 0) {
+        tgtEnt.lastHitBy = e;
+        if (tgtEnt === player) hurtPlayer(cfg.dmg); else hurtPlayer2(cfg.dmg);
         e.cd = cfg.cd;
         e.lunge = 0.18;
-        spark(player.x, player.y, 4, '#c2a67a', 90);
+        spark(tgtEnt.x, tgtEnt.y, 4, '#c2a67a', 90);
       }
     } else if (tgt.ref && d < e.r + tgt.ref.r + 10 && e.cd <= 0) {
       damageDmBot(tgt.ref, cfg.dmg, aim, e);
@@ -13483,7 +13514,10 @@ function dmRefreshArena() {
 }
 
 function updateDm(dt) {
-  if (!state.dm) state.dm = { deadT: 0, killedBy: null, uiT: 0 };
+  if (!state.dm) state.dm = { deadT: 0, p2deadT: 0, killedBy: null, uiT: 0 };
+  if (state.dm.p2deadT === undefined) state.dm.p2deadT = 0;
+  if (!dmP2On && dmP2Wanted()) dmSpawnP2(false);
+  if (dmP2On) { updatePlayer2(dt); updatePickups2(dt); }
   if (state.dm.deadT > 0) {
     state.dm.deadT -= dt;
     if (state.dm.deadT <= 0) dmRespawnPlayer();
@@ -13509,9 +13543,14 @@ function syncDmObjectives() {
   if (!state.dmScore) state.dmScore = { you: 0, losses: 0 };
   const rows = [{
     id: 'you',
-    text: 'ТЫ · ' + state.dmScore.you + ' фрагов · ' + state.dmScore.losses + ' смертей',
+    text: 'ИГРОК 1 · ' + state.dmScore.you + ' фрагов · ' + state.dmScore.losses + ' смертей',
     done: false, active: true
   }];
+  if (dmP2On) rows.push({
+    id: 'p2',
+    text: 'ИГРОК 2 · ' + (state.dmScore.p2 || 0) + ' фрагов · ' + (state.dmScore.p2losses || 0) + ' смертей',
+    done: false, active: true
+  });
   dmRoster.slice().sort((a, b) => b.kills - a.kills || a.deaths - b.deaths).forEach(b => {
     rows.push({
       id: 'bot_' + b.name,
@@ -13617,6 +13656,16 @@ function drawDmSupply() {
 function drawDmTags() {
   ctx.save();
   ctx.textAlign = 'center';
+  /* живые игроки подписаны, чтобы их не путать с ботами */
+  ctx.font = 'bold 10px Consolas, monospace';
+  if (player && !(state.dm && state.dm.deadT > 0)) {
+    ctx.fillStyle = 'rgba(236,229,215,.7)';
+    ctx.fillText('ИГРОК 1', player.x, player.y - 24);
+  }
+  if (player2 && dmP2On && !(state.dm && state.dm.p2deadT > 0)) {
+    ctx.fillStyle = 'rgba(150,205,255,.85)';
+    ctx.fillText('ИГРОК 2', player2.x, player2.y - 24);
+  }
   for (const e of enemies) {
     if (!e.isBot) continue;
     const k = clamp(Math.max(0, e.hp) / e.maxhp, 0, 1);
@@ -13701,6 +13750,278 @@ function drawDmOptics() {
   ctx.restore();
 }
 
+/* ===========================================================
+   ВТОРОЙ ЖИВОЙ ИГРОК (Deathmatch)
+   Подключил геймпад — и он в бою: левый стик ходьба, правый
+   прицел, RT/A — огонь, X — смена ствола, Y — перезарядка.
+   Без геймпада — клавиши IJKL (прицел по ходу), ПРОБЕЛ — огонь,
+   U — ствол, P — перезарядка. Боты стреляют и в него тоже.
+   =========================================================== */
+let player2 = null;
+let dmP2On = false;
+
+function dmPad() {
+  if (!navigator.getGamepads) return null;
+  const pads = navigator.getGamepads();
+  for (let i = 0; i < pads.length; i++) if (pads[i] && pads[i].connected) return pads[i];
+  return null;
+}
+
+function dmP2Input() {
+  let mx = 0, my = 0, ax = 0, ay = 0, fire = false, swap = false, reload = false;
+  const g = dmPad();
+  if (g) {
+    const dz = 0.24;
+    const lx = g.axes[0] || 0, ly = g.axes[1] || 0, rx = g.axes[2] || 0, ry = g.axes[3] || 0;
+    if (Math.abs(lx) > dz) mx = lx;
+    if (Math.abs(ly) > dz) my = ly;
+    if (Math.abs(rx) > dz) ax = rx;
+    if (Math.abs(ry) > dz) ay = ry;
+    const b = g.buttons || [];
+    fire = !!((b[7] && b[7].value > 0.35) || (b[0] && b[0].pressed) || (b[5] && b[5].pressed));
+    swap = !!(b[2] && b[2].pressed);
+    reload = !!(b[3] && b[3].pressed);
+  }
+  if (keys.has('KeyI')) my -= 1;
+  if (keys.has('KeyK')) my += 1;
+  if (keys.has('KeyJ')) mx -= 1;
+  if (keys.has('KeyL')) mx += 1;
+  if (keys.has('Space')) fire = true;
+  if (keys.has('KeyU')) swap = true;
+  if (keys.has('KeyP')) reload = true;
+  return { mx, my, ax, ay, fire, swap, reload };
+}
+
+function dmP2Wanted() {
+  if (dmPad()) return true;
+  return keys.has('KeyI') || keys.has('KeyJ') || keys.has('KeyK') || keys.has('KeyL') || keys.has('Space');
+}
+
+function dmSpawnP2(silent) {
+  player2 = makePlayer();
+  player2.isP2 = true;
+  ['pistol', 'plasma', 'shotgun', 'smg'].forEach(k => {
+    player2.weapons[k].owned = true;
+    player2.weapons[k].mag = WEAPONS[k].magSize;
+    player2.weapons[k].reserve = k === 'smg' ? 160 : (k === 'shotgun' ? 30 : 60);
+  });
+  player2.weapon = 'smg';
+  player2.binocs.owned = true;
+  player2.aimAng = 0;
+  player2.moveAng = 0;
+  player2.lastHitBy = null;
+  dmP2On = true;
+  dmRespawnP2(true);
+  syncDmObjectives();
+  if (!silent) toast('Второй игрок в бою: геймпад или IJKL + ПРОБЕЛ.', 3200);
+}
+
+function dmRespawnP2(first) {
+  const at = dmSpawnPoint();
+  player2.x = at.x; player2.y = at.y;
+  player2.hp = player2.maxhp;
+  player2.hurt = 0; player2.reloading = 0; player2.fireCd = 0;
+  player2.invuln = first ? 2.4 : 2.6;
+  player2.lastHitBy = null;
+  if (state.dm) state.dm.p2deadT = 0;
+  if (!first) toast('Второй игрок снова в бою.', 1400);
+}
+
+function dmP2SwapWeapon() {
+  const order = ['smg', 'shotgun', 'plasma', 'pistol'];
+  const i = order.indexOf(player2.weapon);
+  for (let s = 1; s <= order.length; s++) {
+    const k = order[(i + s) % order.length];
+    if (player2.weapons[k].owned) { player2.weapon = k; player2.reloading = 0; break; }
+  }
+}
+
+function tryReload2() {
+  const w = player2.weapons[player2.weapon], cfg = WEAPONS[player2.weapon];
+  if (!w.owned || player2.reloading > 0 || w.mag >= cfg.magSize || w.reserve <= 0) return;
+  player2.reloading = cfg.reload;
+}
+
+function shoot2() {
+  if (state.mode !== 'play' || !player2) return;
+  const w = player2.weapons[player2.weapon], cfg = WEAPONS[player2.weapon];
+  if (!w.owned || player2.reloading > 0 || player2.fireCd > 0) return;
+  if (w.mag <= 0) { sfx.dry(); tryReload2(); return; }
+
+  w.mag--;
+  player2.fireCd = cfg.cd;
+  player2.muzzle = cfg.pellets ? 0.09 : 0.07;
+  const pellets = cfg.pellets || 1;
+  for (let i = 0; i < pellets; i++) {
+    const a = player2.ang + rnd(-cfg.spread, cfg.spread);
+    bullets.push({
+      x: player2.x + Math.cos(player2.ang) * 20,
+      y: player2.y + Math.sin(player2.ang) * 20,
+      vx: Math.cos(a) * cfg.speed, vy: Math.sin(a) * cfg.speed,
+      r: cfg.bolt ? 5 : (cfg.pellets ? 2 : 3), dmg: cfg.dmg,
+      life: cfg.life || (cfg.bolt ? 1.5 : 1.4),
+      from: 'player2', p2: true, bolt: cfg.bolt, pierce: cfg.pierce, hitList: []
+    });
+  }
+  state.p2shots = (state.p2shots || 0) + 1;
+  state.shake = Math.max(state.shake, cfg.bolt ? 2.8 : 2.2);
+  if (cfg.bolt) sfx.plasma();
+  else if (cfg.smg) { noiseHit(0.05, 0.13, 1500, 1.2); tone(170, 0.04, 'square', 0.03, 90); }
+  else sfx.shot();
+  casings.push({
+    x: player2.x + Math.cos(player2.ang) * 10, y: player2.y + Math.sin(player2.ang) * 10,
+    vx: Math.cos(player2.ang + 1.9) * rnd(40, 90), vy: Math.sin(player2.ang + 1.9) * rnd(40, 90),
+    rot: rnd(0, 6.28), vr: rnd(-9, 9), life: 6
+  });
+  smokePuff(player2.x + Math.cos(player2.ang) * 26, player2.y + Math.sin(player2.ang) * 26, 2);
+}
+
+function hurtPlayer2(n, ignoreInvuln) {
+  if (state.mode !== 'play' || !player2 || !dmP2On) return;
+  if (state.dm && state.dm.p2deadT > 0) return;
+  if (!ignoreInvuln && player2.invuln > 0) return;
+  n *= diff().dmgIn;
+  player2.hp -= n;
+  player2.hurt = 0.45;
+  player2.invuln = Math.max(player2.invuln, 0.4);
+  state.shake = Math.max(state.shake, 5);
+  blood(player2.x, player2.y, 8);
+  if (player2.hp <= 0) { player2.hp = 0; dmP2Down(); }
+}
+
+function dmP2Down() {
+  if (state.mode !== 'play' || !state.dm) return;
+  state.dmScore.p2losses = (state.dmScore.p2losses || 0) + 1;
+  const killer = player2.lastHitBy;
+  if (killer && killer.roster) killer.roster.kills++;
+  state.dm.p2deadT = DM.playerRespawn;
+  player2.invuln = DM.playerRespawn + 1.6;
+  blood(player2.x, player2.y, 22);
+  decals.push({ x: player2.x, y: player2.y, r: 16, rot: rnd(0, 6.28), a: 0.5 });
+  toast('Второго игрока сняли' + (killer && killer.roster ? ' (' + killer.roster.name + ')' : '') +
+    '. Возвращается в бой.', 2200);
+  syncDmObjectives();
+  dmCheckFrags();
+}
+
+function updatePlayer2(dt) {
+  if (!player2 || !state.dm) return;
+  player2.invuln = Math.max(0, player2.invuln - dt);
+  player2.hurt = Math.max(0, player2.hurt - dt);
+  player2.muzzle = Math.max(0, player2.muzzle - dt);
+  player2.fireCd = Math.max(0, player2.fireCd - dt);
+  if (state.dm.p2deadT > 0) {
+    state.dm.p2deadT -= dt;
+    if (state.dm.p2deadT <= 0) dmRespawnP2(false);
+    return;
+  }
+
+  const inp = dmP2Input();
+  let vx = inp.mx, vy = inp.my;
+  const len = Math.hypot(vx, vy);
+  const moving = len > 0.01;
+  if (moving) {
+    vx /= len; vy /= len;
+    const spd = player2.speed * (player2.hurt > 0 ? 0.88 : 1);
+    const nx = player2.x + vx * spd * dt;
+    const ny = player2.y + vy * spd * dt;
+    if (!hits(nx, player2.y, player2.r)) player2.x = nx;
+    if (!hits(player2.x, ny, player2.r)) player2.y = ny;
+    player2.walk += dt * 9;
+    player2.moveAng = Math.atan2(vy, vx);
+  } else {
+    player2.walk += dt * 1.5;
+  }
+  player2.x = clamp(player2.x, WALL + player2.r, W - WALL - player2.r);
+  player2.y = clamp(player2.y, WALL + player2.r, H - WALL - player2.r);
+
+  /* прицел: правый стик, иначе — куда идёт */
+  if (Math.hypot(inp.ax, inp.ay) > 0.25) player2.aimAng = Math.atan2(inp.ay, inp.ax);
+  else if (moving) player2.aimAng = player2.moveAng;
+  player2.ang = player2.aimAng || 0;
+
+  if (inp.swap) dmP2SwapWeapon();
+  if (inp.reload) tryReload2();
+
+  if (player2.reloading > 0) {
+    player2.reloading -= dt;
+    if (player2.reloading <= 0) {
+      const w = player2.weapons[player2.weapon], cfg = WEAPONS[player2.weapon];
+      const take = Math.min(cfg.magSize - w.mag, w.reserve);
+      w.mag += take;
+      w.reserve -= take;
+    }
+  }
+  if (inp.fire) shoot2();
+}
+
+/* второй игрок подбирает только снабжение: патроны и аптечки */
+function updatePickups2(dt) {
+  if (!player2 || !dmP2On) return;
+  for (const p of pickups) {
+    if (p.hidden || p.taken) continue;
+    if (Math.hypot(player2.x - p.x, player2.y - p.y) > 26 + player2.r) continue;
+    if (p.type === 'medkit' || p.type === 'drop_medkit') {
+      p.taken = true;
+      player2.hp = Math.min(player2.maxhp, player2.hp + 45);
+      floatText(player2.x, player2.y - 20, '+45', '#8fbf7a');
+      sfx.pick();
+    } else if (p.type === 'drop_ammo' || p.type === 'ammo' || p.type === 'cell' ||
+               p.type === 'smgmag' || p.type === 'shells' || p.type === 'ammocrate') {
+      p.taken = true;
+      const amt = p.amount || dmAmmoAmount(p.type) || 16;
+      ['pistol', 'plasma', 'shotgun', 'smg'].forEach(k => {
+        if (player2.weapons[k].owned) player2.weapons[k].reserve += amt;
+      });
+      floatText(player2.x, player2.y - 20, 'ПАТРОНЫ +' + amt, '#d9a24a');
+      sfx.pick();
+    }
+  }
+}
+
+function drawPlayer2() {
+  if (!player2 || !state.dm || state.dm.p2deadT > 0) return;
+  drawPlayer(player2);
+}
+
+function drawP2Hud() {
+  if (!player2 || !state.dm) return;
+  const w = player2.weapons[player2.weapon], cfg = WEAPONS[player2.weapon];
+  const x = Math.round(W / 2 - 107), y = H - 96, wd = 214, ht = 72;
+  ctx.save();
+  ctx.fillStyle = 'rgba(8,10,14,.6)';
+  roundRect(ctx, x, y, wd, ht, 6); ctx.fill();
+  ctx.strokeStyle = 'rgba(120,190,255,.4)';
+  ctx.lineWidth = 1;
+  roundRect(ctx, x + 0.5, y + 0.5, wd - 1, ht - 1, 6); ctx.stroke();
+
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 11px Consolas, monospace';
+  ctx.fillStyle = 'rgba(150,205,255,.92)';
+  ctx.fillText('ИГРОК 2 · ГЕЙМПАД / IJKL', x + 10, y + 17);
+
+  ctx.font = '10px Consolas, monospace';
+  ctx.fillStyle = 'rgba(236,229,215,.85)';
+  if (state.dm.p2deadT > 0) {
+    ctx.fillText('ВЫБЫЛ · ВЕРНЁТСЯ ЧЕРЕЗ ' + Math.ceil(state.dm.p2deadT) + ' С', x + 10, y + 34);
+  } else {
+    ctx.fillText((cfg ? cfg.short : '—') + ' · ' + (w ? w.mag + ' / ' + w.reserve : '—') +
+      (player2.reloading > 0 ? ' · ПЕРЕЗАРЯДКА' : ''), x + 10, y + 34);
+  }
+  ctx.fillText('ФРАГИ ' + state.dmScore.p2 + ' · СМЕРТИ ' + (state.dmScore.p2losses || 0), x + 10, y + 48);
+
+  ctx.fillStyle = 'rgba(236,229,215,.14)';
+  ctx.fillRect(x + 10, y + 56, wd - 20, 6);
+  const k = clamp(player2.hp / player2.maxhp, 0, 1);
+  ctx.fillStyle = k > 0.5 ? 'rgba(143,191,122,.9)' : (k > 0.22 ? 'rgba(240,210,110,.9)' : 'rgba(200,80,60,.92)');
+  ctx.fillRect(x + 10, y + 56, (wd - 20) * k, 6);
+  ctx.fillStyle = 'rgba(210,235,240,.6)';
+  ctx.font = 'bold 9px Consolas, monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(String(Math.max(0, Math.round(player2.hp))), x + wd - 10, y + 55);
+  ctx.restore();
+}
+
 /* ---------- арена: запуск, лобби, финал ---------- */
 function enterDm(id) {
   ac();
@@ -13717,14 +14038,17 @@ function enterDm(id) {
     },
     binocs: true
   });
-  state.dm = { deadT: 0, killedBy: null, uiT: 0 };
-  state.dmScore = { you: 0, losses: 0 };
+  state.dm = { deadT: 0, p2deadT: 0, killedBy: null, uiT: 0 };
+  state.dmScore = { you: 0, losses: 0, p2: 0, p2losses: 0 };
   state.dmRefreshT = DM.refresh;
   state.dmResult = null;
   player.binocs.owned = true;
   player.binocs.charges = DM.supply;
   player.lastHitBy = null;
   spawnDmBots();
+  /* второй игрок: есть геймпад или он уже играл с клавиатуры — он в бою, иначе матч одиночный */
+  if (dmP2Wanted()) { if (dmP2On) dmRespawnP2(true); else dmSpawnP2(true); }
+  else { player2 = null; dmP2On = false; }
   syncDmObjectives();
   updateHud();
   updateWaveHud();
@@ -13740,8 +14064,10 @@ function dmEndScreen(win) {
   els.endText.innerHTML = win
     ? 'Ты добрал ' + DM.killTarget + '-й фраг первым. Дым расходится над бетоном, бойцы расходятся по укрытиям.'
     : 'Кто-то из бойцов добрал ' + DM.killTarget + '-й фраг раньше тебя. Арена остаётся за ним.';
-  let stats = '<li>ТВОИ ФРАГИ <b>' + r.you + '</b></li>' +
-    '<li>ТВОИ СМЕРТИ <b>' + state.dmScore.losses + '</b></li>' +
+  let stats = '<li>ФРАГИ ИГРОКА 1 <b>' + r.you + '</b></li>' +
+    '<li>СМЕРТИ ИГРОКА 1 <b>' + state.dmScore.losses + '</b></li>' +
+    (dmP2On ? '<li>ФРАГИ ИГРОКА 2 <b>' + (state.dmScore.p2 || 0) + '</b></li>' +
+      '<li>СМЕРТИ ИГРОКА 2 <b>' + (state.dmScore.p2losses || 0) + '</b></li>' : '') +
     '<li>ВЫСТРЕЛОВ <b>' + state.shots + '</b></li>' +
     '<li>ТОЧНОСТЬ <b>' + acc + '%</b></li>';
   r.bots.slice().sort((a, b) => b.kills - a.kills).slice(0, 5).forEach(b => {
@@ -13760,8 +14086,10 @@ function renderDeathmatch() {
     '<span class="m-state">' + (a.note === 'DEATHMATCH' ? 'АРЕНА · БОТЫ И ИГРОКИ' : 'АРЕНА ИЗ КАМПАНИИ') + '</span>' +
     '</button>').join('');
   if (els.dmLead) {
-    els.dmLead.textContent = 'Боты и игроки: против тебя ' + DM.bots + ' бойцов, матч — до ' +
-      DM.killTarget + ' фрагов. Каждую минуту карта обновляется, а в бинокле ' + DM.supply + ' зарядов снабжения.';
+    els.dmLead.textContent = 'Боты и игроки: против вас ' + DM.bots + ' бойцов, матч — до ' +
+      DM.killTarget + ' фрагов. Каждую минуту карта обновляется, а в бинокле ' + DM.supply +
+      ' зарядов снабжения. Вдвоём за одним экраном: подключи геймпад — второму игроку отведут фигуру, ' +
+      'табло и своё место в счёте.';
   }
 }
 
@@ -15043,7 +15371,11 @@ window.LO = {
   get dmRoster() { return dmRoster; },
   get dmScore() { return state.dmScore; },
   get dmState() { return state.dm; },
-  get supplyCharges() { return supplyCharges(); }
+  get supplyCharges() { return supplyCharges(); },
+  /* Второй игрок */
+  dmSpawnP2, hurtPlayer2, shoot2, dmP2Input, dmP2Wanted, dmP2Down,
+  get player2() { return player2; },
+  get dmP2On() { return dmP2On; }
 };
 </script>
 </body>
